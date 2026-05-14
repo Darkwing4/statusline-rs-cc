@@ -43,7 +43,7 @@ Outside a git repo only `%` and cwd are shown. Worktree gitfiles (`/.git/worktre
 
 ## install
 
-One command. Downloads the right prebuilt binary for your platform, installs it to `~/.claude/bin/statusline`, and prints the `settings.json` snippet to paste.
+One command. Downloads the right prebuilt binary for your platform, drops it in `~/.claude/bin/statusline`, and patches `~/.claude/settings.json` so Claude Code picks it up on the next event.
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/Darkwing4/statusline-rs-cc/main/install.sh | sh
@@ -51,18 +51,17 @@ curl -fsSL https://raw.githubusercontent.com/Darkwing4/statusline-rs-cc/main/ins
 
 Supported targets: Linux x86_64 / aarch64, macOS x86_64 / aarch64.
 
-After install, register the binary in `~/.claude/settings.json`:
+The settings patch is non-destructive: it preserves every other key in `settings.json`, writes a `.bak` next to the original before changing anything, and is a no-op if the file already points at the binary. If `python3` is missing it skips the patch and prints the snippet to paste manually.
 
-```json
-{
-  "statusLine": {
-    "type": "command",
-    "command": "/home/you/.claude/bin/statusline"
-  }
-}
-```
+Env vars the installer respects:
 
-Env vars the installer respects: `STATUSLINE_TAG` (default `latest`), `STATUSLINE_INSTALL_DIR` (default `$HOME/.claude/bin`), `STATUSLINE_REPO`.
+| var | default |
+|---|---|
+| `STATUSLINE_TAG` | `latest` |
+| `STATUSLINE_INSTALL_DIR` | `$HOME/.claude/bin` |
+| `STATUSLINE_SETTINGS` | `$HOME/.claude/settings.json` |
+| `STATUSLINE_SKIP_SETTINGS` | unset — set to `1` to skip the JSON patch |
+| `STATUSLINE_REPO` | `Darkwing4/statusline-rs-cc` |
 
 ### build from source
 
