@@ -11,6 +11,18 @@ SKIP_SETTINGS="${STATUSLINE_SKIP_SETTINGS:-}"
 os="$(uname -s | tr '[:upper:]' '[:lower:]')"
 arch="$(uname -m)"
 
+case "$os" in
+    msys*|mingw*|cygwin*)
+        cat >&2 <<'EOF'
+Detected a Windows shell (Git Bash / MSYS / Cygwin).
+Run the PowerShell installer instead:
+
+  powershell -NoProfile -ExecutionPolicy Bypass -Command "iwr -useb https://raw.githubusercontent.com/Darkwing4/statusline-rs-cc/main/install.ps1 | iex"
+EOF
+        exit 1
+        ;;
+esac
+
 case "$os-$arch" in
     linux-x86_64)           target="x86_64-unknown-linux-gnu" ;;
     linux-aarch64|linux-arm64) target="aarch64-unknown-linux-gnu" ;;

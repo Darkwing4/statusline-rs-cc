@@ -43,13 +43,21 @@ Outside a git repo only `%` and cwd are shown. Worktree gitfiles (`/.git/worktre
 
 ## install
 
-One command. Downloads the right prebuilt binary for your platform, drops it in `~/.claude/bin/statusline`, and patches `~/.claude/settings.json` so Claude Code picks it up on the next event.
+One command. Downloads the right prebuilt binary for your platform, drops it in `~/.claude/bin/statusline` (or `%USERPROFILE%\.claude\bin\statusline.exe` on Windows), and patches `settings.json` so Claude Code picks it up on the next event.
+
+**Linux / macOS:**
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/Darkwing4/statusline-rs-cc/main/install.sh | sh
 ```
 
-Supported targets: Linux x86_64 / aarch64, macOS x86_64 / aarch64.
+**Windows (PowerShell):**
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -Command "iwr -useb https://raw.githubusercontent.com/Darkwing4/statusline-rs-cc/main/install.ps1 | iex"
+```
+
+Supported targets: Linux x86_64 / aarch64, macOS x86_64 / aarch64, Windows x86_64 / aarch64.
 
 The settings patch is non-destructive: it preserves every other key in `settings.json`, writes a `.bak` next to the original before changing anything, and is a no-op if the file already points at the binary. If `python3` is missing it skips the patch and prints the snippet to paste manually.
 

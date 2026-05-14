@@ -31,6 +31,12 @@ jobs:
             os: macos-latest
           - target: aarch64-apple-darwin
             os: macos-latest
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
+            windows: true
+          - target: aarch64-pc-windows-msvc
+            os: windows-latest
+            windows: true
     steps:
       - uses: actions/checkout@v4
 
@@ -60,10 +66,17 @@ jobs:
         run: cargo build --release --target ${{ matrix.target }}
 
       - name: package
+        shell: bash
         run: |
           mkdir -p dist
-          tar -C target/${{ matrix.target }}/release -czf dist/statusline-${{ matrix.target }}.tar.gz statusline
-          (cd dist && shasum -a 256 statusline-${{ matrix.target }}.tar.gz > statusline-${{ matrix.target }}.tar.gz.sha256)
+          if [ "${{ matrix.windows }}" = "true" ]; then
+            asset="statusline-${{ matrix.target }}.zip"
+            (cd target/${{ matrix.target }}/release && 7z a "../../../dist/$asset" statusline.exe >/dev/null)
+          else
+            asset="statusline-${{ matrix.target }}.tar.gz"
+            tar -C target/${{ matrix.target }}/release -czf "dist/$asset" statusline
+          fi
+          (cd dist && sha256sum "$asset" > "$asset.sha256")
 
       - uses: actions/upload-artifact@v4
         with:
