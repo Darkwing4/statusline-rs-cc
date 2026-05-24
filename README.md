@@ -2,13 +2,19 @@
 
 Minimal, fast Claude Code statusline. Single Rust binary, ~5 ms per invocation, no runtime deps.
 
-![statusline in Claude Code](hero.png)
+![statusline in Claude Code](docs/screenshots/hero.png)
 
 ## cheat sheet
 
-![statusline preview](preview.png)
+Default look is codex-inspired: dim middot separator, soft teal cwd, gradient percentage, green branch, bright-red git state.
 
-Default look is codex-inspired: dim middot separator, soft teal cwd, magenta-lavender context prefix, gradient percentage, green branch.
+Worktree, rebase in progress, partial diff — single line covers it all:
+
+![worktree + rebase](docs/screenshots/states.png)
+
+Outside a git repo only context and cwd render:
+
+![outside git repo](docs/screenshots/nogit.png)
 
 | segment | colour | example |
 |---|---|---|
@@ -170,7 +176,9 @@ Two mechanisms, both **only active in debug builds** (`cargo build` without `--r
 cat ~/.claude/statusline-debug.json
 ```
 
-**In-statusline JSON.** The `InputFromClaudeToStatusline` item (registered in `main.rs` under `#[cfg(debug_assertions)]`) pretty-prints the JSON on its own line below the main statusline, dim grey. Useful when you want to see the contract live while iterating.
+**In-statusline JSON.** The `InputFromClaudeToStatusline` item (registered in `main.rs` under `#[cfg(debug_assertions)]`) pretty-prints the JSON on its own line below the main statusline, dim grey. Useful when you want to see the contract live while iterating:
+
+![debug item showing JSON below statusline](docs/screenshots/debug.png)
 
 Both compile away to zero bytes in `--release` builds — the entire `items/debug/` module is gated by `#[cfg(debug_assertions)]`.
 
