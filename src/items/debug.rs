@@ -1,0 +1,3 @@
+pub mod input_from_claude_to_statusline;
+
+pub use input_from_claude_to_statusline::InputFromClaudeToStatusline;
