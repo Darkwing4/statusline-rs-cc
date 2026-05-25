@@ -1,6 +1,7 @@
 pub mod context;
 pub mod cwd;
 pub mod git;
+pub mod idle_time;
 
 #[cfg(debug_assertions)]
 pub mod debug;
