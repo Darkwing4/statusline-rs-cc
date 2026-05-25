@@ -11,7 +11,6 @@ use items::{
     context::Context,
     cwd::Cwd,
     git::{GitBranch, GitDiff},
-    idle_time::IdleTime,
 };
 
 #[cfg(debug_assertions)]
@@ -48,7 +47,6 @@ fn main() {
                 untracked_color: Color::Named(32),
                 deleted_color: Color::Named(31),
             }),
-            Box::new(IdleTime::new(Color::Named(90), "idle ", 0)),
             #[cfg(debug_assertions)]
             Box::new(InputFromClaudeToStatusline {
                 color: Color::Named(90),
