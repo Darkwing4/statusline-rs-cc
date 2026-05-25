@@ -25,6 +25,7 @@ Codex-inspired: dim middot separator, soft teal cwd, gradient percentage, green 
 | git state | bright red | `[REBASE 2/5]` | `MERGE`, `REBASE n/m`, `CHERRY-PICK`, `REVERT`, `BISECT`, `AM n/m` — only during the op |
 | ahead/behind | branch colour | `(↑2 ↓1)` | only when non-zero |
 | diff | yellow / green / red | `~2 +1 -1` | modified tracked / untracked / deleted |
+| idle time | bright black | `idle 3m12s` | since the last real user input in the Claude transcript |
 | separator | bright black | ` · ` | middot |
 
 ## install
@@ -80,33 +81,34 @@ let renderer = Renderer {
         Box::new(Cwd { color: Color::Rgb(95, 175, 175) }),
         Box::new(GitBranch { color: Color::Named(32), state_color: Color::Named(91), show_worktree: true, show_ahead_behind: true, show_state: true }),
         Box::new(GitDiff { modified_color: Color::Named(33), untracked_color: Color::Named(32), deleted_color: Color::Named(31) }),
+        Box::new(IdleTime { color: Color::Named(90), prefix: "idle ", threshold_seconds: 0 }),
     ],
 };
 ```
 
 Reorder, drop, or re-colour by editing the vec. `Color` variants: `Named(code)` for ANSI 30–37 / 90–97, `Rgb(r, g, b)` for truecolor, `Gradient` (only meaningful on `Context`).
 
-**Adding a new segment** — say `Model` showing the model name. Three touch-points:
+**Adding a new segment** — `IdleTime` is the concrete extension example, added in [`fac22e1`](https://github.com/Darkwing4/statusline-rs-cc/commit/fac22e1c1b04822b332c00268305bfc9224547b1). It reads `transcript_path`, ignores tool-result messages, finds the latest real user input timestamp, and renders values like `idle 42s`, `idle 3m12s`, or `idle 1h0m`.
 
-1. `src/items/model.rs`:
+The same three touch-points apply: create the item file, register the module, drop it into the vec.
+
+`src/items.rs`:
 
 ```rust
-use serde_json::Value;
-use crate::items::{GitCache, Item};
-use crate::types::Color;
-
-pub struct Model { pub color: Color }
-
-impl Item for Model {
-    fn render(&self, json: &Value, _git: &mut GitCache) -> Option<String> {
-        let name = json.get("model")?.get("display_name")?.as_str()?;
-        Some(self.color.paint(name))
-    }
-}
+pub mod idle_time;
 ```
 
-2. `src/items.rs` — add `pub mod model;`.
-3. `src/main.rs` — drop `Box::new(Model { color: Color::Named(35) })` into the vec.
+`src/main.rs`:
+
+```rust
+use items::idle_time::IdleTime;
+
+Box::new(IdleTime {
+    color: Color::Named(90),
+    prefix: "idle ",
+    threshold_seconds: 0,
+})
+```
 
 Items receive the raw `serde_json::Value` so they own which fields they read — no central schema to update. For git-aware items take `git: &mut GitCache` and call `git.dir()` / `git.status()` — `git status` is forked at most once per render, shared. For items that render on their own line below the main one (multi-line debug output), override `fn standalone(&self) -> bool { true }`.
 
@@ -122,6 +124,7 @@ src/
 └── items/
     ├── context.rs          context window % with gradient
     ├── cwd.rs              shortened cwd
+    ├── idle_time.rs        time since last real user input
     ├── git/
     │   ├── tools.rs        GitCache shared by branch + diff (one git status fork)
     │   ├── branch.rs       branch name, worktree marker, state, ahead/behind
