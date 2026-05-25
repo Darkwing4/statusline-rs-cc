@@ -1,7 +1,7 @@
 use serde_json::Value;
 
 use crate::types::{Color, RESET};
-use crate::items::{GitCache, Item};
+use crate::segments::{GitCache, Segment};
 
 pub struct Context {
     pub color: Color,
@@ -11,7 +11,7 @@ pub struct Context {
     pub suffix_color: Color,
 }
 
-impl Item for Context {
+impl Segment for Context {
     fn render(&self, json: &Value, _git: &mut GitCache) -> Option<String> {
         let p = json
             .get("context_window")?

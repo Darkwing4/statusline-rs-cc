@@ -6,7 +6,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use serde_json::Value;
 
 use crate::types::Color;
-use crate::items::{GitCache, Item};
+use crate::segments::{GitCache, Segment};
 
 pub struct IdleTime {
     color: Color,
@@ -30,7 +30,7 @@ impl IdleTime {
     }
 }
 
-impl Item for IdleTime {
+impl Segment for IdleTime {
     fn render(&self, json: &Value, _git: &mut GitCache) -> Option<String> {
         let transcript = json.get("transcript_path")?.as_str()?;
         let body = fs::read_to_string(transcript).ok()?;

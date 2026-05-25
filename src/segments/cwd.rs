@@ -3,14 +3,14 @@ use std::env;
 use serde_json::Value;
 
 use crate::types::Color;
-use crate::items::{GitCache, Item};
+use crate::segments::{GitCache, Segment};
 use crate::statusline_input;
 
 pub struct Cwd {
     pub color: Color,
 }
 
-impl Item for Cwd {
+impl Segment for Cwd {
     fn render(&self, json: &Value, _git: &mut GitCache) -> Option<String> {
         let cwd = statusline_input::cwd(json)?;
         Some(self.color.paint(&shorten_home(cwd)))

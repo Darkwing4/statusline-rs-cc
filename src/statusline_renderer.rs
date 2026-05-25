@@ -3,14 +3,14 @@ use std::process::{Command, Stdio};
 
 use serde_json::Value;
 
-use crate::items::{GitCache, Item};
+use crate::segments::{GitCache, Segment};
 use crate::statusline_input;
 use crate::types::{Color, RESET};
 
 pub struct Renderer {
     pub separator: &'static str,
     pub separator_color: Color,
-    pub items: Vec<Box<dyn Item>>,
+    pub segments: Vec<Box<dyn Segment>>,
 }
 
 impl Renderer {
@@ -21,14 +21,14 @@ impl Renderer {
         let mut main_parts: Vec<String> = Vec::new();
         let mut tail_lines: Vec<String> = Vec::new();
 
-        for item in &self.items {
-            let Some(rendered) = item.render(json, &mut git) else {
+        for segment in &self.segments {
+            let Some(rendered) = segment.render(json, &mut git) else {
                 continue;
             };
             if rendered.is_empty() {
                 continue;
             }
-            if item.standalone() {
+            if segment.standalone() {
                 tail_lines.push(rendered);
             } else {
                 main_parts.push(rendered);
@@ -68,13 +68,13 @@ fn terminal_width() -> Option<usize> {
     text.split_whitespace().nth(1)?.parse().ok()
 }
 
-enum Segment<'a> {
+enum AnsiPart<'a> {
     Ansi(&'a str),
     Visible(&'a str),
 }
 
-fn parse_segments(s: &str) -> Vec<Segment<'_>> {
-    let mut segments = Vec::new();
+fn parse_ansi_parts(s: &str) -> Vec<AnsiPart<'_>> {
+    let mut parts = Vec::new();
     let mut rest = s;
 
     while !rest.is_empty() {
@@ -86,17 +86,17 @@ fn parse_segments(s: &str) -> Vec<Segment<'_>> {
                 .map(|(i, c)| i + c.len_utf8())
                 .unwrap_or(rest.len());
             let (ansi, tail) = rest.split_at(end);
-            segments.push(Segment::Ansi(ansi));
+            parts.push(AnsiPart::Ansi(ansi));
             rest = tail;
         } else {
             let char_len = rest.chars().next().unwrap().len_utf8();
             let (visible, tail) = rest.split_at(char_len);
-            segments.push(Segment::Visible(visible));
+            parts.push(AnsiPart::Visible(visible));
             rest = tail;
         }
     }
 
-    segments
+    parts
 }
 
 fn truncate_visible(s: &str, max: usize) -> String {
@@ -104,10 +104,10 @@ fn truncate_visible(s: &str, max: usize) -> String {
     let mut visible_count = 0usize;
     let mut truncated = false;
 
-    for segment in parse_segments(s) {
-        match segment {
-            Segment::Ansi(esc) => out.push_str(esc),
-            Segment::Visible(c) => {
+    for part in parse_ansi_parts(s) {
+        match part {
+            AnsiPart::Ansi(esc) => out.push_str(esc),
+            AnsiPart::Visible(c) => {
                 if visible_count >= max {
                     truncated = true;
                     break;

@@ -9,7 +9,7 @@ Minimal, fast, extensible Claude Code statusline. Single Rust binary, ~5 ms per 
   </tr>
   <tr>
     <td><img src="docs/screenshots/nogit.png" alt="outside git repo"/></td>
-    <td><img src="docs/screenshots/debug.png" alt="debug item below statusline"/></td>
+    <td><img src="docs/screenshots/debug.png" alt="debug segment below statusline"/></td>
   </tr>
 </table>
 
@@ -76,7 +76,7 @@ The whole config is a literal `Renderer { ... }` in [`src/main.rs`](src/main.rs)
 let renderer = Renderer {
     separator: " · ",
     separator_color: Color::Named(90),
-    items: vec![
+    segments: vec![
         Box::new(Context { color: Color::Gradient, prefix: "", prefix_color: Color::Rgb(180, 142, 173), suffix: "", suffix_color: Color::Rgb(180, 142, 173) }),
         Box::new(Cwd { color: Color::Rgb(95, 175, 175) }),
         Box::new(GitBranch { color: Color::Named(32), state_color: Color::Named(91), show_worktree: true, show_ahead_behind: true, show_state: true }),
@@ -90,21 +90,21 @@ Reorder, drop, or re-colour by editing the vec. `Color` variants: `Named(code)` 
 
 ## extending
 
-Define the logic in `src/items/*.rs`, register the module in `src/items.rs`, initialize it in `src/main.rs`, then build.
+Define the logic in `src/segments/*.rs`, register the module in `src/segments.rs`, initialize it in `src/main.rs`, then build.
 
 `IdleTime` is the concrete extension example, added in [`fac22e1`](https://github.com/Darkwing4/statusline-rs-cc/commit/fac22e1c1b04822b332c00268305bfc9224547b1). It reads `transcript_path`, ignores tool-result messages, finds the latest real user input timestamp, and renders values like `idle 42s`, `idle 3m12s`, or `idle 1h0m`.
 
 To make `IdleTime` tick without new Claude events, opt in with `statusLine.refreshInterval` in Claude Code settings.
 
-Register it with `pub mod idle_time;` in `src/items.rs`, then initialize it in `src/main.rs`:
+Register it with `pub mod idle_time;` in `src/segments.rs`, then initialize it in `src/main.rs`:
 
 ```rust
-use items::idle_time::IdleTime;
+use segments::idle_time::IdleTime;
 
 Box::new(IdleTime::new(Color::Named(90), "idle ", 0))
 ```
 
-Items receive the raw `serde_json::Value` so they own which fields they read — no central schema to update. For git-aware items take `git: &mut GitCache` and call `git.dir()` / `git.status()` — `git status` is forked at most once per render, shared. For items that render on their own line below the main one (multi-line debug output), override `fn standalone(&self) -> bool { true }`.
+Segments receive the raw `serde_json::Value` so they own which fields they read — no central schema to update. For git-aware segments take `git: &mut GitCache` and call `git.dir()` / `git.status()` — `git status` is forked at most once per render, shared. For segments that render on their own line below the main one (multi-line debug output), override `fn standalone(&self) -> bool { true }`.
 
 <details>
 <summary>source layout</summary>
@@ -112,10 +112,10 @@ Items receive the raw `serde_json::Value` so they own which fields they read —
 ```
 src/
 ├── main.rs                 entry: build Renderer, write to stdout
-├── statusline_renderer.rs  owns items, joins them, truncates to terminal width
+├── statusline_renderer.rs  owns segments, joins them, truncates to terminal width
 ├── statusline_input.rs     reads + parses stdin JSON from Claude Code
 ├── types.rs / types/       shared types (Color, RESET)
-└── items/
+└── segments/
     ├── context.rs          context window % with gradient
     ├── cwd.rs              shortened cwd
     ├── idle_time.rs        time since last real user input
@@ -130,7 +130,7 @@ src/
 
 ## debug
 
-The `InputFromClaudeToStatusline` item pretty-prints the raw stdin JSON on its own line below the main statusline, dim grey (see screenshot above). Useful for watching the contract live while iterating. Gated by `#[cfg(debug_assertions)]` — compiles away to zero bytes in `--release`.
+The `InputFromClaudeToStatusline` segment pretty-prints the raw stdin JSON on its own line below the main statusline, dim grey (see screenshot above). Useful for watching the contract live while iterating. Gated by `#[cfg(debug_assertions)]` — compiles away to zero bytes in `--release`.
 
 ```sh
 cargo build && cp target/debug/statusline ~/.claude/bin/statusline                # poke around

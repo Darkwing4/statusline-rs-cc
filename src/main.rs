@@ -1,4 +1,4 @@
-mod items;
+mod segments;
 mod statusline_renderer;
 mod statusline_input;
 mod types;
@@ -7,14 +7,14 @@ use std::io::{self, Write};
 
 use statusline_renderer::Renderer;
 use types::Color;
-use items::{
+use segments::{
     context::Context,
     cwd::Cwd,
     git::{GitBranch, GitDiff},
 };
 
 #[cfg(debug_assertions)]
-use items::debug::InputFromClaudeToStatusline;
+use segments::debug::InputFromClaudeToStatusline;
 
 fn main() {
     let Some(json) = statusline_input::read() else {
@@ -24,7 +24,7 @@ fn main() {
     let renderer = Renderer {
         separator: " · ",
         separator_color: Color::Named(90),
-        items: vec![
+        segments: vec![
             Box::new(Context {
                 color: Color::Gradient,
                 prefix: "",

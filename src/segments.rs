@@ -10,7 +10,7 @@ pub use git::GitCache;
 
 use serde_json::Value;
 
-pub trait Item {
+pub trait Segment {
     fn render(&self, json: &Value, git: &mut GitCache) -> Option<String>;
 
     fn standalone(&self) -> bool {

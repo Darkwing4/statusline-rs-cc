@@ -2,7 +2,7 @@ use serde_json::Value;
 
 use super::tools::GitCache;
 use crate::types::Color;
-use crate::items::Item;
+use crate::segments::Segment;
 
 pub struct GitDiff {
     pub modified_color: Color,
@@ -10,7 +10,7 @@ pub struct GitDiff {
     pub deleted_color: Color,
 }
 
-impl Item for GitDiff {
+impl Segment for GitDiff {
     fn render(&self, _json: &Value, git: &mut GitCache) -> Option<String> {
         git.dir()?;
         let status = git.status()?;

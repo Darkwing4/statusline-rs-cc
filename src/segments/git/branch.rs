@@ -2,7 +2,7 @@ use serde_json::Value;
 
 use super::tools::{detect_state, is_worktree, GitCache};
 use crate::types::Color;
-use crate::items::Item;
+use crate::segments::Segment;
 
 pub struct GitBranch {
     pub color: Color,
@@ -12,7 +12,7 @@ pub struct GitBranch {
     pub show_state: bool,
 }
 
-impl Item for GitBranch {
+impl Segment for GitBranch {
     fn render(&self, _json: &Value, git: &mut GitCache) -> Option<String> {
         let dir = git.dir()?.to_path_buf();
         let status = git.status()?;
