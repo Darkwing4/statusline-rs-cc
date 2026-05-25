@@ -104,8 +104,7 @@ add this to $SETTINGS manually:
 {
   "statusLine": {
     "type": "command",
-    "command": "$INSTALL_DIR/$BIN",
-    "refreshInterval": 1
+    "command": "$INSTALL_DIR/$BIN"
   }
 }
 EOF
@@ -141,19 +140,8 @@ if path.exists() and path.stat().st_size > 0:
         print(f"leaving {path} untouched", file=sys.stderr)
         sys.exit(0)
 
-status_line = data.get("statusLine")
-if not isinstance(status_line, dict):
-    status_line = {}
-
-prev = status_line.get("command")
-refresh = status_line.get("refreshInterval")
-refresh_enabled = (
-    isinstance(refresh, (int, float))
-    and not isinstance(refresh, bool)
-    and refresh > 0
-)
-
-if prev == cmd and refresh_enabled:
+prev = (data.get("statusLine") or {}).get("command")
+if prev == cmd:
     print(f"{path}: statusLine already points at {cmd}")
     sys.exit(0)
 
@@ -162,16 +150,10 @@ if path.exists():
     backup.write_text(path.read_text())
     print(f"backup written: {backup}")
 
-status_line["type"] = "command"
-status_line["command"] = cmd
-if not refresh_enabled:
-    status_line["refreshInterval"] = 1
-data["statusLine"] = status_line
+data["statusLine"] = {"type": "command", "command": cmd}
 path.write_text(json.dumps(data, indent=2) + "\n")
 if prev:
     print(f"replaced previous statusLine command: {prev}")
-if not refresh_enabled:
-    print("set statusLine.refreshInterval: 1")
 print(f"updated: {path}")
 PY
 

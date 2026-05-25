@@ -57,19 +57,7 @@ Supported targets: Linux x86_64 / aarch64, macOS x86_64 / aarch64, Windows x86_6
 | `STATUSLINE_SKIP_SETTINGS` | unset — set to `1` to skip the JSON patch |
 | `STATUSLINE_REPO` | `Darkwing4/statusline-rs-cc` |
 
-The settings patch is non-destructive: preserves every other key in `settings.json`, writes a `.bak` next to the original, no-ops if already pointed at the binary with `statusLine.refreshInterval` enabled. If `python3` is missing it skips the patch and prints the snippet to paste manually.
-
-`IdleTime` needs Claude Code to refresh the status line on a timer:
-
-```json
-{
-  "statusLine": {
-    "type": "command",
-    "command": "/absolute/path/to/statusline",
-    "refreshInterval": 1
-  }
-}
-```
+The settings patch is non-destructive: preserves every other key in `settings.json`, writes a `.bak` next to the original, no-ops if already pointed at the binary. If `python3` is missing it skips the patch and prints the snippet to paste manually.
 
 Build from source:
 
@@ -105,6 +93,8 @@ Reorder, drop, or re-colour by editing the vec. `Color` variants: `Named(code)` 
 Define the logic in `src/items/*.rs`, register the module in `src/items.rs`, initialize it in `src/main.rs`, then build.
 
 `IdleTime` is the concrete extension example, added in [`fac22e1`](https://github.com/Darkwing4/statusline-rs-cc/commit/fac22e1c1b04822b332c00268305bfc9224547b1). It reads `transcript_path`, ignores tool-result messages, finds the latest real user input timestamp, and renders values like `idle 42s`, `idle 3m12s`, or `idle 1h0m`.
+
+To make `IdleTime` tick without new Claude events, opt in with `statusLine.refreshInterval` in Claude Code settings.
 
 Register it with `pub mod idle_time;` in `src/items.rs`, then initialize it in `src/main.rs`:
 

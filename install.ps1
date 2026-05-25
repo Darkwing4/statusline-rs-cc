@@ -62,9 +62,8 @@ function Write-Snippet {
     Write-Host ""
     $snippet = [ordered]@{
         statusLine = [ordered]@{
-            type            = 'command'
-            command         = $cmdPath
-            refreshInterval = 1
+            type    = 'command'
+            command = $cmdPath
         }
     } | ConvertTo-Json -Depth 5
     Write-Host $snippet
@@ -96,31 +95,14 @@ if (Test-Path $Settings) {
 }
 if (-not $obj) { $obj = [PSCustomObject]@{} }
 
-$statusLine = $null
-if ($obj.PSObject.Properties.Name -contains 'statusLine' -and $obj.statusLine -is [PSCustomObject]) {
-    $statusLine = $obj.statusLine
-}
-if (-not $statusLine) {
-    $statusLine = [PSCustomObject]@{}
-}
-
 $prev = $null
-if ($statusLine.PSObject.Properties.Name -contains 'command') {
-    $prev = $statusLine.command
-}
-
-$refreshEnabled = $false
-if ($statusLine.PSObject.Properties.Name -contains 'refreshInterval') {
-    $refresh = $statusLine.refreshInterval
-    if ($null -ne $refresh -and $refresh -isnot [bool]) {
-        $refreshNumber = $refresh -as [double]
-        if ($null -ne $refreshNumber) {
-            $refreshEnabled = $refreshNumber -gt 0
-        }
+if ($obj.PSObject.Properties.Name -contains 'statusLine' -and $obj.statusLine) {
+    if ($obj.statusLine.PSObject.Properties.Name -contains 'command') {
+        $prev = $obj.statusLine.command
     }
 }
 
-if ($prev -eq $cmdPath -and $refreshEnabled) {
+if ($prev -eq $cmdPath) {
     Write-Host "${Settings}: statusLine already points at $cmdPath"
     exit 0
 }
@@ -130,24 +112,15 @@ if (Test-Path $Settings) {
     Write-Host "backup written: $($Settings).bak"
 }
 
-function Set-JsonProperty($target, $name, $value) {
-    if ($target.PSObject.Properties.Name -contains $name) {
-        $target.$name = $value
-    } else {
-        $target | Add-Member -MemberType NoteProperty -Name $name -Value $value
-    }
-}
-
-Set-JsonProperty $statusLine 'type' 'command'
-Set-JsonProperty $statusLine 'command' $cmdPath
-if (-not $refreshEnabled) {
-    Set-JsonProperty $statusLine 'refreshInterval' 1
+$newStatusLine = [PSCustomObject]@{
+    type    = 'command'
+    command = $cmdPath
 }
 
 if ($obj.PSObject.Properties.Name -contains 'statusLine') {
-    $obj.statusLine = $statusLine
+    $obj.statusLine = $newStatusLine
 } else {
-    $obj | Add-Member -MemberType NoteProperty -Name statusLine -Value $statusLine
+    $obj | Add-Member -MemberType NoteProperty -Name statusLine -Value $newStatusLine
 }
 
 $json = $obj | ConvertTo-Json -Depth 64
@@ -162,9 +135,6 @@ $utf8NoBom = New-Object System.Text.UTF8Encoding $false
 
 if ($prev) {
     Write-Host "replaced previous statusLine command: $prev"
-}
-if (-not $refreshEnabled) {
-    Write-Host "set statusLine.refreshInterval: 1"
 }
 Write-Host "updated: $Settings"
 Write-Host ""
