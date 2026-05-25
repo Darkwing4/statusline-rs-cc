@@ -48,11 +48,7 @@ fn main() {
                 untracked_color: Color::Named(32),
                 deleted_color: Color::Named(31),
             }),
-            Box::new(IdleTime {
-                color: Color::Named(90),
-                prefix: "idle ",
-                threshold_seconds: 0,
-            }),
+            Box::new(IdleTime::new(Color::Named(90), "idle ", 0)),
             #[cfg(debug_assertions)]
             Box::new(InputFromClaudeToStatusline {
                 color: Color::Named(90),

@@ -57,7 +57,19 @@ Supported targets: Linux x86_64 / aarch64, macOS x86_64 / aarch64, Windows x86_6
 | `STATUSLINE_SKIP_SETTINGS` | unset — set to `1` to skip the JSON patch |
 | `STATUSLINE_REPO` | `Darkwing4/statusline-rs-cc` |
 
-The settings patch is non-destructive: preserves every other key in `settings.json`, writes a `.bak` next to the original, no-ops if already pointed at the binary. If `python3` is missing it skips the patch and prints the snippet to paste manually.
+The settings patch is non-destructive: preserves every other key in `settings.json`, writes a `.bak` next to the original, no-ops if already pointed at the binary with `statusLine.refreshInterval` enabled. If `python3` is missing it skips the patch and prints the snippet to paste manually.
+
+`IdleTime` needs Claude Code to refresh the status line on a timer:
+
+```json
+{
+  "statusLine": {
+    "type": "command",
+    "command": "/absolute/path/to/statusline",
+    "refreshInterval": 1
+  }
+}
+```
 
 Build from source:
 
@@ -81,7 +93,7 @@ let renderer = Renderer {
         Box::new(Cwd { color: Color::Rgb(95, 175, 175) }),
         Box::new(GitBranch { color: Color::Named(32), state_color: Color::Named(91), show_worktree: true, show_ahead_behind: true, show_state: true }),
         Box::new(GitDiff { modified_color: Color::Named(33), untracked_color: Color::Named(32), deleted_color: Color::Named(31) }),
-        Box::new(IdleTime { color: Color::Named(90), prefix: "idle ", threshold_seconds: 0 }),
+        Box::new(IdleTime::new(Color::Named(90), "idle ", 0)),
     ],
 };
 ```
@@ -103,11 +115,7 @@ pub mod idle_time;
 ```rust
 use items::idle_time::IdleTime;
 
-Box::new(IdleTime {
-    color: Color::Named(90),
-    prefix: "idle ",
-    threshold_seconds: 0,
-})
+Box::new(IdleTime::new(Color::Named(90), "idle ", 0))
 ```
 
 Items receive the raw `serde_json::Value` so they own which fields they read — no central schema to update. For git-aware items take `git: &mut GitCache` and call `git.dir()` / `git.status()` — `git status` is forked at most once per render, shared. For items that render on their own line below the main one (multi-line debug output), override `fn standalone(&self) -> bool { true }`.
