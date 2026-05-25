@@ -80,7 +80,7 @@ cp target/release/statusline ~/.claude/bin/statusline
 
 </details>
 
-## configuration & extending
+## configuration
 
 The whole config is a literal `Renderer { ... }` in [`src/main.rs`](src/main.rs):
 
@@ -100,17 +100,13 @@ let renderer = Renderer {
 
 Reorder, drop, or re-colour by editing the vec. `Color` variants: `Named(code)` for ANSI 30–37 / 90–97, `Rgb(r, g, b)` for truecolor, `Gradient` (only meaningful on `Context`).
 
-**Adding a new segment** — `IdleTime` is the concrete extension example, added in [`fac22e1`](https://github.com/Darkwing4/statusline-rs-cc/commit/fac22e1c1b04822b332c00268305bfc9224547b1). It reads `transcript_path`, ignores tool-result messages, finds the latest real user input timestamp, and renders values like `idle 42s`, `idle 3m12s`, or `idle 1h0m`.
+## extending
 
-The same three touch-points apply: create the item file, register the module, drop it into the vec.
+Define the logic in `src/items/*.rs`, register the module in `src/items.rs`, initialize it in `src/main.rs`, then build.
 
-`src/items.rs`:
+`IdleTime` is the concrete extension example, added in [`fac22e1`](https://github.com/Darkwing4/statusline-rs-cc/commit/fac22e1c1b04822b332c00268305bfc9224547b1). It reads `transcript_path`, ignores tool-result messages, finds the latest real user input timestamp, and renders values like `idle 42s`, `idle 3m12s`, or `idle 1h0m`.
 
-```rust
-pub mod idle_time;
-```
-
-`src/main.rs`:
+Register it with `pub mod idle_time;` in `src/items.rs`, then initialize it in `src/main.rs`:
 
 ```rust
 use items::idle_time::IdleTime;
