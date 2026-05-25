@@ -133,12 +133,7 @@ src/
 
 ## debug
 
-Two mechanisms, both **only active in debug builds** (`cargo build` without `--release`):
-
-- **File dump** — every invocation writes raw stdin JSON to `~/.claude/statusline-debug.json`, overwriting. Always the latest payload Claude Code sent.
-- **In-statusline JSON** — the `InputFromClaudeToStatusline` item pretty-prints the JSON on its own line below the main statusline, dim grey (see screenshot above). Useful for watching the contract live while iterating.
-
-Both compile away to zero bytes in `--release` — the entire `items/debug/` module is gated by `#[cfg(debug_assertions)]`.
+The `InputFromClaudeToStatusline` item pretty-prints the raw stdin JSON on its own line below the main statusline, dim grey (see screenshot above). Useful for watching the contract live while iterating. Gated by `#[cfg(debug_assertions)]` — compiles away to zero bytes in `--release`.
 
 ```sh
 cargo build && cp target/debug/statusline ~/.claude/bin/statusline                # poke around
