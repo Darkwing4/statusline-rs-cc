@@ -16,9 +16,6 @@ use segments::{
     git::{GitBranch, GitDiff, GitError},
 };
 
-#[cfg(debug_assertions)]
-use segments::debug::InputFromClaudeToStatusline;
-
 fn main() {
     let Some(json) = statusline_input::read() else {
         return;
@@ -57,10 +54,6 @@ fn main() {
             Box::new(GitError {
                 color: BRIGHT_RED,
                 prefix: "git: ",
-            }),
-            #[cfg(debug_assertions)]
-            Box::new(InputFromClaudeToStatusline {
-                color: GRAY,
             }),
         ],
     };
