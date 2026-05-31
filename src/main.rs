@@ -10,6 +10,7 @@ use palette::{BRIGHT_RED, GRAY, GREEN, MAUVE, RED, TEAL, YELLOW};
 use statusline_renderer::Renderer;
 use types::Color;
 use segments::{
+    cache_ttl::CacheTtl,
     context::Context,
     cwd::Cwd,
     git::{GitBranch, GitDiff, GitError},
@@ -33,6 +34,10 @@ fn main() {
                 prefix_color: MAUVE,
                 suffix: "",
                 suffix_color: MAUVE,
+            }),
+            Box::new(CacheTtl {
+                color: Color::Gradient,
+                prefix: "cache ",
             }),
             Box::new(Cwd {
                 color: TEAL,

@@ -20,6 +20,7 @@ Codex-inspired: dim middot separator, soft teal cwd, gradient percentage, green 
 | segment | colour | example | notes |
 |---|---|---|---|
 | context | grey → yellow → red gradient | `42%` | dim grey under 20%, then ramps |
+| cache | grey → yellow → red gradient | `cache 4m32s`, `cache cold` | Anthropic prompt-cache TTL countdown; once cold the colour shifts by `context_window` % (cheap when context is empty, expensive when full) |
 | cwd | soft teal `#5fafaf` | `~/proj` | `$HOME` shortened to `~` |
 | git branch | green | `main`, `⑂feature` | `⑂` only inside a worktree (resolved by reading `.git` gitfile, no fork) |
 | git state | bright red | `[REBASE 2/5]` | `MERGE`, `REBASE n/m`, `CHERRY-PICK`, `REVERT`, `BISECT`, `AM n/m` — only during the op |

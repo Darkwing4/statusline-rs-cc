@@ -1,7 +1,7 @@
 use serde_json::Value;
 
-use crate::types::{Color, RESET};
 use crate::segments::{GitCache, Segment};
+use crate::types::{Color, RESET};
 
 pub struct Context {
     pub color: Color,
@@ -17,7 +17,9 @@ impl Segment for Context {
             .get("context_window")?
             .get("used_percentage")?
             .as_f64()?;
+
         let pct = format!("{}%", p.round() as i64);
+
         let painted_pct = match self.color {
             Color::Gradient => {
                 let (r, g, b) = gradient_rgb(p);
@@ -25,14 +27,19 @@ impl Segment for Context {
             }
             _ => self.color.paint(&pct),
         };
+
         let mut out = String::new();
+
         if !self.prefix.is_empty() {
             out.push_str(&self.prefix_color.paint(self.prefix));
         }
+
         out.push_str(&painted_pct);
+
         if !self.suffix.is_empty() {
             out.push_str(&self.suffix_color.paint(self.suffix));
         }
+
         Some(out)
     }
 }
