@@ -14,6 +14,7 @@ use segments::{
     context::Context,
     cwd::Cwd,
     git::{GitBranch, GitDiff, GitError},
+    rate_limits::{RateLimit, Window},
 };
 
 fn main() {
@@ -35,6 +36,20 @@ fn main() {
             Box::new(CacheTtl {
                 color: Color::Gradient,
                 prefix: "cache ",
+            }),
+            Box::new(RateLimit {
+                window: Window::FiveHour,
+                prefix: "5h ",
+                low_color: GREEN,
+                mid_color: YELLOW,
+                high_color: RED,
+            }),
+            Box::new(RateLimit {
+                window: Window::SevenDay,
+                prefix: "7d ",
+                low_color: GREEN,
+                mid_color: YELLOW,
+                high_color: RED,
             }),
             Box::new(Cwd {
                 color: TEAL,

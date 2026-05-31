@@ -21,6 +21,8 @@ Codex-inspired: dim middot separator, soft teal cwd, gradient percentage, green 
 |---|---|---|---|
 | context | grey → yellow → red gradient | `42%` | dim grey under 20%, then ramps |
 | cache | grey → yellow → red gradient | `cache 4m32s`, `cache cold` | Anthropic prompt-cache TTL countdown; once cold the colour shifts by `context_window` % (cheap when context is empty, expensive when full) |
+| 5h limit | green / yellow / red | `5h 42%` | Claude.ai rolling 5-hour usage; green <50%, yellow 50–80%, red >80%. Absent on API plans and before the first response |
+| 7d limit | green / yellow / red | `7d 65%` | Claude.ai weekly usage; same thresholds as 5h |
 | cwd | soft teal `#5fafaf` | `~/proj` | `$HOME` shortened to `~` |
 | git branch | green | `main`, `⑂feature` | `⑂` only inside a worktree (resolved by reading `.git` gitfile, no fork) |
 | git state | bright red | `[REBASE 2/5]` | `MERGE`, `REBASE n/m`, `CHERRY-PICK`, `REVERT`, `BISECT`, `AM n/m` — only during the op |
@@ -79,6 +81,8 @@ let renderer = Renderer {
     separator_color: Color::Named(90),
     segments: vec![
         Box::new(Context { color: Color::Gradient, prefix: "", prefix_color: Color::Rgb(180, 142, 173), suffix: "", suffix_color: Color::Rgb(180, 142, 173) }),
+        Box::new(RateLimit { window: Window::FiveHour, prefix: "5h ", low_color: Color::Named(32), mid_color: Color::Named(33), high_color: Color::Named(31) }),
+        Box::new(RateLimit { window: Window::SevenDay, prefix: "7d ", low_color: Color::Named(32), mid_color: Color::Named(33), high_color: Color::Named(31) }),
         Box::new(Cwd { color: Color::Rgb(95, 175, 175) }),
         Box::new(GitBranch { color: Color::Named(32), state_color: Color::Named(91), show_worktree: true, show_ahead_behind: true, show_state: true }),
         Box::new(GitDiff { modified_color: Color::Named(33), untracked_color: Color::Named(32), deleted_color: Color::Named(31) }),
