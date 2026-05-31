@@ -1,3 +1,4 @@
+mod palette;
 mod segments;
 mod statusline_renderer;
 mod statusline_input;
@@ -5,6 +6,7 @@ mod types;
 
 use std::io::{self, Write};
 
+use palette::{BRIGHT_RED, GRAY, GREEN, MAUVE, RED, TEAL, YELLOW};
 use statusline_renderer::Renderer;
 use types::Color;
 use segments::{
@@ -23,33 +25,33 @@ fn main() {
 
     let renderer = Renderer {
         separator: " · ",
-        separator_color: Color::Named(90),
+        separator_color: GRAY,
         segments: vec![
             Box::new(Context {
                 color: Color::Gradient,
                 prefix: "",
-                prefix_color: Color::Rgb(180, 142, 173),
+                prefix_color: MAUVE,
                 suffix: "",
-                suffix_color: Color::Rgb(180, 142, 173),
+                suffix_color: MAUVE,
             }),
             Box::new(Cwd {
-                color: Color::Rgb(95, 175, 175),
+                color: TEAL,
             }),
             Box::new(GitBranch {
-                color: Color::Named(32),
-                state_color: Color::Named(91),
+                color: GREEN,
+                state_color: BRIGHT_RED,
                 show_worktree: true,
                 show_ahead_behind: true,
                 show_state: true,
             }),
             Box::new(GitDiff {
-                modified_color: Color::Named(33),
-                untracked_color: Color::Named(32),
-                deleted_color: Color::Named(31),
+                modified_color: YELLOW,
+                untracked_color: GREEN,
+                deleted_color: RED,
             }),
             #[cfg(debug_assertions)]
             Box::new(InputFromClaudeToStatusline {
-                color: Color::Named(90),
+                color: GRAY,
             }),
         ],
     };
