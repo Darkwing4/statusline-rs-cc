@@ -12,7 +12,7 @@ use types::Color;
 use segments::{
     context::Context,
     cwd::Cwd,
-    git::{GitBranch, GitDiff},
+    git::{GitBranch, GitDiff, GitError},
 };
 
 #[cfg(debug_assertions)]
@@ -48,6 +48,10 @@ fn main() {
                 modified_color: YELLOW,
                 untracked_color: GREEN,
                 deleted_color: RED,
+            }),
+            Box::new(GitError {
+                color: BRIGHT_RED,
+                prefix: "git: ",
             }),
             #[cfg(debug_assertions)]
             Box::new(InputFromClaudeToStatusline {

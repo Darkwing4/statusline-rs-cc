@@ -15,7 +15,7 @@ pub struct GitStatus {
 pub struct GitCache {
     cwd: String,
     dir: Option<Option<PathBuf>>,
-    status: Option<Option<GitStatus>>,
+    status: Option<Result<GitStatus, String>>,
 }
 
 impl GitCache {
@@ -38,13 +38,21 @@ impl GitCache {
     }
 
     pub fn status(&mut self) -> Option<&GitStatus> {
+        self.ensure_status()?.as_ref().ok()
+    }
+
+    pub fn error(&mut self) -> Option<&str> {
+        self.ensure_status()?.as_ref().err().map(String::as_str)
+    }
+
+    fn ensure_status(&mut self) -> Option<&Result<GitStatus, String>> {
         if self.cwd.is_empty() {
             return None;
         }
         if self.status.is_none() {
             self.status = Some(run_git_status(&self.cwd));
         }
-        self.status.as_ref().unwrap().as_ref()
+        self.status.as_ref()
     }
 }
 
@@ -72,7 +80,7 @@ fn read_gitfile(gitfile: &Path, base_dir: &Path) -> Option<PathBuf> {
     Some(resolved)
 }
 
-fn run_git_status(cwd: &str) -> Option<GitStatus> {
+fn run_git_status(cwd: &str) -> Result<GitStatus, String> {
     let output = Command::new("git")
         .args([
             "-C",
@@ -83,10 +91,17 @@ fn run_git_status(cwd: &str) -> Option<GitStatus> {
             "--porcelain=v2",
         ])
         .output()
-        .ok()?;
+        .map_err(|e| e.to_string())?;
 
     if !output.status.success() {
-        return None;
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        let msg = stderr
+            .lines()
+            .map(str::trim)
+            .find(|l| !l.is_empty())
+            .unwrap_or("git status failed")
+            .to_string();
+        return Err(msg);
     }
 
     let text = String::from_utf8_lossy(&output.stdout);
@@ -94,7 +109,7 @@ fn run_git_status(cwd: &str) -> Option<GitStatus> {
     for line in text.lines() {
         parse_status_line(line, &mut status);
     }
-    Some(status)
+    Ok(status)
 }
 
 fn parse_status_line(line: &str, s: &mut GitStatus) {
