@@ -59,11 +59,10 @@ impl GitCache {
 fn find_git_repo(cwd: &str) -> Option<PathBuf> {
     for dir in Path::new(cwd).ancestors() {
         let dot_git = dir.join(".git");
-        if dot_git.is_dir() {
-            return Some(dot_git);
-        }
-        if dot_git.is_file() {
-            return read_gitfile(&dot_git, dir);
+        match fs::metadata(&dot_git) {
+            Ok(m) if m.is_dir() => return Some(dot_git),
+            Ok(m) if m.is_file() => return read_gitfile(&dot_git, dir),
+            _ => {}
         }
     }
     None
