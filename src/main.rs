@@ -22,7 +22,7 @@ fn main() {
     };
 
     let renderer = Renderer {
-        separator: " · ",
+        separator: " ",
         separator_color: GRAY,
         segments: vec![
             Box::new(Context {
