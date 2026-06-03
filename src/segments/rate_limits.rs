@@ -3,6 +3,9 @@ use serde_json::Value;
 use crate::segments::{GitCache, Segment};
 use crate::types::Color;
 
+use serde::Deserialize;
+
+#[derive(Clone, Copy, Deserialize)]
 pub enum Window {
     FiveHour,
     SevenDay,
@@ -10,7 +13,7 @@ pub enum Window {
 
 pub struct RateLimit {
     pub window: Window,
-    pub prefix: &'static str,
+    pub prefix: String,
     pub low_color: Color,
     pub mid_color: Color,
     pub high_color: Color,

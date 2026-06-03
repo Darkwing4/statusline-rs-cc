@@ -6,7 +6,7 @@ use crate::segments::Segment;
 
 pub struct GitError {
     pub color: Color,
-    pub prefix: &'static str,
+    pub prefix: String,
 }
 
 impl Segment for GitError {

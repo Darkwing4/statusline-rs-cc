@@ -1,6 +1,8 @@
+use serde::Deserialize;
+
 pub const RESET: &str = "\x1b[0m";
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Deserialize)]
 pub enum Color {
     Named(u8),
     Rgb(u8, u8, u8),

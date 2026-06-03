@@ -1,0 +1,36 @@
+(
+    separator: " ",
+    separator_color: Named(90),
+    segments: [
+        Context(
+            color: Gradient,
+            prefix: "",
+            prefix_color: Rgb(180, 142, 173),
+            suffix: "",
+            suffix_color: Rgb(180, 142, 173),
+        ),
+        CacheTtl(
+            color: Gradient,
+            prefix: "cache ",
+        ),
+        Cwd(
+            color: Rgb(95, 175, 175),
+        ),
+        GitBranch(
+            color: Named(32),
+            state_color: Named(91),
+            show_worktree: true,
+            show_ahead_behind: true,
+            show_state: true,
+        ),
+        GitDiff(
+            modified_color: Named(33),
+            untracked_color: Named(32),
+            deleted_color: Named(31),
+        ),
+        GitError(
+            color: Named(91),
+            prefix: "git: ",
+        ),
+    ],
+)

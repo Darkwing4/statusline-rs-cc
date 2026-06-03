@@ -10,12 +10,12 @@ use crate::segments::{GitCache, Segment};
 
 pub struct IdleTime {
     color: Color,
-    prefix: &'static str,
+    prefix: String,
     threshold_seconds: u64,
 }
 
 impl IdleTime {
-    pub fn new(color: Color, prefix: &'static str, threshold_seconds: u64) -> Self {
+    pub fn new(color: Color, prefix: String, threshold_seconds: u64) -> Self {
         #[cfg(debug_assertions)]
         debug_assert!(
             statusline_refresh_interval_enabled(),

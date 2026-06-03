@@ -5,9 +5,9 @@ use crate::types::{Color, RESET};
 
 pub struct Context {
     pub color: Color,
-    pub prefix: &'static str,
+    pub prefix: String,
     pub prefix_color: Color,
-    pub suffix: &'static str,
+    pub suffix: String,
     pub suffix_color: Color,
 }
 
@@ -31,13 +31,13 @@ impl Segment for Context {
         let mut out = String::new();
 
         if !self.prefix.is_empty() {
-            out.push_str(&self.prefix_color.paint(self.prefix));
+            out.push_str(&self.prefix_color.paint(&self.prefix));
         }
 
         out.push_str(&painted_pct);
 
         if !self.suffix.is_empty() {
-            out.push_str(&self.suffix_color.paint(self.suffix));
+            out.push_str(&self.suffix_color.paint(&self.suffix));
         }
 
         Some(out)

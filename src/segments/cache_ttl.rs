@@ -11,7 +11,7 @@ const TTL_1H_SECS: i64 = 60 * 60;
 
 pub struct CacheTtl {
     pub color: Color,
-    pub prefix: &'static str,
+    pub prefix: String,
 }
 
 pub(super) struct CacheSnapshot {
@@ -48,9 +48,9 @@ impl Segment for CacheTtl {
             let remaining = s.ttl_secs - (now - s.last_activity);
 
             let (text, rgb) = if remaining > 0 {
-                active_view(self.prefix, remaining, s.ttl_secs)
+                active_view(&self.prefix, remaining, s.ttl_secs)
             } else {
-                cold_view(self.prefix, json)
+                cold_view(&self.prefix, json)
             };
 
             match self.color {
