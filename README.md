@@ -137,6 +137,8 @@ src/
 
 The `InputFromClaudeToStatusline` segment pretty-prints the raw stdin JSON on its own line below the main statusline, dim grey (see screenshot above). Useful for watching the contract live while iterating. Gated by `#[cfg(debug_assertions)]` — compiles away to zero bytes in `--release`.
 
+`cache_ttl_dump` appends one JSONL line per render to `~/.claude/statusline-cache-ttl-debug.jsonl` with the parsed snapshot (`last_activity`, `ttl_secs`, derived `remaining`), the transcript path with its size/mtime, and the rendered text. Lets you scrub history when the timer stalls — compare consecutive entries to see whether the file grew, whether parsing latched onto a fresh row, and how `remaining` evolved. Same `cfg(debug_assertions)` gate.
+
 ```sh
 cargo build && cp target/debug/statusline ~/.claude/bin/statusline                # poke around
 cargo build --release && cp target/release/statusline ~/.claude/bin/statusline    # back to prod

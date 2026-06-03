@@ -14,9 +14,9 @@ pub struct CacheTtl {
     pub prefix: &'static str,
 }
 
-struct CacheSnapshot {
-    last_activity: i64,
-    ttl_secs: i64,
+pub(super) struct CacheSnapshot {
+    pub(super) last_activity: i64,
+    pub(super) ttl_secs: i64,
 }
 
 struct UsageRow {
@@ -41,25 +41,36 @@ impl UsageRow {
 
 impl Segment for CacheTtl {
     fn render(&self, json: &Value, _git: &mut GitCache) -> Option<String> {
-        let snapshot = read_cache_snapshot(json)?;
         let now = SystemTime::now().duration_since(UNIX_EPOCH).ok()?.as_secs() as i64;
-        let remaining = snapshot.ttl_secs - (now - snapshot.last_activity);
+        let snapshot = read_cache_snapshot(json);
 
-        let (text, rgb) = if remaining > 0 {
-            active_view(self.prefix, remaining, snapshot.ttl_secs)
-        } else {
-            cold_view(self.prefix, json)
-        };
+        let painted = snapshot.as_ref().map(|s| {
+            let remaining = s.ttl_secs - (now - s.last_activity);
 
-        let painted = match self.color {
-            Color::Gradient => {
-                let (r, g, b) = rgb;
-                Color::Rgb(r, g, b).paint(&text)
+            let (text, rgb) = if remaining > 0 {
+                active_view(self.prefix, remaining, s.ttl_secs)
+            } else {
+                cold_view(self.prefix, json)
+            };
+
+            match self.color {
+                Color::Gradient => {
+                    let (r, g, b) = rgb;
+                    Color::Rgb(r, g, b).paint(&text)
+                }
+                _ => self.color.paint(&text),
             }
-            _ => self.color.paint(&text),
-        };
+        });
 
-        Some(painted)
+        #[cfg(debug_assertions)]
+        crate::segments::debug::cache_ttl_dump::append(
+            json,
+            now,
+            snapshot.as_ref(),
+            painted.as_deref(),
+        );
+
+        painted
     }
 }
 
