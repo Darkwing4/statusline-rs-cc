@@ -1,7 +1,7 @@
 use serde_json::Value;
 
 use crate::segments::{GitCache, Segment};
-use crate::types::Color;
+use crate::types::{Color, RESET};
 
 use serde::Deserialize;
 
@@ -11,12 +11,51 @@ pub enum Window {
     SevenDay,
 }
 
+#[derive(Clone, Copy, Deserialize)]
+pub enum Style {
+    Percent,
+    Bar,
+    BarPercent,
+    Radial,
+    RadialPercent,
+}
+
+#[derive(Clone, Copy, Deserialize)]
+pub enum Fill {
+    Used,
+    Remaining,
+}
+
+#[derive(Clone, Copy, Deserialize)]
+pub enum ColorMode {
+    Steps,
+    Gradient,
+}
+
 pub struct RateLimit {
     pub window: Window,
+    pub style: Style,
+    pub fill: Fill,
+    pub color_mode: ColorMode,
     pub prefix: String,
     pub low_color: Color,
     pub mid_color: Color,
     pub high_color: Color,
+}
+
+const BAR_GLYPHS: [char; 8] = ['▁', '▂', '▃', '▄', '▅', '▆', '▇', '█'];
+const RADIAL_GLYPHS: [char; 5] = ['○', '◔', '◑', '◕', '●'];
+
+fn bar_glyph(pct: f64) -> char {
+    let idx = (pct * 8.0 / 100.0) as isize;
+    let clamped = idx.clamp(0, 7) as usize;
+    BAR_GLYPHS[clamped]
+}
+
+fn radial_glyph(pct: f64) -> char {
+    let idx = (pct * 5.0 / 100.0) as isize;
+    let clamped = idx.clamp(0, 4) as usize;
+    RADIAL_GLYPHS[clamped]
 }
 
 impl Segment for RateLimit {
@@ -33,16 +72,73 @@ impl Segment for RateLimit {
             .as_f64()?;
 
         let rounded = pct.round() as i64;
-        let text = format!("{}{}%", self.prefix, rounded);
 
-        let color = if pct < 50.0 {
-            self.low_color
-        } else if pct <= 80.0 {
-            self.mid_color
-        } else {
-            self.high_color
+        let glyph_pct = match self.fill {
+            Fill::Used => pct,
+            Fill::Remaining => 100.0 - pct,
         };
 
-        Some(color.paint(&text))
+        let text = match self.style {
+            Style::Percent => format!("{}{}%", self.prefix, rounded),
+            Style::Bar => format!("{}{}", self.prefix, bar_glyph(glyph_pct)),
+            Style::BarPercent => {
+                format!("{}{} {}%", self.prefix, bar_glyph(glyph_pct), rounded)
+            }
+            Style::Radial => format!("{}{}", self.prefix, radial_glyph(glyph_pct)),
+            Style::RadialPercent => {
+                format!("{}{} {}%", self.prefix, radial_glyph(glyph_pct), rounded)
+            }
+        };
+
+        let painted = match self.color_mode {
+            ColorMode::Steps => {
+                let color = if pct < 50.0 {
+                    self.low_color
+                } else if pct <= 80.0 {
+                    self.mid_color
+                } else {
+                    self.high_color
+                };
+                color.paint(&text)
+            }
+            ColorMode::Gradient => {
+                let low = color_to_rgb(self.low_color, (60, 200, 60));
+                let mid = color_to_rgb(self.mid_color, (220, 200, 40));
+                let high = color_to_rgb(self.high_color, (220, 60, 60));
+                let (r, g, b) = gradient_rgb(pct, low, mid, high);
+                format!("\x1b[38;2;{};{};{}m{}{}", r, g, b, text, RESET)
+            }
+        };
+
+        Some(painted)
     }
+}
+
+fn color_to_rgb(c: Color, fallback: (u8, u8, u8)) -> (u8, u8, u8) {
+    match c {
+        Color::Rgb(r, g, b) => (r, g, b),
+        _ => fallback,
+    }
+}
+
+fn gradient_rgb(
+    pct: f64,
+    low: (u8, u8, u8),
+    mid: (u8, u8, u8),
+    high: (u8, u8, u8),
+) -> (u8, u8, u8) {
+    let p = pct.clamp(0.0, 100.0);
+    let (a, b, t) = if p <= 50.0 {
+        (low, mid, p / 50.0)
+    } else {
+        (mid, high, (p - 50.0) / 50.0)
+    };
+    lerp_rgb(a, b, t)
+}
+
+fn lerp_rgb(a: (u8, u8, u8), b: (u8, u8, u8), t: f64) -> (u8, u8, u8) {
+    let lerp = |x: u8, y: u8, t: f64| {
+        (x as f64 + (y as f64 - x as f64) * t).round().clamp(0.0, 255.0) as u8
+    };
+    (lerp(a.0, b.0, t), lerp(a.1, b.1, t), lerp(a.2, b.2, t))
 }

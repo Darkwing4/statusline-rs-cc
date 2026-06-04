@@ -6,7 +6,7 @@ use crate::segments::{
     cwd::Cwd,
     git::{GitBranch, GitDiff, GitError},
     idle_time::IdleTime,
-    rate_limits::{RateLimit, Window},
+    rate_limits::{ColorMode, Fill, RateLimit, Style, Window},
     Segment,
 };
 use crate::types::Color;
@@ -59,6 +59,9 @@ pub enum SegmentSpec {
     },
     RateLimit {
         window: Window,
+        style: Style,
+        fill: Fill,
+        color_mode: ColorMode,
         prefix: String,
         low_color: Color,
         mid_color: Color,
@@ -114,12 +117,18 @@ impl SegmentSpec {
             } => Box::new(IdleTime::new(color, prefix, threshold_seconds)),
             SegmentSpec::RateLimit {
                 window,
+                style,
+                fill,
+                color_mode,
                 prefix,
                 low_color,
                 mid_color,
                 high_color,
             } => Box::new(RateLimit {
                 window,
+                style,
+                fill,
+                color_mode,
                 prefix,
                 low_color,
                 mid_color,
