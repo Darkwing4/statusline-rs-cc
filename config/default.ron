@@ -19,8 +19,8 @@
             fill: Remaining,
             color_mode: Gradient,
             prefix: "5h ",
-            low_color: Rgb(60, 200, 60),
-            mid_color: Rgb(220, 200, 40),
+            low_color: Rgb(103, 175, 103),
+            mid_color: Rgb(195, 179, 100),
             high_color: Rgb(220, 60, 60),
         ),
         RateLimit(
@@ -29,8 +29,8 @@
             fill: Remaining,
             color_mode: Gradient,
             prefix: "7d ",
-            low_color: Rgb(60, 200, 60),
-            mid_color: Rgb(220, 200, 40),
+            low_color: Rgb(103, 175, 103),
+            mid_color: Rgb(195, 179, 100),
             high_color: Rgb(220, 60, 60),
         ),
         Cwd(
