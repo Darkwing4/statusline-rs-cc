@@ -1,6 +1,6 @@
 # statusline
 
-Minimal, fast, extensible Claude Code statusline. Single Rust binary, ~5 ms per invocation, no runtime deps, new segment in 3 touch-points.
+The fastest Claude Code statusline: a single Rust binary, ~5 ms per render, zero runtime deps. Edit the config yourself, or ask Claude Code to do it — a bundled skill rewrites the RON, rebuilds, and reinstalls in one step.
 
 <table>
   <tr>
@@ -10,6 +10,20 @@ Minimal, fast, extensible Claude Code statusline. Single Rust binary, ~5 ms per 
   <tr>
     <td><img src="docs/screenshots/nogit.png" alt="outside git repo"/></td>
     <td><img src="docs/screenshots/debug.png" alt="debug segment below statusline"/></td>
+  </tr>
+</table>
+
+When the line is wider than the terminal, the renderer wraps it across multiple lines instead of truncating:
+
+<p><img src="docs/screenshots/wrap.png" alt="multi-line wrap when statusline exceeds terminal width"/></p>
+
+`RateLimit` ships with several styles — radial dial, bar, and plain percent (also `BarPercent` / `RadialPercent` which combine a graphic with the number):
+
+<table>
+  <tr>
+    <td><img src="docs/screenshots/ratelimit-radial.png" alt="ratelimit radial style"/></td>
+    <td><img src="docs/screenshots/ratelimit-bar.png" alt="ratelimit bar+percent style"/></td>
+    <td><img src="docs/screenshots/ratelimit-percent.png" alt="ratelimit plain percent style"/></td>
   </tr>
 </table>
 
@@ -71,27 +85,61 @@ cp target/release/statusline ~/.claude/bin/statusline
 
 </details>
 
+## claude code skill
+
+Ships with a project-local skill at [`.claude/skills/statusline-config/`](.claude/skills/statusline-config/SKILL.md). Open Claude Code in the cloned repo and it auto-discovers it — then ask in plain language and Claude edits the RON, rebuilds, and copies the binary into place:
+
+> recolour the branch to lavender
+> make 5h radial
+> drop the 7d segment
+
+The skill defaults to editing `config/local.ron` (gitignored personal override) and runs `./install-local.sh` to reinstall. Say "for the repo" to edit `config/default.ron` instead.
+
 ## configuration
 
-The whole config is a literal `Renderer { ... }` in [`src/main.rs`](src/main.rs):
+The whole config is an external [RON](https://github.com/ron-rs/ron) file at [`config/default.ron`](config/default.ron). `build.rs` embeds it into the binary at compile time; [`src/config.rs`](src/config.rs) parses it into segments at startup. Point `STATUSLINE_CONFIG` at a different file to swap the embedded config without touching the source — `install-local.sh` auto-picks `config/local.ron` if it exists (gitignored personal override).
 
-```rust
-let renderer = Renderer {
-    separator: " · ",
-    separator_color: Color::Named(90),
-    segments: vec![
-        Box::new(Context { color: Color::Gradient, prefix: "", prefix_color: Color::Rgb(180, 142, 173), suffix: "", suffix_color: Color::Rgb(180, 142, 173) }),
-        Box::new(RateLimit { window: Window::FiveHour, prefix: "5h ", low_color: Color::Named(32), mid_color: Color::Named(33), high_color: Color::Named(31) }),
-        Box::new(RateLimit { window: Window::SevenDay, prefix: "7d ", low_color: Color::Named(32), mid_color: Color::Named(33), high_color: Color::Named(31) }),
-        Box::new(Cwd { color: Color::Rgb(95, 175, 175) }),
-        Box::new(GitBranch { color: Color::Named(32), state_color: Color::Named(91), show_worktree: true, show_ahead_behind: true, show_state: true }),
-        Box::new(GitDiff { modified_color: Color::Named(33), untracked_color: Color::Named(32), deleted_color: Color::Named(31) }),
-        Box::new(IdleTime::new(Color::Named(90), "idle ", 0)),
+```ron
+(
+    separator: " ",
+    separator_color: Named(90),
+    segments: [
+        Context(
+            color: Gradient,
+            prefix: "", prefix_color: Rgb(180, 142, 173),
+            suffix: "", suffix_color: Rgb(180, 142, 173),
+        ),
+        CacheTtl(color: Gradient, prefix: "cache "),
+        RateLimit(
+            window: FiveHour, style: Bar, fill: Remaining, color_mode: Gradient,
+            prefix: "5h ",
+            low_color:  Rgb(103, 175, 103),
+            mid_color:  Rgb(195, 179, 100),
+            high_color: Rgb(220,  60,  60),
+        ),
+        RateLimit(
+            window: SevenDay, style: Bar, fill: Remaining, color_mode: Gradient,
+            prefix: "7d ",
+            low_color:  Rgb(103, 175, 103),
+            mid_color:  Rgb(195, 179, 100),
+            high_color: Rgb(220,  60,  60),
+        ),
+        Cwd(color: Rgb(95, 175, 175)),
+        GitBranch(
+            color: Named(32), state_color: Named(91),
+            show_worktree: true, show_ahead_behind: true, show_state: true,
+        ),
+        GitDiff(
+            modified_color:  Named(33),
+            untracked_color: Named(32),
+            deleted_color:   Named(31),
+        ),
+        GitError(color: Named(91), prefix: "git: "),
     ],
-};
+)
 ```
 
-Reorder, drop, or re-colour by editing the vec. `Color` variants: `Named(code)` for ANSI 30–37 / 90–97, `Rgb(r, g, b)` for truecolor, `Gradient` (only meaningful on `Context`).
+Reorder, drop, or re-colour by editing the list, then rebuild. `Color` variants: `Named(code)` for ANSI 30–37 / 90–97, `Rgb(r, g, b)` for truecolor, `Gradient` (meaningful on `Context`, `CacheTtl`, and `RateLimit` when `color_mode: Gradient`).
 
 ## extending
 
@@ -132,17 +180,6 @@ src/
 ```
 
 </details>
-
-## debug
-
-The `InputFromClaudeToStatusline` segment pretty-prints the raw stdin JSON on its own line below the main statusline, dim grey (see screenshot above). Useful for watching the contract live while iterating. Gated by `#[cfg(debug_assertions)]` — compiles away to zero bytes in `--release`.
-
-`cache_ttl_dump` appends one JSONL line per render to `~/.claude/statusline-cache-ttl-debug.jsonl` with the parsed snapshot (`last_activity`, `ttl_secs`, derived `remaining`), the transcript path with its size/mtime, and the rendered text. Lets you scrub history when the timer stalls — compare consecutive entries to see whether the file grew, whether parsing latched onto a fresh row, and how `remaining` evolved. Same `cfg(debug_assertions)` gate.
-
-```sh
-cargo build && cp target/debug/statusline ~/.claude/bin/statusline                # poke around
-cargo build --release && cp target/release/statusline ~/.claude/bin/statusline    # back to prod
-```
 
 ## under the hood
 
