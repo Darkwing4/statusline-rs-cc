@@ -1,9 +1,11 @@
+use serde::Deserialize;
 use serde_json::Value;
 
 use super::tools::GitCache;
 use crate::types::Color;
 use crate::segments::Segment;
 
+#[derive(Deserialize)]
 pub struct GitDiff {
     pub modified_color: Color,
     pub untracked_color: Color,

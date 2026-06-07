@@ -1,8 +1,10 @@
+use serde::Deserialize;
 use serde_json::Value;
 
 use crate::segments::{GitCache, Segment};
 use crate::types::{Color, RESET};
 
+#[derive(Deserialize)]
 pub struct Context {
     pub color: Color,
     pub prefix: String,

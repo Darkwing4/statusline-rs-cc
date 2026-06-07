@@ -3,30 +3,26 @@ use std::fs;
 use std::path::PathBuf;
 use std::time::{SystemTime, UNIX_EPOCH};
 
+use serde::Deserialize;
 use serde_json::Value;
 
 use crate::types::Color;
 use crate::segments::{GitCache, Segment};
 
+#[derive(Deserialize)]
 pub struct IdleTime {
-    color: Color,
-    prefix: String,
-    threshold_seconds: u64,
+    pub color: Color,
+    pub prefix: String,
+    pub threshold_seconds: u64,
 }
 
 impl IdleTime {
-    pub fn new(color: Color, prefix: String, threshold_seconds: u64) -> Self {
-        #[cfg(debug_assertions)]
+    #[cfg(debug_assertions)]
+    pub fn validate_debug(&self) {
         debug_assert!(
             statusline_refresh_interval_enabled(),
             "IdleTime requires statusLine.refreshInterval > 0 in Claude Code settings"
         );
-
-        Self {
-            color,
-            prefix,
-            threshold_seconds,
-        }
     }
 }
 

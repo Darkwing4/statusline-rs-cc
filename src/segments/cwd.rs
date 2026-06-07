@@ -1,11 +1,13 @@
 use std::env;
 
+use serde::Deserialize;
 use serde_json::Value;
 
 use crate::types::Color;
 use crate::segments::{GitCache, Segment};
 use crate::statusline_input;
 
+#[derive(Deserialize)]
 pub struct Cwd {
     pub color: Color,
 }

@@ -6,7 +6,7 @@ use crate::segments::{
     cwd::Cwd,
     git::{GitBranch, GitDiff, GitError},
     idle_time::IdleTime,
-    rate_limits::{ColorMode, Fill, RateLimit, Style, Window},
+    rate_limits::RateLimit,
     Segment,
 };
 use crate::types::Color;
@@ -22,122 +22,37 @@ pub struct RootConfig {
 
 #[derive(Deserialize)]
 pub enum SegmentSpec {
-    Context {
-        color: Color,
-        prefix: String,
-        prefix_color: Color,
-        suffix: String,
-        suffix_color: Color,
-    },
-    CacheTtl {
-        color: Color,
-        prefix: String,
-    },
-    Cwd {
-        color: Color,
-    },
-    GitBranch {
-        color: Color,
-        state_color: Color,
-        show_worktree: bool,
-        show_ahead_behind: bool,
-        show_state: bool,
-    },
-    GitDiff {
-        modified_color: Color,
-        untracked_color: Color,
-        deleted_color: Color,
-    },
-    GitError {
-        color: Color,
-        prefix: String,
-    },
-    IdleTime {
-        color: Color,
-        prefix: String,
-        threshold_seconds: u64,
-    },
-    RateLimit {
-        window: Window,
-        style: Style,
-        fill: Fill,
-        color_mode: ColorMode,
-        prefix: String,
-        low_color: Color,
-        mid_color: Color,
-        high_color: Color,
-    },
+    Context(Context),
+    CacheTtl(CacheTtl),
+    Cwd(Cwd),
+    GitBranch(GitBranch),
+    GitDiff(GitDiff),
+    GitError(GitError),
+    IdleTime(IdleTime),
+    RateLimit(RateLimit),
 }
 
 impl SegmentSpec {
     pub fn into_segment(self) -> Box<dyn Segment> {
         match self {
-            SegmentSpec::Context {
-                color,
-                prefix,
-                prefix_color,
-                suffix,
-                suffix_color,
-            } => Box::new(Context {
-                color,
-                prefix,
-                prefix_color,
-                suffix,
-                suffix_color,
-            }),
-            SegmentSpec::CacheTtl { color, prefix } => Box::new(CacheTtl { color, prefix }),
-            SegmentSpec::Cwd { color } => Box::new(Cwd { color }),
-            SegmentSpec::GitBranch {
-                color,
-                state_color,
-                show_worktree,
-                show_ahead_behind,
-                show_state,
-            } => Box::new(GitBranch {
-                color,
-                state_color,
-                show_worktree,
-                show_ahead_behind,
-                show_state,
-            }),
-            SegmentSpec::GitDiff {
-                modified_color,
-                untracked_color,
-                deleted_color,
-            } => Box::new(GitDiff {
-                modified_color,
-                untracked_color,
-                deleted_color,
-            }),
-            SegmentSpec::GitError { color, prefix } => Box::new(GitError { color, prefix }),
-            SegmentSpec::IdleTime {
-                color,
-                prefix,
-                threshold_seconds,
-            } => Box::new(IdleTime::new(color, prefix, threshold_seconds)),
-            SegmentSpec::RateLimit {
-                window,
-                style,
-                fill,
-                color_mode,
-                prefix,
-                low_color,
-                mid_color,
-                high_color,
-            } => Box::new(RateLimit {
-                window,
-                style,
-                fill,
-                color_mode,
-                prefix,
-                low_color,
-                mid_color,
-                high_color,
-            }),
+            SegmentSpec::Context(s) => Box::new(s),
+            SegmentSpec::CacheTtl(s) => Box::new(s),
+            SegmentSpec::Cwd(s) => Box::new(s),
+            SegmentSpec::GitBranch(s) => Box::new(s),
+            SegmentSpec::GitDiff(s) => Box::new(s),
+            SegmentSpec::GitError(s) => Box::new(s),
+            SegmentSpec::IdleTime(s) => {
+                #[cfg(debug_assertions)]
+                s.validate_debug();
+                Box::new(s)
+            }
+            SegmentSpec::RateLimit(s) => Box::new(s),
         }
     }
 }
 
-pub fn load_embedded() -> Result<RootConfig, ron::de::SpannedError> {
-    ron::from_str(EMBEDDED)
+pub fn load_embedded() -> Result<RootConfig, ron::error::SpannedError> {
+    ron::Options::default()
+        .with_default_extension(ron::extensions::Extensions::UNWRAP_VARIANT_NEWTYPES)
+        .from_str(EMBEDDED)
 }

@@ -1,9 +1,11 @@
+use serde::Deserialize;
 use serde_json::Value;
 
 use super::tools::{detect_state, is_worktree, GitCache};
 use crate::types::Color;
 use crate::segments::Segment;
 
+#[derive(Deserialize)]
 pub struct GitBranch {
     pub color: Color,
     pub state_color: Color,

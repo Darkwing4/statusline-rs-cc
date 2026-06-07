@@ -32,6 +32,7 @@ pub enum ColorMode {
     Gradient,
 }
 
+#[derive(Deserialize)]
 pub struct RateLimit {
     pub window: Window,
     pub style: Style,
