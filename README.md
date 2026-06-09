@@ -17,7 +17,7 @@ When the line is wider than the terminal, the renderer wraps it across multiple 
 
 <p><img src="docs/screenshots/wrap.png" alt="multi-line wrap when statusline exceeds terminal width"/></p>
 
-`RateLimit` ships with several styles — radial dial, bar, and plain percent (also `BarPercent` / `RadialPercent` which combine a graphic with the number):
+Every segment is tweakable from the RON config, and some ship with multiple styles. For example, `RateLimit` has radial dial, bar, and plain percent (plus `BarPercent` / `RadialPercent` which combine a graphic with the number):
 
 <table>
   <tr>
@@ -27,23 +27,16 @@ When the line is wider than the terminal, the renderer wraps it across multiple 
   </tr>
 </table>
 
-## cheat sheet
+<details>
+<summary>cheat sheet — non-obvious bits</summary>
 
-Codex-inspired: dim middot separator, soft teal cwd, gradient percentage, green branch, bright-red git state. Outside a git repo only context and cwd render.
+- `cache 4m32s` is the Anthropic prompt-cache TTL countdown. Once `cache cold`, the colour ramps by `context_window` % — cheap when context is empty, expensive when full.
+- `5h` / `7d` are Claude.ai rolling usage limits: green <50%, yellow 50–80%, red >80%. Absent on API plans and before the first response.
+- `⑂feature` means you're inside a git worktree (resolved by reading `.git`, no `fork()`).
+- git state like `[REBASE 2/5]` only shows during the op (`MERGE`, `CHERRY-PICK`, `REVERT`, `BISECT`, `AM n/m`).
+- diff `~2 +1 -1` = modified tracked / untracked / deleted.
 
-| segment | colour | example | notes |
-|---|---|---|---|
-| context | grey → yellow → red gradient | `42%` | dim grey under 20%, then ramps |
-| cache | grey → yellow → red gradient | `cache 4m32s`, `cache cold` | Anthropic prompt-cache TTL countdown; once cold the colour shifts by `context_window` % (cheap when context is empty, expensive when full) |
-| 5h limit | green / yellow / red | `5h 42%` | Claude.ai rolling 5-hour usage; green <50%, yellow 50–80%, red >80%. Absent on API plans and before the first response |
-| 7d limit | green / yellow / red | `7d 65%` | Claude.ai weekly usage; same thresholds as 5h |
-| cwd | soft teal `#5fafaf` | `~/proj` | `$HOME` shortened to `~` |
-| git branch | green | `main`, `⑂feature` | `⑂` only inside a worktree (resolved by reading `.git` gitfile, no fork) |
-| git state | bright red | `[REBASE 2/5]` | `MERGE`, `REBASE n/m`, `CHERRY-PICK`, `REVERT`, `BISECT`, `AM n/m` — only during the op |
-| ahead/behind | branch colour | `(↑2 ↓1)` | only when non-zero |
-| diff | yellow / green / red | `~2 +1 -1` | modified tracked / untracked / deleted |
-| idle time | bright black | `idle 3m12s` | since the last real user input in the Claude transcript |
-| separator | bright black | ` · ` | middot |
+</details>
 
 ## install
 
