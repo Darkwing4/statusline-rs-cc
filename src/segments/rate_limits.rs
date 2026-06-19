@@ -1,3 +1,5 @@
+use std::time::{SystemTime, UNIX_EPOCH};
+
 use serde_json::Value;
 
 use crate::segments::{GitCache, Segment};
@@ -44,6 +46,40 @@ pub struct RateLimit {
     pub high_color: Color,
 }
 
+const COUNTDOWN_TOKEN: &str = "{t}";
+
+impl RateLimit {
+    fn resolve_prefix(&self, window_data: &Value) -> String {
+        if !self.prefix.contains(COUNTDOWN_TOKEN) {
+            return self.prefix.clone();
+        }
+
+        let remaining = self.remaining_units(window_data);
+        self.prefix.replace(COUNTDOWN_TOKEN, &remaining.to_string())
+    }
+
+    fn remaining_units(&self, window_data: &Value) -> i64 {
+        let (unit_secs, nominal) = match self.window {
+            Window::FiveHour => (3600, 5),
+            Window::SevenDay => (86400, 7),
+        };
+
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .ok()
+            .map(|d| d.as_secs() as i64);
+        let resets_at = window_data.get("resets_at").and_then(Value::as_i64);
+
+        match (now, resets_at) {
+            (Some(now), Some(resets_at)) => {
+                let remaining = (resets_at - now).max(0);
+                (remaining + unit_secs - 1) / unit_secs
+            }
+            _ => nominal,
+        }
+    }
+}
+
 const BAR_GLYPHS: [char; 8] = ['▁', '▂', '▃', '▄', '▅', '▆', '▇', '█'];
 const RADIAL_GLYPHS: [char; 5] = ['○', '◔', '◑', '◕', '●'];
 
@@ -66,11 +102,11 @@ impl Segment for RateLimit {
             Window::SevenDay => "seven_day",
         };
 
-        let pct = json
-            .get("rate_limits")?
-            .get(key)?
-            .get("used_percentage")?
-            .as_f64()?;
+        let window_data = json.get("rate_limits")?.get(key)?;
+
+        let pct = window_data.get("used_percentage")?.as_f64()?;
+
+        let prefix = self.resolve_prefix(window_data);
 
         let rounded = pct.round() as i64;
 
@@ -80,14 +116,14 @@ impl Segment for RateLimit {
         };
 
         let text = match self.style {
-            Style::Percent => format!("{}{}%", self.prefix, rounded),
-            Style::Bar => format!("{}{}", self.prefix, bar_glyph(glyph_pct)),
+            Style::Percent => format!("{}{}%", prefix, rounded),
+            Style::Bar => format!("{}{}", prefix, bar_glyph(glyph_pct)),
             Style::BarPercent => {
-                format!("{}{} {}%", self.prefix, bar_glyph(glyph_pct), rounded)
+                format!("{}{} {}%", prefix, bar_glyph(glyph_pct), rounded)
             }
-            Style::Radial => format!("{}{}", self.prefix, radial_glyph(glyph_pct)),
+            Style::Radial => format!("{}{}", prefix, radial_glyph(glyph_pct)),
             Style::RadialPercent => {
-                format!("{}{} {}%", self.prefix, radial_glyph(glyph_pct), rounded)
+                format!("{}{} {}%", prefix, radial_glyph(glyph_pct), rounded)
             }
         };
 

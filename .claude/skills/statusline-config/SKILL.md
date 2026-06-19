@@ -99,7 +99,7 @@ RateLimit(
     style: Bar,              // Percent | Bar | BarPercent | Radial | RadialPercent
     fill: Remaining,         // Used | Remaining
     color_mode: Gradient,    // Steps | Gradient
-    prefix: "5h ",
+    prefix: "5h ",           // a "{t}" token is replaced by time left until reset, in the window's unit (h for FiveHour, d for SevenDay), rounded up — e.g. "{t}d " shows 7d..1d..0d; falls back to nominal 5/7 if resets_at is missing
     low_color: Rgb(103, 175, 103),
     mid_color: Rgb(195, 179, 100),
     high_color: Rgb(220, 60, 60),
