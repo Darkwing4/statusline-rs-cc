@@ -55,13 +55,14 @@ impl RateLimit {
         }
 
         let remaining = self.remaining_units(window_data);
-        self.prefix.replace(COUNTDOWN_TOKEN, &remaining.to_string())
+        self.prefix
+            .replace(COUNTDOWN_TOKEN, &format!("{:.1}", remaining))
     }
 
-    fn remaining_units(&self, window_data: &Value) -> i64 {
+    fn remaining_units(&self, window_data: &Value) -> f64 {
         let (unit_secs, nominal) = match self.window {
-            Window::FiveHour => (3600, 5),
-            Window::SevenDay => (86400, 7),
+            Window::FiveHour => (3600.0, 5.0),
+            Window::SevenDay => (86400.0, 7.0),
         };
 
         let now = SystemTime::now()
@@ -72,8 +73,8 @@ impl RateLimit {
 
         match (now, resets_at) {
             (Some(now), Some(resets_at)) => {
-                let remaining = (resets_at - now).max(0);
-                (remaining + unit_secs - 1) / unit_secs
+                let remaining = (resets_at - now).max(0) as f64;
+                remaining / unit_secs
             }
             _ => nominal,
         }
