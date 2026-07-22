@@ -127,7 +127,7 @@ The whole config is an external [RON](https://github.com/ron-rs/ron) file at [`c
             untracked_color: Named(32),
             deleted_color:   Named(31),
         ),
-        GitError(color: Named(91), prefix: "git: "),
+        GitError(color: Named(91), text: "no git"),
     ],
 )
 ```

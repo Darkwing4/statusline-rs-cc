@@ -8,23 +8,12 @@ use crate::segments::Segment;
 #[derive(Deserialize)]
 pub struct GitError {
     pub color: Color,
-    pub prefix: String,
+    pub text: String,
 }
 
 impl Segment for GitError {
     fn render(&self, _json: &Value, git: &mut GitCache) -> Option<String> {
-        git.dir()?;
-        let err = git.error()?;
-        let text = strip_git_prefix(err);
-        Some(self.color.paint(&format!("{}{}", self.prefix, text)))
+        git.error()?;
+        Some(self.color.paint(&self.text))
     }
-}
-
-fn strip_git_prefix(msg: &str) -> &str {
-    for prefix in ["fatal: ", "error: ", "warning: "] {
-        if let Some(rest) = msg.strip_prefix(prefix) {
-            return rest;
-        }
-    }
-    msg
 }
