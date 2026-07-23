@@ -2,49 +2,9 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use serde_json::Value;
 
+pub use crate::config_schema::{ColorMode, Fill, RateLimit, Style, Window};
 use crate::segments::{GitCache, Segment};
 use crate::types::{Color, RESET};
-
-use serde::Deserialize;
-
-#[derive(Clone, Copy, Deserialize)]
-pub enum Window {
-    FiveHour,
-    SevenDay,
-}
-
-#[derive(Clone, Copy, Deserialize)]
-pub enum Style {
-    Percent,
-    Bar,
-    BarPercent,
-    Radial,
-    RadialPercent,
-}
-
-#[derive(Clone, Copy, Deserialize)]
-pub enum Fill {
-    Used,
-    Remaining,
-}
-
-#[derive(Clone, Copy, Deserialize)]
-pub enum ColorMode {
-    Steps,
-    Gradient,
-}
-
-#[derive(Deserialize)]
-pub struct RateLimit {
-    pub window: Window,
-    pub style: Style,
-    pub fill: Fill,
-    pub color_mode: ColorMode,
-    pub prefix: String,
-    pub low_color: Color,
-    pub mid_color: Color,
-    pub high_color: Color,
-}
 
 const COUNTDOWN_TOKEN: &str = "{t}";
 
