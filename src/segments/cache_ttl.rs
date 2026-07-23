@@ -1,10 +1,13 @@
-use std::fs;
+use std::fs::File;
+use std::io::{Read, Seek};
+use std::ops::ControlFlow;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use serde::Deserialize;
 use serde_json::Value;
 
 use crate::segments::{GitCache, Segment};
+use crate::transcript_tail_reader::scan_jsonl_lines_from_end;
 use crate::types::Color;
 
 const TTL_5M_SECS: i64 = 5 * 60;
@@ -78,14 +81,15 @@ impl Segment for CacheTtl {
 
 fn read_cache_snapshot(json: &Value) -> Option<CacheSnapshot> {
     let transcript = json.get("transcript_path")?.as_str()?;
-    let body = fs::read_to_string(transcript).ok()?;
+    let mut file = File::open(transcript).ok()?;
+    read_cache_snapshot_from(&mut file)
+}
 
+fn read_cache_snapshot_from<R: Read + Seek>(reader: &mut R) -> Option<CacheSnapshot> {
     let mut last_activity: Option<i64> = None;
-    let mut ttl_secs: Option<i64> = None;
-
-    for line in body.lines().rev() {
+    let result = scan_jsonl_lines_from_end(reader, |line| {
         let Some(row) = parse_usage_row(line) else {
-            continue;
+            return ControlFlow::Continue(());
         };
 
         if last_activity.is_none() {
@@ -95,14 +99,20 @@ fn read_cache_snapshot(json: &Value) -> Option<CacheSnapshot> {
         }
 
         if let Some(ttl) = row.ttl_hint() {
-            ttl_secs = Some(ttl);
-            break;
+            return ControlFlow::Break(ttl);
         }
-    }
+
+        ControlFlow::Continue(())
+    })
+    .ok()?;
+
+    let ControlFlow::Break(ttl_secs) = result else {
+        return None;
+    };
 
     Some(CacheSnapshot {
         last_activity: last_activity?,
-        ttl_secs: ttl_secs?,
+        ttl_secs,
     })
 }
 
@@ -246,4 +256,47 @@ fn days_from_civil(y: i64, m: u32, d: u32) -> i64 {
     let doe = yoe * 365 + yoe / 4 - yoe / 100 + doy;
 
     era * 146097 + doe - 719468
+}
+
+#[cfg(test)]
+mod tests {
+    use std::io::Cursor;
+
+    use super::{parse_iso8601_utc, read_cache_snapshot_from, TTL_1H_SECS};
+
+    #[test]
+    fn uses_newest_activity_and_nearest_older_ttl_hint() {
+        let transcript = concat!(
+            r#"{"type":"assistant","timestamp":"2026-01-01T00:00:01Z","message":{"usage":{"cache_creation_input_tokens":1,"cache_creation":{"ephemeral_5m_input_tokens":1}}}}"#,
+            "\n",
+            r#"{"type":"assistant","timestamp":"2026-01-01T00:00:02Z","message":{"usage":{"cache_creation_input_tokens":1,"cache_creation":{"ephemeral_1h_input_tokens":1}}}}"#,
+            "\n",
+            r#"{"type":"assistant","timestamp":"2026-01-01T00:00:03Z","message":{"usage":{"cache_read_input_tokens":1}}}"#,
+            "\n",
+            r#"{"type":"assistant","isSidechain":true,"timestamp":"2026-01-01T00:00:04Z","message":{"usage":{"cache_creation_input_tokens":1,"cache_creation":{"ephemeral_5m_input_tokens":1}}}}"#,
+            "\n",
+            r#"{"type":"assistant""#,
+        );
+        let mut reader = Cursor::new(transcript.as_bytes());
+
+        let snapshot = read_cache_snapshot_from(&mut reader).unwrap();
+
+        assert_eq!(
+            snapshot.last_activity,
+            parse_iso8601_utc("2026-01-01T00:00:03Z").unwrap()
+        );
+        assert_eq!(snapshot.ttl_secs, TTL_1H_SECS);
+    }
+
+    #[test]
+    fn stops_at_ttl_hint_without_searching_for_an_older_timestamp() {
+        let transcript = concat!(
+            r#"{"type":"assistant","timestamp":"2026-01-01T00:00:01Z","message":{"usage":{"cache_read_input_tokens":1}}}"#,
+            "\n",
+            r#"{"type":"assistant","message":{"usage":{"cache_creation_input_tokens":1,"cache_creation":{"ephemeral_5m_input_tokens":1}}}}"#,
+        );
+        let mut reader = Cursor::new(transcript.as_bytes());
+
+        assert!(read_cache_snapshot_from(&mut reader).is_none());
+    }
 }
