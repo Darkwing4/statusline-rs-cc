@@ -1,11 +1,13 @@
-use std::fs::{self, OpenOptions};
+use std::fs::{self, File, OpenOptions};
 use std::io::Write;
+use std::ops::ControlFlow;
 use std::path::PathBuf;
 use std::time::UNIX_EPOCH;
 
 use serde_json::{json, Value};
 
 use crate::segments::cache_ttl::CacheSnapshot;
+use crate::transcript_tail_reader::scan_jsonl_lines_from_end;
 
 pub fn append(
     json_input: &Value,
@@ -75,17 +77,17 @@ pub fn append(
 }
 
 fn recent_assistant_rows(transcript: &str) -> Vec<Value> {
-    let Ok(body) = fs::read_to_string(transcript) else {
+    let Ok(mut file) = File::open(transcript) else {
         return Vec::new();
     };
 
     let mut out: Vec<Value> = Vec::new();
-    for line in body.lines().rev() {
+    let result = scan_jsonl_lines_from_end(&mut file, |line| {
         let Ok(v) = serde_json::from_str::<Value>(line) else {
-            continue;
+            return ControlFlow::Continue(());
         };
         if v.get("type").and_then(Value::as_str) != Some("assistant") {
-            continue;
+            return ControlFlow::Continue(());
         }
 
         let usage = v.pointer("/message/usage");
@@ -117,10 +119,17 @@ fn recent_assistant_rows(transcript: &str) -> Vec<Value> {
         }));
 
         if out.len() >= 5 {
-            break;
+            return ControlFlow::Break(());
         }
+
+        ControlFlow::Continue(())
+    });
+
+    if result.is_err() {
+        Vec::new()
+    } else {
+        out
     }
-    out
 }
 
 fn read_ppid() -> Option<u32> {

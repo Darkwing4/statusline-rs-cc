@@ -1,4 +1,8 @@
+#[cfg(debug_assertions)]
 use std::fs;
+use std::fs::File;
+use std::io::{Read, Seek};
+use std::ops::ControlFlow;
 #[cfg(debug_assertions)]
 use std::path::PathBuf;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -8,6 +12,7 @@ use serde_json::Value;
 
 use crate::types::Color;
 use crate::segments::{GitCache, Segment};
+use crate::transcript_tail_reader::scan_jsonl_lines_from_end;
 
 #[derive(Deserialize)]
 pub struct IdleTime {
@@ -29,18 +34,8 @@ impl IdleTime {
 impl Segment for IdleTime {
     fn render(&self, json: &Value, _git: &mut GitCache) -> Option<String> {
         let transcript = json.get("transcript_path")?.as_str()?;
-        let body = fs::read_to_string(transcript).ok()?;
-
-        let last_ts = body
-            .lines()
-            .rev()
-            .filter_map(|line| serde_json::from_str::<Value>(line).ok())
-            .filter(is_user_input)
-            .find_map(|v| {
-                v.get("timestamp")
-                    .and_then(|t| t.as_str())
-                    .and_then(parse_iso8601_utc)
-            })?;
+        let mut file = File::open(transcript).ok()?;
+        let last_ts = read_last_user_input_timestamp(&mut file)?;
 
         let now = SystemTime::now().duration_since(UNIX_EPOCH).ok()?.as_secs() as i64;
 
@@ -51,6 +46,33 @@ impl Segment for IdleTime {
 
         let text = format!("{}{}", self.prefix, format_duration(diff));
         Some(self.color.paint(&text))
+    }
+}
+
+fn read_last_user_input_timestamp<R: Read + Seek>(reader: &mut R) -> Option<i64> {
+    let result = scan_jsonl_lines_from_end(reader, |line| {
+        let Ok(value) = serde_json::from_str::<Value>(line) else {
+            return ControlFlow::Continue(());
+        };
+        if !is_user_input(&value) {
+            return ControlFlow::Continue(());
+        }
+
+        let Some(timestamp) = value
+            .get("timestamp")
+            .and_then(Value::as_str)
+            .and_then(parse_iso8601_utc)
+        else {
+            return ControlFlow::Continue(());
+        };
+
+        ControlFlow::Break(timestamp)
+    })
+    .ok()?;
+
+    match result {
+        ControlFlow::Break(timestamp) => Some(timestamp),
+        ControlFlow::Continue(()) => None,
     }
 }
 
@@ -142,4 +164,32 @@ fn claude_settings_path() -> Option<PathBuf> {
 
     let home = std::env::var_os("HOME").or_else(|| std::env::var_os("USERPROFILE"))?;
     Some(PathBuf::from(home).join(".claude").join("settings.json"))
+}
+
+#[cfg(test)]
+mod tests {
+    use std::io::Cursor;
+
+    use super::{parse_iso8601_utc, read_last_user_input_timestamp};
+
+    #[test]
+    fn finds_latest_real_user_message_with_a_timestamp() {
+        let transcript = concat!(
+            r#"{"type":"user","timestamp":"2026-01-01T00:00:01Z","message":{"content":"first"}}"#,
+            "\n",
+            r#"{"type":"user","timestamp":"2026-01-01T00:00:02Z","message":{"content":[{"type":"text","text":"second"}]}}"#,
+            "\n",
+            r#"{"type":"user","timestamp":"2026-01-01T00:00:03Z","message":{"content":[{"type":"tool_result","content":"done"}]}}"#,
+            "\n",
+            r#"{"type":"user","message":{"content":"missing timestamp"}}"#,
+            "\n",
+            r#"{"type":"user""#,
+        );
+        let mut reader = Cursor::new(transcript.as_bytes());
+
+        assert_eq!(
+            read_last_user_input_timestamp(&mut reader),
+            parse_iso8601_utc("2026-01-01T00:00:02Z")
+        );
+    }
 }

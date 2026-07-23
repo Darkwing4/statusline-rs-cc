@@ -2,6 +2,7 @@ mod config;
 mod segments;
 mod statusline_renderer;
 mod statusline_input;
+mod transcript_tail_reader;
 mod types;
 
 use std::io::{self, Write};
