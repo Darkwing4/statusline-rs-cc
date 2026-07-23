@@ -1,16 +1,8 @@
-use serde::Deserialize;
 use serde_json::Value;
 
 use super::tools::GitCache;
-use crate::types::Color;
+pub use crate::config_schema::GitDiff;
 use crate::segments::Segment;
-
-#[derive(Deserialize)]
-pub struct GitDiff {
-    pub modified_color: Color,
-    pub untracked_color: Color,
-    pub deleted_color: Color,
-}
 
 impl Segment for GitDiff {
     fn render(&self, _json: &Value, git: &mut GitCache) -> Option<String> {

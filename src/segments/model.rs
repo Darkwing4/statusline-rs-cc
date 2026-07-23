@@ -1,14 +1,7 @@
-use serde::Deserialize;
 use serde_json::Value;
 
+pub use crate::config_schema::Model;
 use crate::segments::{GitCache, Segment};
-use crate::types::Color;
-
-#[derive(Deserialize)]
-pub struct Model {
-    pub color: Color,
-    pub prefix: String,
-}
 
 impl Segment for Model {
     fn render(&self, json: &Value, _git: &mut GitCache) -> Option<String> {

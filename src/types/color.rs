@@ -1,13 +1,6 @@
-use serde::Deserialize;
+pub use crate::config_schema::Color;
 
 pub const RESET: &str = "\x1b[0m";
-
-#[derive(Clone, Copy, Deserialize)]
-pub enum Color {
-    Named(u8),
-    Rgb(u8, u8, u8),
-    Gradient,
-}
 
 impl Color {
     pub fn paint(&self, body: &str) -> String {

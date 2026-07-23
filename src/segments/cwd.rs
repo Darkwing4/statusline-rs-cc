@@ -1,16 +1,10 @@
 use std::env;
 
-use serde::Deserialize;
 use serde_json::Value;
 
-use crate::types::Color;
+pub use crate::config_schema::Cwd;
 use crate::segments::{GitCache, Segment};
 use crate::statusline_input;
-
-#[derive(Deserialize)]
-pub struct Cwd {
-    pub color: Color,
-}
 
 impl Segment for Cwd {
     fn render(&self, json: &Value, _git: &mut GitCache) -> Option<String> {

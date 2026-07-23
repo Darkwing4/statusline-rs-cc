@@ -1,14 +1,7 @@
-use serde::Deserialize;
 use serde_json::Value;
 
+pub use crate::config_schema::Effort;
 use crate::segments::{GitCache, Segment};
-use crate::types::Color;
-
-#[derive(Deserialize)]
-pub struct Effort {
-    pub color: Color,
-    pub prefix: String,
-}
 
 impl Segment for Effort {
     fn render(&self, json: &Value, _git: &mut GitCache) -> Option<String> {

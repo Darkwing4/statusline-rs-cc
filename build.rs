@@ -2,6 +2,10 @@ use std::env;
 use std::fs;
 use std::path::PathBuf;
 
+#[allow(dead_code)]
+#[path = "src/config_schema.rs"]
+mod config_schema;
+
 const ENV_VAR: &str = "STATUSLINE_CONFIG";
 const DEFAULT_REL_PATH: &str = "config/default.ron";
 const EMBED_FILENAME: &str = "embedded_config.ron";
@@ -26,6 +30,14 @@ fn main() {
     let body = fs::read_to_string(&source).unwrap_or_else(|e| {
         panic!(
             "statusline build: cannot read config '{}': {}",
+            source.display(),
+            e
+        )
+    });
+
+    config_schema::parse(&body).unwrap_or_else(|e| {
+        panic!(
+            "statusline build: invalid config '{}': {}",
             source.display(),
             e
         )
