@@ -1,17 +1,8 @@
-use serde::Deserialize;
 use serde_json::Value;
 
+pub use crate::config_schema::Context;
 use crate::segments::{GitCache, Segment};
 use crate::types::{Color, RESET};
-
-#[derive(Deserialize)]
-pub struct Context {
-    pub color: Color,
-    pub prefix: String,
-    pub prefix_color: Color,
-    pub suffix: String,
-    pub suffix_color: Color,
-}
 
 impl Segment for Context {
     fn render(&self, json: &Value, _git: &mut GitCache) -> Option<String> {

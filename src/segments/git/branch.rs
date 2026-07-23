@@ -1,18 +1,8 @@
-use serde::Deserialize;
 use serde_json::Value;
 
 use super::tools::{detect_state, is_worktree, GitCache};
-use crate::types::Color;
+pub use crate::config_schema::GitBranch;
 use crate::segments::Segment;
-
-#[derive(Deserialize)]
-pub struct GitBranch {
-    pub color: Color,
-    pub state_color: Color,
-    pub show_worktree: bool,
-    pub show_ahead_behind: bool,
-    pub show_state: bool,
-}
 
 impl Segment for GitBranch {
     fn render(&self, _json: &Value, git: &mut GitCache) -> Option<String> {

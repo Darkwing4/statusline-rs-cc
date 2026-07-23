@@ -3,18 +3,10 @@ use std::fs;
 use std::path::PathBuf;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use serde::Deserialize;
 use serde_json::Value;
 
-use crate::types::Color;
+pub use crate::config_schema::IdleTime;
 use crate::segments::{GitCache, Segment};
-
-#[derive(Deserialize)]
-pub struct IdleTime {
-    pub color: Color,
-    pub prefix: String,
-    pub threshold_seconds: u64,
-}
 
 impl IdleTime {
     #[cfg(debug_assertions)]

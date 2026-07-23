@@ -1,20 +1,14 @@
 use std::fs;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use serde::Deserialize;
 use serde_json::Value;
 
+pub use crate::config_schema::CacheTtl;
 use crate::segments::{GitCache, Segment};
 use crate::types::Color;
 
 const TTL_5M_SECS: i64 = 5 * 60;
 const TTL_1H_SECS: i64 = 60 * 60;
-
-#[derive(Deserialize)]
-pub struct CacheTtl {
-    pub color: Color,
-    pub prefix: String,
-}
 
 pub(super) struct CacheSnapshot {
     pub(super) last_activity: i64,

@@ -9,6 +9,10 @@ serde = { version = "1", default-features = false, features = ["std", "derive"] 
 serde_json = { version = "1", default-features = false, features = ["std"] }
 ron = "0.8"
 
+[build-dependencies]
+serde = { version = "1", default-features = false, features = ["std", "derive"] }
+ron = "0.8"
+
 [profile.release]
 opt-level = 3
 lto = "fat"
