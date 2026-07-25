@@ -85,7 +85,7 @@ GitDiff(
 
 GitError(
     color: Named(91),
-    prefix: "git: ",
+    text: "no git",
 )
 
 IdleTime(
