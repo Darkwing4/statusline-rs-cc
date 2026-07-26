@@ -14,7 +14,10 @@ impl Segment for GitDiff {
             parts.push(self.modified_color.paint(&format!("~{}", status.modified)));
         }
         if status.untracked > 0 {
-            parts.push(self.untracked_color.paint(&format!("+{}", status.untracked)));
+            parts.push(
+                self.untracked_color
+                    .paint(&format!("+{}", status.untracked)),
+            );
         }
         if status.deleted > 0 {
             parts.push(self.deleted_color.paint(&format!("-{}", status.deleted)));

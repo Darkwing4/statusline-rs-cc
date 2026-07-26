@@ -13,14 +13,19 @@ const EMBED_FILENAME: &str = "embedded_config.ron";
 fn main() {
     println!("cargo:rerun-if-env-changed={}", ENV_VAR);
 
-    let manifest_dir = PathBuf::from(env::var_os("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR"));
+    let manifest_dir =
+        PathBuf::from(env::var_os("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR"));
 
     let configured = env::var(ENV_VAR).ok().filter(|s| !s.is_empty());
 
     let source = match configured {
         Some(p) => {
             let pb = PathBuf::from(&p);
-            if pb.is_absolute() { pb } else { manifest_dir.join(p) }
+            if pb.is_absolute() {
+                pb
+            } else {
+                manifest_dir.join(p)
+            }
         }
         None => manifest_dir.join(DEFAULT_REL_PATH),
     };

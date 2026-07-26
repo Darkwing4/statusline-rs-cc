@@ -9,7 +9,7 @@ use serde_json::{json, Value};
 use crate::segments::cache_ttl::CacheSnapshot;
 use crate::transcript_tail_reader::scan_jsonl_lines_from_end;
 
-pub fn append(
+pub(in crate::segments) fn append(
     json_input: &Value,
     now: i64,
     snapshot: Option<&CacheSnapshot>,
@@ -46,7 +46,9 @@ pub fn append(
         })
     });
 
-    let recent_rows = transcript_path.map(recent_assistant_rows).unwrap_or_default();
+    let recent_rows = transcript_path
+        .map(recent_assistant_rows)
+        .unwrap_or_default();
 
     let rendered_text = rendered.map(strip_ansi);
 

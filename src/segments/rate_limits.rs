@@ -136,7 +136,9 @@ fn gradient_rgb(
 
 fn lerp_rgb(a: (u8, u8, u8), b: (u8, u8, u8), t: f64) -> (u8, u8, u8) {
     let lerp = |x: u8, y: u8, t: f64| {
-        (x as f64 + (y as f64 - x as f64) * t).round().clamp(0.0, 255.0) as u8
+        (x as f64 + (y as f64 - x as f64) * t)
+            .round()
+            .clamp(0.0, 255.0) as u8
     };
     (lerp(a.0, b.0, t), lerp(a.1, b.1, t), lerp(a.2, b.2, t))
 }

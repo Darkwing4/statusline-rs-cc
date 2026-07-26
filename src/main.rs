@@ -1,8 +1,8 @@
 mod config;
 mod config_schema;
 mod segments;
-mod statusline_renderer;
 mod statusline_input;
+mod statusline_renderer;
 mod transcript_tail_reader;
 mod types;
 
