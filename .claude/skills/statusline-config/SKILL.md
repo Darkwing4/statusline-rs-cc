@@ -94,6 +94,11 @@ IdleTime(
     threshold_seconds: 0,
 )
 
+ModelEffort(
+    model_color: Rgb(180, 142, 173),
+    effort_color: Named(90),
+)
+
 RateLimit(
     window: FiveHour,        // FiveHour | SevenDay
     style: Bar,              // Percent | Bar | BarPercent | Radial | RadialPercent

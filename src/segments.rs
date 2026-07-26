@@ -3,6 +3,7 @@ pub mod context;
 pub mod cwd;
 pub mod git;
 pub mod idle_time;
+pub mod model_effort;
 pub mod rate_limits;
 
 #[cfg(debug_assertions)]

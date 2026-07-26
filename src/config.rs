@@ -6,6 +6,7 @@ use crate::segments::{
     cwd::Cwd,
     git::{GitBranch, GitDiff, GitError},
     idle_time::IdleTime,
+    model_effort::ModelEffort,
     rate_limits::RateLimit,
     Segment,
 };
@@ -29,6 +30,7 @@ pub enum SegmentSpec {
     GitDiff(GitDiff),
     GitError(GitError),
     IdleTime(IdleTime),
+    ModelEffort(ModelEffort),
     RateLimit(RateLimit),
 }
 
@@ -46,6 +48,7 @@ impl SegmentSpec {
                 s.validate_debug();
                 Box::new(s)
             }
+            SegmentSpec::ModelEffort(s) => Box::new(s),
             SegmentSpec::RateLimit(s) => Box::new(s),
         }
     }
