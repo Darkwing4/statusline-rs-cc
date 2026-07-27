@@ -144,21 +144,23 @@ Reorder, drop, or re-colour by editing the list, then rebuild. `Color` variants:
 
 ## extending
 
-Define the logic in `src/segments/*.rs`, register the module in `src/segments.rs`, initialize it in `src/main.rs`, then build.
+Declare the segment's config fields in `src/config_schema.rs` and add a `SegmentSpec` variant for them, define the logic in `src/segments/*.rs` (re-export the schema struct and `impl Segment` for it), register the module in `src/segments.rs`, map the variant in `src/config.rs`, add the segment to `config/default.ron`, then build.
 
 `IdleTime` is the concrete extension example, added in [`fac22e1`](https://github.com/Darkwing4/statusline-rs-cc/commit/fac22e1c1b04822b332c00268305bfc9224547b1). It reads `transcript_path`, ignores tool-result messages, finds the latest real user input timestamp, and renders values like `idle 42s`, `idle 3m12s`, or `idle 1h0m`.
 
 To make `IdleTime` tick without new Claude events, opt in with `statusLine.refreshInterval` in Claude Code settings.
 
-Register it with `pub mod idle_time;` in `src/segments.rs`, then initialize it in `src/main.rs`:
+Register it with `pub mod idle_time;` in `src/segments.rs`, then add it to `config/default.ron`:
 
-```rust
-use segments::idle_time::IdleTime;
-
-Box::new(IdleTime::new(Color::Named(90), "idle ", 0))
+```ron
+IdleTime(
+    color: Named(90),
+    prefix: "idle ",
+    threshold_seconds: 0,
+)
 ```
 
-Segments receive the raw `serde_json::Value` so they own which fields they read — no central schema to update. For git-aware segments take `git: &mut GitCache` and call `git.dir()` / `git.status()` — `git status` is forked at most once per render, shared. For segments that render on their own line below the main one (multi-line debug output), override `fn standalone(&self) -> bool { true }`.
+Segments receive the raw `serde_json::Value` so they own which input fields they read — only the config fields go through `config_schema.rs`, which `build.rs` uses to reject an invalid config at build time. For git-aware segments take `git: &mut GitCache` and call `git.dir()` / `git.status()` — `git status` is forked at most once per render, shared. For segments that render on their own line below the main one (multi-line debug output), override `fn standalone(&self) -> bool { true }`.
 
 <details>
 <summary>source layout</summary>
@@ -166,8 +168,14 @@ Segments receive the raw `serde_json::Value` so they own which fields they read 
 ```
 src/
 ├── main.rs                 entry: build Renderer, write to stdout
-├── statusline_renderer.rs  owns segments, joins them, truncates to terminal width
+├── config.rs               loads the embedded config, maps SegmentSpec to segments
+├── config_schema.rs        RON schema, shared with build.rs for build-time validation
+├── statusline_renderer.rs  owns segments, joins them, wraps to terminal width
+├── statusline_renderer/
+│   ├── segment_wrapping.rs wraps segments to lines by visible (ANSI-stripped) width
+│   └── terminal_width.rs   terminal columns via ioctl, COLUMNS, parent process tree
 ├── statusline_input.rs     reads + parses stdin JSON from Claude Code
+├── transcript_tail_reader.rs  scans transcript JSONL backwards in 64 KB blocks
 ├── types.rs / types/       shared types (Color, RESET)
 └── segments/
     ├── model.rs            current model name
@@ -192,7 +200,7 @@ Claude Code invokes the statusline after each assistant message (and a few other
 { "cwd": "...", "context_window": { "used_percentage": 42.5 }, "model": { "display_name": "Opus" }, "effort": { "level": "high" }, "workspace": {...} }
 ```
 
-Hot path on Linux x86_64 (i7-12700H, median of 60): **~4.9 ms** inside a git repo, **~2.1 ms** outside, **~424 KB** stripped release binary. `git status --branch --porcelain=v2` forks once; everything else (HOME shortening, `.git` ancestor walk, state detection, terminal width via `stty`) runs in-process.
+Hot path on Linux x86_64 (i7-12700H, median of 60): **~4.9 ms** inside a git repo, **~2.1 ms** outside, **~424 KB** stripped release binary. `git status --branch --porcelain=v2` forks once; everything else (HOME shortening, `.git` ancestor walk, state detection, terminal width via `ioctl`) runs in-process.
 
 ## license
 
