@@ -2,9 +2,13 @@
     separator: " ",
     separator_color: Named(90),
     segments: [
-        ModelEffort(
-            model_color: Rgb(180, 142, 173),
-            effort_color: Named(90),
+        Model(
+            color: Rgb(180, 142, 173),
+            prefix: "",
+        ),
+        Effort(
+            color: Named(90),
+            prefix: "",
         ),
         Context(
             color: Gradient,

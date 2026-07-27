@@ -97,9 +97,13 @@ The whole config is an external [RON](https://github.com/ron-rs/ron) file at [`c
     separator: " ",
     separator_color: Named(90),
     segments: [
-        ModelEffort(
-            model_color: Rgb(180, 142, 173),
-            effort_color: Named(90),
+        Model(
+            color: Rgb(180, 142, 173),
+            prefix: "",
+        ),
+        Effort(
+            color: Named(90),
+            prefix: "",
         ),
         Context(
             color: Gradient,
@@ -166,7 +170,8 @@ src/
 ├── statusline_input.rs     reads + parses stdin JSON from Claude Code
 ├── types.rs / types/       shared types (Color, RESET)
 └── segments/
-    ├── model_effort.rs     current model name and reasoning effort
+    ├── model.rs            current model name
+    ├── effort.rs           current reasoning effort level
     ├── context.rs          context window % with gradient
     ├── cwd.rs              shortened cwd
     ├── idle_time.rs        time since last real user input

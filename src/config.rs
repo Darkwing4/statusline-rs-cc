@@ -4,9 +4,10 @@ use crate::segments::{
     cache_ttl::CacheTtl,
     context::Context,
     cwd::Cwd,
+    effort::Effort,
     git::{GitBranch, GitDiff, GitError},
     idle_time::IdleTime,
-    model_effort::ModelEffort,
+    model::Model,
     rate_limits::RateLimit,
     Segment,
 };
@@ -26,11 +27,12 @@ pub enum SegmentSpec {
     Context(Context),
     CacheTtl(CacheTtl),
     Cwd(Cwd),
+    Effort(Effort),
     GitBranch(GitBranch),
     GitDiff(GitDiff),
     GitError(GitError),
     IdleTime(IdleTime),
-    ModelEffort(ModelEffort),
+    Model(Model),
     RateLimit(RateLimit),
 }
 
@@ -40,6 +42,7 @@ impl SegmentSpec {
             SegmentSpec::Context(s) => Box::new(s),
             SegmentSpec::CacheTtl(s) => Box::new(s),
             SegmentSpec::Cwd(s) => Box::new(s),
+            SegmentSpec::Effort(s) => Box::new(s),
             SegmentSpec::GitBranch(s) => Box::new(s),
             SegmentSpec::GitDiff(s) => Box::new(s),
             SegmentSpec::GitError(s) => Box::new(s),
@@ -48,7 +51,7 @@ impl SegmentSpec {
                 s.validate_debug();
                 Box::new(s)
             }
-            SegmentSpec::ModelEffort(s) => Box::new(s),
+            SegmentSpec::Model(s) => Box::new(s),
             SegmentSpec::RateLimit(s) => Box::new(s),
         }
     }
