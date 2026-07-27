@@ -5,6 +5,7 @@ use serde_json::Value;
 
 use self::segment_wrapping::wrap_segments;
 use self::terminal_width::terminal_width;
+
 use crate::segments::{GitCache, Segment};
 use crate::statusline_input;
 use crate::types::Color;
@@ -27,9 +28,11 @@ impl Renderer {
             let Some(rendered) = segment.render(json, &mut git) else {
                 continue;
             };
+
             if rendered.is_empty() {
                 continue;
             }
+
             if segment.standalone() {
                 tail_lines.push(rendered);
             } else {
