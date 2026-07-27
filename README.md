@@ -97,6 +97,14 @@ The whole config is an external [RON](https://github.com/ron-rs/ron) file at [`c
     separator: " ",
     separator_color: Named(90),
     segments: [
+        Model(
+            color: Rgb(180, 142, 173),
+            prefix: "",
+        ),
+        Effort(
+            color: Named(90),
+            prefix: "",
+        ),
         Context(
             color: Gradient,
             prefix: "", prefix_color: Rgb(180, 142, 173),
@@ -162,6 +170,8 @@ src/
 ├── statusline_input.rs     reads + parses stdin JSON from Claude Code
 ├── types.rs / types/       shared types (Color, RESET)
 └── segments/
+    ├── model.rs            current model name
+    ├── effort.rs           current reasoning effort level
     ├── context.rs          context window % with gradient
     ├── cwd.rs              shortened cwd
     ├── idle_time.rs        time since last real user input
@@ -179,7 +189,7 @@ src/
 Claude Code invokes the statusline after each assistant message (and a few other events), feeds JSON on stdin, renders whatever lands on stdout. Execution is async — a slow statusline never blocks input, in-flight runs are cancelled on update. Contract:
 
 ```json
-{ "cwd": "...", "context_window": { "used_percentage": 42.5 }, "model": {...}, "workspace": {...} }
+{ "cwd": "...", "context_window": { "used_percentage": 42.5 }, "model": { "display_name": "Opus" }, "effort": { "level": "high" }, "workspace": {...} }
 ```
 
 Hot path on Linux x86_64 (i7-12700H, median of 60): **~4.9 ms** inside a git repo, **~2.1 ms** outside, **~424 KB** stripped release binary. `git status --branch --porcelain=v2` forks once; everything else (HOME shortening, `.git` ancestor walk, state detection, terminal width via `stty`) runs in-process.

@@ -69,6 +69,11 @@ Cwd(
     color: Rgb(95, 175, 175),
 )
 
+Effort(
+    color: Named(90),
+    prefix: "",              // reasoning effort level, e.g. "high"
+)
+
 GitBranch(
     color: Named(32),
     state_color: Named(91),
@@ -92,6 +97,11 @@ IdleTime(
     color: Named(90),
     prefix: "idle ",
     threshold_seconds: 0,
+)
+
+Model(
+    color: Rgb(180, 142, 173),
+    prefix: "",              // model display name, falls back to model id
 )
 
 RateLimit(
