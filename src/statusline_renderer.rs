@@ -320,3 +320,92 @@ fn platform_terminal_width() -> Option<usize> {
 fn platform_terminal_width() -> Option<usize> {
     None
 }
+
+#[cfg(test)]
+mod tests {
+    use serde_json::Value;
+
+    use super::Renderer;
+    use crate::segments::{GitCache, Segment};
+    use crate::types::Color;
+
+    struct FixedSegment {
+        output: Option<&'static str>,
+        standalone: bool,
+    }
+
+    impl Segment for FixedSegment {
+        fn render(&self, _json: &Value, _git: &mut GitCache) -> Option<String> {
+            self.output.map(str::to_owned)
+        }
+
+        fn standalone(&self) -> bool {
+            self.standalone
+        }
+    }
+
+    fn segment(output: &'static str, standalone: bool) -> Box<dyn Segment> {
+        Box::new(FixedSegment {
+            output: Some(output),
+            standalone,
+        })
+    }
+
+    fn omitted_segment(standalone: bool) -> Box<dyn Segment> {
+        Box::new(FixedSegment {
+            output: None,
+            standalone,
+        })
+    }
+
+    #[test]
+    fn renders_standalone_segments_on_separate_lines_after_main_line() {
+        let renderer = Renderer {
+            separator: " ".to_string(),
+            separator_color: Color::Gradient,
+            segments: vec![
+                segment("first standalone", true),
+                segment("main", false),
+                segment("second standalone", true),
+            ],
+        };
+
+        assert_eq!(
+            renderer.render(&serde_json::json!({})),
+            "main\nfirst standalone\nsecond standalone"
+        );
+    }
+
+    #[test]
+    fn renders_only_standalone_segments_on_separate_lines() {
+        let renderer = Renderer {
+            separator: " ".to_string(),
+            separator_color: Color::Gradient,
+            segments: vec![
+                segment("first standalone", true),
+                segment("second standalone", true),
+            ],
+        };
+
+        assert_eq!(
+            renderer.render(&serde_json::json!({})),
+            "\nfirst standalone\nsecond standalone"
+        );
+    }
+
+    #[test]
+    fn skips_absent_and_empty_segments_without_extra_lines() {
+        let renderer = Renderer {
+            separator: " ".to_string(),
+            separator_color: Color::Gradient,
+            segments: vec![
+                omitted_segment(false),
+                segment("", false),
+                omitted_segment(true),
+                segment("", true),
+            ],
+        };
+
+        assert_eq!(renderer.render(&serde_json::json!({})), "");
+    }
+}

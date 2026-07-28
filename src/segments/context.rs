@@ -56,3 +56,27 @@ fn gradient_rgb(p: f64) -> (u8, u8, u8) {
         (lerp(180, 220, t), lerp(165, 60, t), lerp(100, 60, t))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::gradient_rgb;
+
+    #[test]
+    fn returns_colors_at_gradient_stops() {
+        assert_eq!(gradient_rgb(0.0), (150, 150, 150));
+        assert_eq!(gradient_rgb(20.0), (180, 165, 100));
+        assert_eq!(gradient_rgb(30.0), (220, 60, 60));
+    }
+
+    #[test]
+    fn interpolates_between_gradient_stops() {
+        assert_eq!(gradient_rgb(10.0), (165, 157, 125));
+        assert_eq!(gradient_rgb(25.0), (200, 112, 80));
+    }
+
+    #[test]
+    fn clamps_values_outside_gradient_range() {
+        assert_eq!(gradient_rgb(-1.0), (150, 150, 150));
+        assert_eq!(gradient_rgb(100.0), (220, 60, 60));
+    }
+}
