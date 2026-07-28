@@ -7,11 +7,29 @@ use std::ops::ControlFlow;
 use std::path::PathBuf;
 use std::time::{SystemTime, UNIX_EPOCH};
 
+use serde::Deserialize;
 use serde_json::Value;
 
 pub use crate::config_schema::IdleTime;
 use crate::segments::{GitCache, Segment};
 use crate::transcript_tail_reader::scan_jsonl_lines_from_end;
+
+#[derive(Deserialize)]
+struct RawLineKind<'a> {
+    #[serde(rename = "type")]
+    kind: Option<&'a str>,
+}
+
+#[derive(Deserialize)]
+struct RawUserLine<'a> {
+    timestamp: Option<&'a str>,
+    message: Option<RawUserMessage>,
+}
+
+#[derive(Deserialize)]
+struct RawUserMessage {
+    content: Option<Value>,
+}
 
 impl IdleTime {
     #[cfg(debug_assertions)]
@@ -43,18 +61,7 @@ impl Segment for IdleTime {
 
 fn read_last_user_input_timestamp<R: Read + Seek>(reader: &mut R) -> Option<i64> {
     let result = scan_jsonl_lines_from_end(reader, |line| {
-        let Ok(value) = serde_json::from_str::<Value>(line) else {
-            return ControlFlow::Continue(());
-        };
-        if !is_user_input(&value) {
-            return ControlFlow::Continue(());
-        }
-
-        let Some(timestamp) = value
-            .get("timestamp")
-            .and_then(Value::as_str)
-            .and_then(parse_iso8601_utc)
-        else {
+        let Some(timestamp) = parse_user_input_timestamp(line) else {
             return ControlFlow::Continue(());
         };
 
@@ -68,18 +75,29 @@ fn read_last_user_input_timestamp<R: Read + Seek>(reader: &mut R) -> Option<i64>
     }
 }
 
-fn is_user_input(v: &Value) -> bool {
-    if v.get("type").and_then(|x| x.as_str()) != Some("user") {
-        return false;
+fn parse_user_input_timestamp(line: &str) -> Option<i64> {
+    let head: RawLineKind = serde_json::from_str(line).ok()?;
+
+    if head.kind != Some("user") {
+        return None;
     }
-    let Some(content) = v.pointer("/message/content") else {
-        return false;
-    };
+
+    let row: RawUserLine = serde_json::from_str(line).ok()?;
+    let content = row.message?.content?;
+
+    if !is_user_input(&content) {
+        return None;
+    }
+
+    row.timestamp.and_then(parse_iso8601_utc)
+}
+
+fn is_user_input(content: &Value) -> bool {
     match content {
         Value::String(_) => true,
-        Value::Array(arr) => !arr
+        Value::Array(blocks) => !blocks
             .iter()
-            .any(|c| c.get("type").and_then(|t| t.as_str()) == Some("tool_result")),
+            .any(|block| block.get("type").and_then(|t| t.as_str()) == Some("tool_result")),
         _ => false,
     }
 }
