@@ -41,11 +41,7 @@ impl SegmentSpec {
             SegmentSpec::GitBranch(s) => Box::new(s),
             SegmentSpec::GitDiff(s) => Box::new(s),
             SegmentSpec::GitError(s) => Box::new(s),
-            SegmentSpec::IdleTime(s) => {
-                #[cfg(debug_assertions)]
-                s.validate_debug();
-                Box::new(s)
-            }
+            SegmentSpec::IdleTime(s) => Box::new(s),
             SegmentSpec::RateLimit(s) => Box::new(s),
         }
     }

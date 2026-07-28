@@ -94,22 +94,17 @@ fn wrap_segments(parts: &[String], sep: &str, max: usize) -> String {
 
 fn visible_width(s: &str) -> usize {
     let mut width = 0usize;
-    let bytes = s.as_bytes();
-    let mut i = 0;
+    let mut chars = s.chars();
 
-    while i < bytes.len() {
-        if bytes[i] == 0x1b {
-            i += 1;
-            while i < bytes.len() && !bytes[i].is_ascii_alphabetic() {
-                i += 1;
-            }
-            if i < bytes.len() {
-                i += 1;
+    while let Some(ch) = chars.next() {
+        if ch == '\u{1b}' {
+            for escape_char in chars.by_ref() {
+                if escape_char.is_ascii_alphabetic() {
+                    break;
+                }
             }
         } else {
-            let ch = s[i..].chars().next().unwrap();
             width += 1;
-            i += ch.len_utf8();
         }
     }
 
@@ -319,4 +314,24 @@ fn platform_terminal_width() -> Option<usize> {
 #[cfg(not(any(unix, windows)))]
 fn platform_terminal_width() -> Option<usize> {
     None
+}
+
+#[cfg(test)]
+mod tests {
+    use super::visible_width;
+
+    #[test]
+    fn ignores_ansi_sequences_when_measuring_width() {
+        assert_eq!(visible_width("\u{1b}[31mred\u{1b}[0m"), 3);
+    }
+
+    #[test]
+    fn preserves_unicode_around_ansi_sequences() {
+        assert_eq!(visible_width("界\u{1b}[31m🙂\u{1b}[0mé"), 3);
+    }
+
+    #[test]
+    fn handles_incomplete_ansi_sequence() {
+        assert_eq!(visible_width("界\u{1b}[31"), 1);
+    }
 }
