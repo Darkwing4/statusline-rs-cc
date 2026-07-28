@@ -7,6 +7,7 @@ use crate::segments::{GitCache, Segment};
 use crate::types::{Color, RESET};
 
 const COUNTDOWN_TOKEN: &str = "{t}";
+const UNKNOWN_COUNTDOWN: &str = "?";
 
 impl RateLimit {
     fn resolve_prefix(&self, window_data: &Value, now: Option<i64>) -> String {
@@ -14,26 +15,22 @@ impl RateLimit {
             return self.prefix.clone();
         }
 
-        let remaining = self.remaining_units(window_data, now);
-        self.prefix
-            .replace(COUNTDOWN_TOKEN, &format!("{:.1}", remaining))
+        let remaining = match self.remaining_units(window_data, now) {
+            Some(value) => format!("{value:.1}"),
+            None => UNKNOWN_COUNTDOWN.to_string(),
+        };
+        self.prefix.replace(COUNTDOWN_TOKEN, &remaining)
     }
 
-    fn remaining_units(&self, window_data: &Value, now: Option<i64>) -> f64 {
-        let (unit_secs, nominal) = match self.window {
-            Window::FiveHour => (3600.0, 5.0),
-            Window::SevenDay => (86400.0, 7.0),
+    fn remaining_units(&self, window_data: &Value, now: Option<i64>) -> Option<f64> {
+        let unit_secs = match self.window {
+            Window::FiveHour => 3600.0,
+            Window::SevenDay => 86400.0,
         };
-
-        let resets_at = window_data.get("resets_at").and_then(Value::as_i64);
-
-        match (now, resets_at) {
-            (Some(now), Some(resets_at)) => {
-                let remaining = resets_at.saturating_sub(now).max(0) as f64;
-                remaining / unit_secs
-            }
-            _ => nominal,
-        }
+        let now = now?;
+        let resets_at = window_data.get("resets_at").and_then(Value::as_i64)?;
+        let remaining = resets_at.saturating_sub(now).max(0) as f64;
+        Some(remaining / unit_secs)
     }
 }
 
@@ -103,7 +100,8 @@ impl Segment for RateLimit {
                 let low = color_to_rgb(self.low_color, (60, 200, 60));
                 let mid = color_to_rgb(self.mid_color, (220, 200, 40));
                 let high = color_to_rgb(self.high_color, (220, 60, 60));
-                let (r, g, b) = gradient_rgb(pct, low, mid, high);
+                let (r, g, b) =
+                    gradient_rgb(pct, self.gradient_midpoint_percentage, low, mid, high);
                 format!("\x1b[38;2;{};{};{}m{}{}", r, g, b, text, RESET)
             }
         };
@@ -121,15 +119,20 @@ fn color_to_rgb(c: Color, fallback: (u8, u8, u8)) -> (u8, u8, u8) {
 
 fn gradient_rgb(
     pct: f64,
+    midpoint_percentage: f64,
     low: (u8, u8, u8),
     mid: (u8, u8, u8),
     high: (u8, u8, u8),
 ) -> (u8, u8, u8) {
     let p = pct.clamp(0.0, 100.0);
-    let (a, b, t) = if p <= 50.0 {
-        (low, mid, p / 50.0)
+    let (a, b, t) = if p <= midpoint_percentage {
+        (low, mid, p / midpoint_percentage)
     } else {
-        (mid, high, (p - 50.0) / 50.0)
+        (
+            mid,
+            high,
+            (p - midpoint_percentage) / (100.0 - midpoint_percentage),
+        )
     };
     lerp_rgb(a, b, t)
 }
@@ -156,6 +159,7 @@ mod tests {
             style: Style::Percent,
             fill: Fill::Used,
             color_mode: ColorMode::Steps,
+            gradient_midpoint_percentage: 50.0,
             prefix: prefix.to_string(),
             low_color: Color::Named(32),
             mid_color: Color::Named(33),
@@ -210,11 +214,21 @@ mod tests {
         let mid = (110, 120, 130);
         let high = (210, 220, 230);
 
-        assert_eq!(gradient_rgb(0.0, low, mid, high), low);
-        assert_eq!(gradient_rgb(25.0, low, mid, high), (60, 70, 80));
-        assert_eq!(gradient_rgb(50.0, low, mid, high), mid);
-        assert_eq!(gradient_rgb(75.0, low, mid, high), (160, 170, 180));
-        assert_eq!(gradient_rgb(100.0, low, mid, high), high);
+        assert_eq!(gradient_rgb(0.0, 50.0, low, mid, high), low);
+        assert_eq!(gradient_rgb(25.0, 50.0, low, mid, high), (60, 70, 80));
+        assert_eq!(gradient_rgb(50.0, 50.0, low, mid, high), mid);
+        assert_eq!(gradient_rgb(75.0, 50.0, low, mid, high), (160, 170, 180));
+        assert_eq!(gradient_rgb(100.0, 50.0, low, mid, high), high);
+    }
+
+    #[test]
+    fn gradient_rgb_places_mid_color_at_configured_midpoint() {
+        let low = (0, 0, 0);
+        let mid = (100, 100, 100);
+        let high = (200, 200, 200);
+
+        assert_eq!(gradient_rgb(25.0, 25.0, low, mid, high), mid);
+        assert_eq!(gradient_rgb(62.5, 25.0, low, mid, high), (150, 150, 150));
     }
 
     #[test]
@@ -223,10 +237,10 @@ mod tests {
         let mid = (1, 3, 5);
         let high = (2, 4, 6);
 
-        assert_eq!(gradient_rgb(25.0, low, mid, high), (1, 3, 5));
-        assert_eq!(gradient_rgb(75.0, low, mid, high), (2, 4, 6));
-        assert_eq!(gradient_rgb(-1.0, low, mid, high), low);
-        assert_eq!(gradient_rgb(101.0, low, mid, high), high);
+        assert_eq!(gradient_rgb(25.0, 50.0, low, mid, high), (1, 3, 5));
+        assert_eq!(gradient_rgb(75.0, 50.0, low, mid, high), (2, 4, 6));
+        assert_eq!(gradient_rgb(-1.0, 50.0, low, mid, high), low);
+        assert_eq!(gradient_rgb(101.0, 50.0, low, mid, high), high);
     }
 
     #[test]
@@ -240,24 +254,24 @@ mod tests {
     }
 
     #[test]
-    fn remaining_units_falls_back_to_nominal_window_lengths() {
+    fn remaining_units_returns_none_without_real_reset_data() {
         let data = json!({});
 
         assert_eq!(
             rate_limit(Window::FiveHour, "").remaining_units(&data, Some(1_000)),
-            5.0
+            None
         );
         assert_eq!(
             rate_limit(Window::SevenDay, "").remaining_units(&data, Some(1_000)),
-            7.0
+            None
         );
         assert_eq!(
             rate_limit(Window::FiveHour, "").remaining_units(&json!({"resets_at": 10_000}), None),
-            5.0
+            None
         );
         assert_eq!(
             rate_limit(Window::SevenDay, "").remaining_units(&json!({"resets_at": 10_000}), None),
-            7.0
+            None
         );
     }
 
@@ -267,11 +281,11 @@ mod tests {
 
         assert_eq!(
             segment.resolve_prefix(&json!({}), Some(1_000)),
-            "7.0 days, then 7.0 days"
+            "? days, then ? days"
         );
         assert_eq!(
             segment.resolve_prefix(&json!({"resets_at": "invalid"}), Some(1_000)),
-            "7.0 days, then 7.0 days"
+            "? days, then ? days"
         );
     }
 
@@ -282,12 +296,18 @@ mod tests {
         let five_hour_data = json!({"resets_at": 6_400});
         let seven_day_data = json!({"resets_at": 130_600});
 
-        assert_eq!(five_hour.remaining_units(&five_hour_data, Some(1_000)), 1.5);
+        assert_eq!(
+            five_hour.remaining_units(&five_hour_data, Some(1_000)),
+            Some(1.5)
+        );
         assert_eq!(
             five_hour.resolve_prefix(&five_hour_data, Some(1_000)),
             "1.5"
         );
-        assert_eq!(seven_day.remaining_units(&seven_day_data, Some(1_000)), 1.5);
+        assert_eq!(
+            seven_day.remaining_units(&seven_day_data, Some(1_000)),
+            Some(1.5)
+        );
         assert_eq!(
             seven_day.resolve_prefix(&seven_day_data, Some(1_000)),
             "1.5"
@@ -300,7 +320,7 @@ mod tests {
 
         assert_eq!(
             segment.remaining_units(&json!({"resets_at": 999}), Some(1_000)),
-            0.0
+            Some(0.0)
         );
         assert_eq!(
             segment.resolve_prefix(&json!({"resets_at": 999}), Some(1_000)),
@@ -308,7 +328,7 @@ mod tests {
         );
         assert_eq!(
             segment.remaining_units(&json!({"resets_at": i64::MIN}), Some(i64::MAX)),
-            0.0
+            Some(0.0)
         );
         assert_eq!(
             segment.resolve_prefix(&json!({"resets_at": i64::MIN}), Some(i64::MAX)),

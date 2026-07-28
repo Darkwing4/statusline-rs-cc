@@ -50,7 +50,7 @@ Top level:
 
 ### Segments
 
-Every segment is a tagged tuple. All fields are required (no defaults in Deserialize) — do not omit fields.
+Every segment is a tagged tuple. All fields are required unless a compatibility default is stated.
 
 ```ron
 Context(
@@ -116,7 +116,8 @@ RateLimit(
     style: Bar,              // Percent | Bar | BarPercent | Radial | RadialPercent
     fill: Remaining,         // Used | Remaining
     color_mode: Gradient,    // Steps | Gradient
-    prefix: "5h ",           // a "{t}" token is replaced by time left until reset, in the window's unit (h for FiveHour, d for SevenDay), 1 decimal — e.g. "{t}d " shows 6.9d..0.5d..0.0d; falls back to nominal 5.0/7.0 if resets_at is missing
+    gradient_midpoint_percentage: 50.0, // position of mid_color in Gradient; defaults to 50.0 for existing configs
+    prefix: "5h ",           // a "{t}" token is replaced by time left until reset, in the window's unit (h for FiveHour, d for SevenDay), 1 decimal — e.g. "{t}d " shows 6.9d..0.5d..0.0d; renders "?" if resets_at is missing
     low_color: Rgb(103, 175, 103),
     mid_color: Rgb(195, 179, 100),
     high_color: Rgb(220, 60, 60),
@@ -139,7 +140,8 @@ If the user only wants to preview / not install yet, skip step 4 and say so.
 
 ## Validation tips
 
-- RON is strict: every field of a segment variant must be present. Missing field → build panics in `build.rs` with `ron::de::SpannedError`.
+- RON is strict: every required field of a segment variant must be present. Missing field → build panics in `build.rs` with `ron::de::SpannedError`.
+- `gradient_midpoint_percentage` defaults to `50.0` when omitted and must be greater than `0` and less than `100`.
 - Don't introduce unknown segment names — only the variants listed above exist in `SegmentSpec`.
 - `Gradient` on `ClaudeResourceUsage` / `Cwd` / `GitBranch` / `GitDiff` / `GitError` / `IdleTime` won't crash but will render as plain text (no colour) — prefer `Named` or `Rgb` there.
 - `ClaudeResourceUsage` is Linux-only and requires a matching live `session_id` entry in Claude Code's local session registry. It emits nothing when the process cannot be resolved or on macOS and Windows. CPU `100%` means one fully used core, RAM is the summed RSS of the Claude process tree, and the first CPU sample is `—`.
@@ -168,6 +170,7 @@ RateLimit(
     style: RadialPercent,
     fill: Used,
     color_mode: Steps,
+    gradient_midpoint_percentage: 50.0,
     prefix: "5h ",
     low_color: Named(32),
     mid_color: Named(33),

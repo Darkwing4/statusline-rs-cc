@@ -1,10 +1,6 @@
-#[cfg(debug_assertions)]
-use std::fs;
 use std::fs::File;
 use std::io::{Read, Seek};
 use std::ops::ControlFlow;
-#[cfg(debug_assertions)]
-use std::path::PathBuf;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use serde_json::Value;
@@ -12,16 +8,6 @@ use serde_json::Value;
 pub use crate::config_schema::IdleTime;
 use crate::segments::{GitCache, Segment};
 use crate::transcript_tail_reader::scan_jsonl_lines_from_end;
-
-impl IdleTime {
-    #[cfg(debug_assertions)]
-    pub fn validate_debug(&self) {
-        debug_assert!(
-            statusline_refresh_interval_enabled(),
-            "IdleTime requires statusLine.refreshInterval > 0 in Claude Code settings"
-        );
-    }
-}
 
 impl Segment for IdleTime {
     fn render(&self, json: &Value, _git: &mut GitCache) -> Option<String> {
@@ -128,36 +114,6 @@ fn days_from_civil(y: i64, m: u32, d: u32) -> i64 {
     let doe = yoe * 365 + yoe / 4 - yoe / 100 + doy;
     era * 146097 + doe - 719468
 }
-
-#[cfg(debug_assertions)]
-fn statusline_refresh_interval_enabled() -> bool {
-    let Some(settings_path) = claude_settings_path() else {
-        return false;
-    };
-    let Ok(body) = fs::read_to_string(settings_path) else {
-        return false;
-    };
-    let Ok(json) = serde_json::from_str::<Value>(&body) else {
-        return false;
-    };
-
-    json.pointer("/statusLine/refreshInterval")
-        .and_then(Value::as_f64)
-        .is_some_and(|n| n > 0.0)
-}
-
-#[cfg(debug_assertions)]
-fn claude_settings_path() -> Option<PathBuf> {
-    if let Some(path) = std::env::var_os("STATUSLINE_SETTINGS") {
-        if !path.is_empty() {
-            return Some(PathBuf::from(path));
-        }
-    }
-
-    let home = std::env::var_os("HOME").or_else(|| std::env::var_os("USERPROFILE"))?;
-    Some(PathBuf::from(home).join(".claude").join("settings.json"))
-}
-
 #[cfg(test)]
 mod tests {
     use std::io::Cursor;

@@ -113,6 +113,7 @@ The whole config is an external [RON](https://github.com/ron-rs/ron) file at [`c
         CacheTtl(color: Gradient, prefix: "cache "),
         RateLimit(
             window: FiveHour, style: Bar, fill: Remaining, color_mode: Gradient,
+            gradient_midpoint_percentage: 50.0,
             prefix: "5h ",
             low_color:  Rgb(103, 175, 103),
             mid_color:  Rgb(195, 179, 100),
@@ -120,6 +121,7 @@ The whole config is an external [RON](https://github.com/ron-rs/ron) file at [`c
         ),
         RateLimit(
             window: SevenDay, style: Bar, fill: Remaining, color_mode: Gradient,
+            gradient_midpoint_percentage: 50.0,
             prefix: "7d ",
             low_color:  Rgb(103, 175, 103),
             mid_color:  Rgb(195, 179, 100),
@@ -141,6 +143,7 @@ The whole config is an external [RON](https://github.com/ron-rs/ron) file at [`c
 ```
 
 Reorder, drop, or re-colour by editing the list, then rebuild. `Color` variants: `Named(code)` for ANSI 30–37 / 90–97, `Rgb(r, g, b)` for truecolor, `Gradient` (meaningful on `Context`, `CacheTtl`, and `RateLimit` when `color_mode: Gradient`).
+`RateLimit.gradient_midpoint_percentage` places `mid_color` within the gradient and must be greater than `0` and less than `100`; existing configs without the field use `50.0`.
 
 ### Linux resource usage
 
