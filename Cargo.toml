@@ -8,6 +8,7 @@ build = "build.rs"
 serde = { version = "1", default-features = false, features = ["std", "derive"] }
 serde_json = { version = "1", default-features = false, features = ["std"] }
 ron = "0.8"
+unicode-width = { version = "0.2", default-features = false }
 
 [build-dependencies]
 serde = { version = "1", default-features = false, features = ["std", "derive"] }
