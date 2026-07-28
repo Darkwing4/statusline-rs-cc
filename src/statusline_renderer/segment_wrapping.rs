@@ -1,3 +1,5 @@
+use unicode_width::UnicodeWidthStr;
+
 pub(super) fn wrap_segments(parts: &[String], sep: &str, max: usize) -> String {
     if parts.is_empty() {
         return String::new();
@@ -39,7 +41,11 @@ pub(super) fn wrap_segments(parts: &[String], sep: &str, max: usize) -> String {
 }
 
 fn visible_width(s: &str) -> usize {
-    let mut width = 0usize;
+    if !s.as_bytes().contains(&0x1b) {
+        return s.width();
+    }
+
+    let mut visible = String::with_capacity(s.len());
     let mut chars = s.chars();
 
     while let Some(ch) = chars.next() {
@@ -50,11 +56,11 @@ fn visible_width(s: &str) -> usize {
                 }
             }
         } else {
-            width += 1;
+            visible.push(ch);
         }
     }
 
-    width
+    visible.width()
 }
 
 #[cfg(test)]
@@ -64,21 +70,24 @@ mod tests {
     #[test]
     fn ignores_ansi_sequences_when_measuring_width() {
         assert_eq!(visible_width("\u{1b}[31mred\u{1b}[0m"), 3);
+        assert_eq!(visible_width("\u{1b}[31ma界🙂\u{1b}[0m"), 5);
+        assert_eq!(visible_width("\u{1b}[31m👩‍💻\u{1b}[0m"), 2);
     }
 
     #[test]
-    fn preserves_existing_unicode_scalar_width() {
-        assert_eq!(visible_width("a界🙂"), 3);
+    fn measures_unicode_display_width() {
+        assert_eq!(visible_width("a界🙂"), 5);
+        assert_eq!(visible_width("👩‍💻"), 2);
     }
 
     #[test]
     fn preserves_unicode_around_ansi_sequences() {
-        assert_eq!(visible_width("界\u{1b}[31m🙂\u{1b}[0mé"), 3);
+        assert_eq!(visible_width("界\u{1b}[31m🙂\u{1b}[0mé"), 5);
     }
 
     #[test]
     fn handles_incomplete_ansi_sequence() {
-        assert_eq!(visible_width("界\u{1b}[31"), 1);
+        assert_eq!(visible_width("界\u{1b}[31"), 2);
     }
 
     #[test]
@@ -93,6 +102,13 @@ mod tests {
         let parts = vec!["one".to_string(), "two".to_string()];
 
         assert_eq!(wrap_segments(&parts, " | ", 8), "one\ntwo");
+    }
+
+    #[test]
+    fn wraps_using_unicode_display_width() {
+        let parts = vec!["a界🙂".to_string(), "x".to_string()];
+
+        assert_eq!(wrap_segments(&parts, " | ", 8), "a界🙂\nx");
     }
 
     #[test]
