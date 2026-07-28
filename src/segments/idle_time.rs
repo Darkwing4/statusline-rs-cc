@@ -6,6 +6,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use serde_json::Value;
 
 pub use crate::config_schema::IdleTime;
+use crate::iso8601::parse_iso8601_utc;
 use crate::segments::{GitCache, Segment};
 use crate::transcript_tail_reader::scan_jsonl_lines_from_end;
 
@@ -84,36 +85,6 @@ fn format_duration(seconds: i64) -> String {
     }
 }
 
-fn parse_iso8601_utc(s: &str) -> Option<i64> {
-    let s = s.strip_suffix('Z').unwrap_or(s);
-    let (date, time) = s.split_once('T')?;
-
-    let mut dp = date.split('-');
-    let y: i64 = dp.next()?.parse().ok()?;
-    let mo: u32 = dp.next()?.parse().ok()?;
-    let d: u32 = dp.next()?.parse().ok()?;
-
-    let time = time.split('.').next()?;
-    let mut tp = time.split(':');
-    let h: i64 = tp.next()?.parse().ok()?;
-    let mi: i64 = tp.next()?.parse().ok()?;
-    let se: i64 = tp.next()?.parse().ok()?;
-
-    let days = days_from_civil(y, mo, d);
-    Some(days * 86400 + h * 3600 + mi * 60 + se)
-}
-
-fn days_from_civil(y: i64, m: u32, d: u32) -> i64 {
-    let y = if m <= 2 { y - 1 } else { y };
-    let era = y.div_euclid(400);
-    let yoe = y - era * 400;
-    let m = m as i64;
-    let d = d as i64;
-    let shifted_m = if m > 2 { m - 3 } else { m + 9 };
-    let doy = (153 * shifted_m + 2) / 5 + d - 1;
-    let doe = yoe * 365 + yoe / 4 - yoe / 100 + doy;
-    era * 146097 + doe - 719468
-}
 #[cfg(test)]
 mod tests {
     use std::io::Cursor;

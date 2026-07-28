@@ -1,5 +1,10 @@
+mod ansi;
 mod config;
 mod config_schema;
+mod gradient;
+mod iso8601;
+#[cfg(target_os = "linux")]
+mod process_stat;
 mod segments;
 mod statusline_input;
 mod statusline_renderer;

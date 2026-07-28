@@ -65,7 +65,7 @@ fn parse(body: &str) -> Option<ProcessStat> {
 
 #[cfg(test)]
 mod tests {
-    use super::{parse, ProcessStat};
+    use super::{parse, read, ProcessStat};
 
     fn process(
         pid: u32,
@@ -120,5 +120,13 @@ mod tests {
         let body = format!("77 (claude) {}", fields.join(" "));
 
         assert_eq!(parse(&body), Some(process(77, 42, 98765, 18, 1234)));
+    }
+
+    #[test]
+    fn reads_current_process() {
+        let pid = std::process::id();
+        let stat = read(pid).unwrap();
+
+        assert_eq!(stat.pid, pid);
     }
 }

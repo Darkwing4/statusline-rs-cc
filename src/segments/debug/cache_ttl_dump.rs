@@ -6,6 +6,9 @@ use std::time::UNIX_EPOCH;
 
 use serde_json::{json, Value};
 
+use crate::ansi::strip_ansi;
+#[cfg(target_os = "linux")]
+use crate::process_stat;
 use crate::segments::cache_ttl::CacheSnapshot;
 use crate::transcript_tail_reader::scan_jsonl_lines_from_end;
 
@@ -54,11 +57,15 @@ pub(in crate::segments) fn append(
 
     let session_id = json_input.get("session_id").and_then(Value::as_str);
     let cwd = json_input.get("cwd").and_then(Value::as_str);
+    #[cfg(target_os = "linux")]
+    let ppid = process_stat::read(std::process::id()).map(|stat| stat.ppid);
+    #[cfg(not(target_os = "linux"))]
+    let ppid = None::<u32>;
 
     let entry = json!({
         "now": now,
         "pid": std::process::id(),
-        "ppid": read_ppid(),
+        "ppid": ppid,
         "session_id": session_id,
         "cwd": cwd,
         "transcript_path": transcript_path,
@@ -132,33 +139,4 @@ fn recent_assistant_rows(transcript: &str) -> Vec<Value> {
     } else {
         out
     }
-}
-
-fn read_ppid() -> Option<u32> {
-    let body = fs::read_to_string("/proc/self/status").ok()?;
-    for line in body.lines() {
-        if let Some(rest) = line.strip_prefix("PPid:") {
-            return rest.trim().parse().ok();
-        }
-    }
-    None
-}
-
-fn strip_ansi(s: &str) -> String {
-    let mut out = String::with_capacity(s.len());
-    let mut in_escape = false;
-    for c in s.chars() {
-        if in_escape {
-            if c == 'm' {
-                in_escape = false;
-            }
-            continue;
-        }
-        if c == '\x1b' {
-            in_escape = true;
-            continue;
-        }
-        out.push(c);
-    }
-    out
 }

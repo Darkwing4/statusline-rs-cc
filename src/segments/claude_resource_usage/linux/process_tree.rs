@@ -2,8 +2,8 @@ use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::path::Path;
 
-use super::process_stat::{self, ProcessStat};
 use super::session_root::ResolvedRoot;
+use crate::process_stat::{self, ProcessStat};
 
 const PROC_ROOT: &str = "/proc";
 
@@ -184,7 +184,7 @@ mod tests {
         aggregate_tree, collect_task_children, parse_process_children, traverse_process_tree,
         TreeAggregate,
     };
-    use crate::segments::claude_resource_usage::linux::process_stat::ProcessStat;
+    use crate::process_stat::ProcessStat;
     use crate::segments::claude_resource_usage::linux::session_root::ResolvedRoot;
 
     fn process(

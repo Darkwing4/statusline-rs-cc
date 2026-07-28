@@ -79,20 +79,9 @@ fn platform_terminal_width() -> Option<usize> {
 fn linux_parent_tree_width() -> Option<usize> {
     use std::os::unix::io::AsRawFd;
 
-    fn read_ppid(pid: u32) -> Option<u32> {
-        let path = format!("/proc/{}/status", pid);
-        let content = std::fs::read_to_string(path).ok()?;
-        for line in content.lines() {
-            if let Some(rest) = line.strip_prefix("PPid:") {
-                return rest.trim().parse().ok();
-            }
-        }
-        None
-    }
-
     let mut pid = std::process::id();
     for _ in 0..32 {
-        let parent = match read_ppid(pid) {
+        let parent = match crate::process_stat::read(pid).map(|stat| stat.ppid) {
             Some(p) if p > 1 => p,
             _ => return None,
         };

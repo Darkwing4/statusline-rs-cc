@@ -8,7 +8,7 @@ use std::path::{Path, PathBuf};
 
 use serde_json::Value;
 
-use super::process_stat::{self, ProcessStat};
+use crate::process_stat::{self, ProcessStat};
 
 const O_NOFOLLOW: c_int = 0o400000;
 const MAX_REGISTRY_BYTES: u64 = 64 * 1024;
@@ -172,7 +172,7 @@ fn read_regular_file(path: &Path, max_bytes: u64) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::{parse_session_record, record_matches, unique_root, ResolvedRoot, SessionRecord};
-    use crate::segments::claude_resource_usage::linux::process_stat::ProcessStat;
+    use crate::process_stat::ProcessStat;
 
     fn process(pid: u32, start_time: u64) -> ProcessStat {
         ProcessStat {

@@ -6,12 +6,26 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use serde_json::Value;
 
 pub use crate::config_schema::CacheTtl;
+use crate::gradient::{gradient, Quantization, Rgb};
+use crate::iso8601::parse_iso8601_utc;
 use crate::segments::{GitCache, Segment};
 use crate::transcript_tail_reader::scan_jsonl_lines_from_end;
 use crate::types::Color;
 
 const TTL_5M_SECS: i64 = 5 * 60;
 const TTL_1H_SECS: i64 = 60 * 60;
+const TTL_GRADIENT: &[(f64, Rgb)] = &[
+    (0.0, (120, 120, 120)),
+    (70.0, (200, 180, 80)),
+    (90.0, (230, 100, 60)),
+    (100.0, (255, 50, 50)),
+];
+const COLD_GRADIENT: &[(f64, Rgb)] = &[
+    (0.0, (120, 120, 120)),
+    (40.0, (200, 180, 80)),
+    (75.0, (230, 100, 60)),
+    (100.0, (255, 50, 50)),
+];
 
 pub(super) struct CacheSnapshot {
     pub(super) last_activity: i64,
@@ -161,7 +175,7 @@ fn active_view(prefix: &str, remaining: i64, ttl: i64) -> (String, (u8, u8, u8))
     let text = format!("{}{}", prefix, format_duration(remaining));
     let burned = ((ttl - remaining) as f64 / ttl as f64) * 100.0;
 
-    (text, gradient_rgb_ttl(burned))
+    (text, gradient(TTL_GRADIENT, burned, Quantization::Truncate))
 }
 
 fn cold_view(prefix: &str, json: &Value) -> (String, (u8, u8, u8)) {
@@ -172,37 +186,10 @@ fn cold_view(prefix: &str, json: &Value) -> (String, (u8, u8, u8)) {
         .and_then(Value::as_f64)
         .unwrap_or(0.0);
 
-    (text, gradient_rgb_context_cold(ctx_pct))
-}
-
-fn gradient_rgb_ttl(p: f64) -> (u8, u8, u8) {
-    let lerp = |a: i32, b: i32, t: f64| (a as f64 + (b - a) as f64 * t.clamp(0.0, 1.0)) as u8;
-
-    if p <= 70.0 {
-        let t = p / 70.0;
-        (lerp(120, 200, t), lerp(120, 180, t), lerp(120, 80, t))
-    } else if p <= 90.0 {
-        let t = (p - 70.0) / 20.0;
-        (lerp(200, 230, t), lerp(180, 100, t), lerp(80, 60, t))
-    } else {
-        let t = (p - 90.0) / 10.0;
-        (lerp(230, 255, t), lerp(100, 50, t), lerp(60, 50, t))
-    }
-}
-
-fn gradient_rgb_context_cold(p: f64) -> (u8, u8, u8) {
-    let lerp = |a: i32, b: i32, t: f64| (a as f64 + (b - a) as f64 * t.clamp(0.0, 1.0)) as u8;
-
-    if p <= 40.0 {
-        let t = p / 40.0;
-        (lerp(120, 200, t), lerp(120, 180, t), lerp(120, 80, t))
-    } else if p <= 75.0 {
-        let t = (p - 40.0) / 35.0;
-        (lerp(200, 230, t), lerp(180, 100, t), lerp(80, 60, t))
-    } else {
-        let t = (p - 75.0) / 25.0;
-        (lerp(230, 255, t), lerp(100, 50, t), lerp(60, 50, t))
-    }
+    (
+        text,
+        gradient(COLD_GRADIENT, ctx_pct, Quantization::Truncate),
+    )
 }
 
 fn format_duration(seconds: i64) -> String {
@@ -220,43 +207,38 @@ fn format_duration(seconds: i64) -> String {
     }
 }
 
-fn parse_iso8601_utc(s: &str) -> Option<i64> {
-    let s = s.strip_suffix('Z').unwrap_or(s);
-    let (date, time) = s.split_once('T')?;
-
-    let mut dp = date.split('-');
-    let y: i64 = dp.next()?.parse().ok()?;
-    let mo: u32 = dp.next()?.parse().ok()?;
-    let d: u32 = dp.next()?.parse().ok()?;
-
-    let time = time.split('.').next()?;
-    let mut tp = time.split(':');
-    let h: i64 = tp.next()?.parse().ok()?;
-    let mi: i64 = tp.next()?.parse().ok()?;
-    let se: i64 = tp.next()?.parse().ok()?;
-
-    let days = days_from_civil(y, mo, d);
-    Some(days * 86400 + h * 3600 + mi * 60 + se)
-}
-
-fn days_from_civil(y: i64, m: u32, d: u32) -> i64 {
-    let y = if m <= 2 { y - 1 } else { y };
-    let era = y.div_euclid(400);
-    let yoe = y - era * 400;
-    let m = m as i64;
-    let d = d as i64;
-    let shifted_m = if m > 2 { m - 3 } else { m + 9 };
-    let doy = (153 * shifted_m + 2) / 5 + d - 1;
-    let doe = yoe * 365 + yoe / 4 - yoe / 100 + doy;
-
-    era * 146097 + doe - 719468
-}
-
 #[cfg(test)]
 mod tests {
     use std::io::Cursor;
 
-    use super::{parse_iso8601_utc, read_cache_snapshot_from, TTL_1H_SECS};
+    use super::{
+        gradient, parse_iso8601_utc, read_cache_snapshot_from, Quantization, COLD_GRADIENT,
+        TTL_1H_SECS, TTL_GRADIENT,
+    };
+
+    #[test]
+    fn preserves_ttl_gradient() {
+        assert_eq!(
+            gradient(TTL_GRADIENT, 80.0, Quantization::Truncate),
+            (215, 140, 70)
+        );
+        assert_eq!(
+            gradient(TTL_GRADIENT, 95.0, Quantization::Truncate),
+            (242, 75, 55)
+        );
+    }
+
+    #[test]
+    fn preserves_cold_gradient() {
+        assert_eq!(
+            gradient(COLD_GRADIENT, 57.5, Quantization::Truncate),
+            (215, 140, 70)
+        );
+        assert_eq!(
+            gradient(COLD_GRADIENT, 87.5, Quantization::Truncate),
+            (242, 75, 55)
+        );
+    }
 
     #[test]
     fn uses_newest_activity_and_nearest_older_ttl_hint() {

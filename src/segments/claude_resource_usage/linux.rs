@@ -1,7 +1,8 @@
 mod cpu_sampler;
-mod process_stat;
 mod process_tree;
 mod session_root;
+
+use crate::process_stat;
 
 use super::ResourceUsage;
 

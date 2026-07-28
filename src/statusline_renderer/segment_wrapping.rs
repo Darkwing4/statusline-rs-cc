@@ -1,4 +1,4 @@
-use unicode_width::UnicodeWidthStr;
+use crate::ansi::visible_width;
 
 pub(super) fn wrap_segments(parts: &[String], sep: &str, max: usize) -> String {
     if parts.is_empty() {
@@ -38,29 +38,6 @@ pub(super) fn wrap_segments(parts: &[String], sep: &str, max: usize) -> String {
     }
 
     lines.join("\n")
-}
-
-fn visible_width(s: &str) -> usize {
-    if !s.as_bytes().contains(&0x1b) {
-        return s.width();
-    }
-
-    let mut visible = String::with_capacity(s.len());
-    let mut chars = s.chars();
-
-    while let Some(ch) = chars.next() {
-        if ch == '\u{1b}' {
-            for escape_char in chars.by_ref() {
-                if escape_char.is_ascii_alphabetic() {
-                    break;
-                }
-            }
-        } else {
-            visible.push(ch);
-        }
-    }
-
-    visible.width()
 }
 
 #[cfg(test)]

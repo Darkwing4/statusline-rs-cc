@@ -3,6 +3,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use serde_json::Value;
 
 pub use crate::config_schema::{ColorMode, Fill, RateLimit, Style, Window};
+use crate::gradient::{gradient, Quantization};
 use crate::segments::{GitCache, Segment};
 use crate::types::{Color, RESET};
 
@@ -100,8 +101,12 @@ impl Segment for RateLimit {
                 let low = color_to_rgb(self.low_color, (60, 200, 60));
                 let mid = color_to_rgb(self.mid_color, (220, 200, 40));
                 let high = color_to_rgb(self.high_color, (220, 60, 60));
-                let (r, g, b) =
-                    gradient_rgb(pct, self.gradient_midpoint_percentage, low, mid, high);
+                let stops = [
+                    (0.0, low),
+                    (self.gradient_midpoint_percentage, mid),
+                    (100.0, high),
+                ];
+                let (r, g, b) = gradient(&stops, pct, Quantization::Nearest);
                 format!("\x1b[38;2;{};{};{}m{}{}", r, g, b, text, RESET)
             }
         };
@@ -117,40 +122,11 @@ fn color_to_rgb(c: Color, fallback: (u8, u8, u8)) -> (u8, u8, u8) {
     }
 }
 
-fn gradient_rgb(
-    pct: f64,
-    midpoint_percentage: f64,
-    low: (u8, u8, u8),
-    mid: (u8, u8, u8),
-    high: (u8, u8, u8),
-) -> (u8, u8, u8) {
-    let p = pct.clamp(0.0, 100.0);
-    let (a, b, t) = if p <= midpoint_percentage {
-        (low, mid, p / midpoint_percentage)
-    } else {
-        (
-            mid,
-            high,
-            (p - midpoint_percentage) / (100.0 - midpoint_percentage),
-        )
-    };
-    lerp_rgb(a, b, t)
-}
-
-fn lerp_rgb(a: (u8, u8, u8), b: (u8, u8, u8), t: f64) -> (u8, u8, u8) {
-    let lerp = |x: u8, y: u8, t: f64| {
-        (x as f64 + (y as f64 - x as f64) * t)
-            .round()
-            .clamp(0.0, 255.0) as u8
-    };
-    (lerp(a.0, b.0, t), lerp(a.1, b.1, t), lerp(a.2, b.2, t))
-}
-
 #[cfg(test)]
 mod tests {
     use serde_json::json;
 
-    use super::{bar_glyph, gradient_rgb, radial_glyph, ColorMode, Fill, RateLimit, Style, Window};
+    use super::{bar_glyph, radial_glyph, ColorMode, Fill, RateLimit, Style, Window};
     use crate::types::Color;
 
     fn rate_limit(window: Window, prefix: &str) -> RateLimit {
@@ -206,41 +182,6 @@ mod tests {
         for (pct, expected) in cases {
             assert_eq!(radial_glyph(pct), expected, "{pct}");
         }
-    }
-
-    #[test]
-    fn gradient_rgb_uses_endpoints_and_interpolates_both_halves() {
-        let low = (10, 20, 30);
-        let mid = (110, 120, 130);
-        let high = (210, 220, 230);
-
-        assert_eq!(gradient_rgb(0.0, 50.0, low, mid, high), low);
-        assert_eq!(gradient_rgb(25.0, 50.0, low, mid, high), (60, 70, 80));
-        assert_eq!(gradient_rgb(50.0, 50.0, low, mid, high), mid);
-        assert_eq!(gradient_rgb(75.0, 50.0, low, mid, high), (160, 170, 180));
-        assert_eq!(gradient_rgb(100.0, 50.0, low, mid, high), high);
-    }
-
-    #[test]
-    fn gradient_rgb_places_mid_color_at_configured_midpoint() {
-        let low = (0, 0, 0);
-        let mid = (100, 100, 100);
-        let high = (200, 200, 200);
-
-        assert_eq!(gradient_rgb(25.0, 25.0, low, mid, high), mid);
-        assert_eq!(gradient_rgb(62.5, 25.0, low, mid, high), (150, 150, 150));
-    }
-
-    #[test]
-    fn gradient_rgb_rounds_and_clamps_percentage() {
-        let low = (0, 2, 4);
-        let mid = (1, 3, 5);
-        let high = (2, 4, 6);
-
-        assert_eq!(gradient_rgb(25.0, 50.0, low, mid, high), (1, 3, 5));
-        assert_eq!(gradient_rgb(75.0, 50.0, low, mid, high), (2, 4, 6));
-        assert_eq!(gradient_rgb(-1.0, 50.0, low, mid, high), low);
-        assert_eq!(gradient_rgb(101.0, 50.0, low, mid, high), high);
     }
 
     #[test]
