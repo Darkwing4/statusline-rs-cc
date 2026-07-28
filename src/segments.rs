@@ -1,4 +1,5 @@
 pub mod cache_ttl;
+pub mod claude_resource_usage;
 pub mod context;
 pub mod cwd;
 pub mod git;

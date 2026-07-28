@@ -2,6 +2,7 @@ use serde::Deserialize;
 
 use crate::segments::{
     cache_ttl::CacheTtl,
+    claude_resource_usage::ClaudeResourceUsage,
     context::Context,
     cwd::Cwd,
     git::{GitBranch, GitDiff, GitError},
@@ -24,6 +25,7 @@ pub struct RootConfig {
 pub enum SegmentSpec {
     Context(Context),
     CacheTtl(CacheTtl),
+    ClaudeResourceUsage(ClaudeResourceUsage),
     Cwd(Cwd),
     GitBranch(GitBranch),
     GitDiff(GitDiff),
@@ -37,6 +39,7 @@ impl SegmentSpec {
         match self {
             SegmentSpec::Context(s) => Box::new(s),
             SegmentSpec::CacheTtl(s) => Box::new(s),
+            SegmentSpec::ClaudeResourceUsage(s) => Box::new(s),
             SegmentSpec::Cwd(s) => Box::new(s),
             SegmentSpec::GitBranch(s) => Box::new(s),
             SegmentSpec::GitDiff(s) => Box::new(s),

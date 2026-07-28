@@ -134,23 +134,33 @@ The whole config is an external [RON](https://github.com/ron-rs/ron) file at [`c
 
 Reorder, drop, or re-colour by editing the list, then rebuild. `Color` variants: `Named(code)` for ANSI 30–37 / 90–97, `Rgb(r, g, b)` for truecolor, `Gradient` (meaningful on `Context`, `CacheTtl`, and `RateLimit` when `color_mode: Gradient`).
 
+### Linux resource usage
+
+`ClaudeResourceUsage` is an opt-in Linux-only segment:
+
+```ron
+ClaudeResourceUsage(
+    color: Named(90),
+    cpu_prefix: "CPU ",
+    memory_prefix: "RAM ",
+)
+```
+
+It validates `session_id` against Claude Code's local session registry instead of guessing by working directory. If no matching live process exists, or on macOS and Windows, it emits nothing. CPU `100%` means one fully used core; RAM is the summed RSS of the Claude process tree. The first CPU sample is shown as `—` because no previous sample exists.
+
+Set `statusLine.refreshInterval` to `1` in Claude Code settings for periodic live updates.
+
 ## extending
 
-Define the logic in `src/segments/*.rs`, register the module in `src/segments.rs`, initialize it in `src/main.rs`, then build.
+Define the segment config and logic in `src/segments/*.rs`, register the module in `src/segments.rs`, add its `SegmentSpec` variant and mapping in `src/config.rs`, then build.
 
 `IdleTime` is the concrete extension example, added in [`fac22e1`](https://github.com/Darkwing4/statusline-rs-cc/commit/fac22e1c1b04822b332c00268305bfc9224547b1). It reads `transcript_path`, ignores tool-result messages, finds the latest real user input timestamp, and renders values like `idle 42s`, `idle 3m12s`, or `idle 1h0m`.
 
 To make `IdleTime` tick without new Claude events, opt in with `statusLine.refreshInterval` in Claude Code settings.
 
-Register it with `pub mod idle_time;` in `src/segments.rs`, then initialize it in `src/main.rs`:
+Register it with `pub mod idle_time;` in `src/segments.rs`, then add the `IdleTime` variant and its `Box<dyn Segment>` mapping in `src/config.rs`.
 
-```rust
-use segments::idle_time::IdleTime;
-
-Box::new(IdleTime::new(Color::Named(90), "idle ", 0))
-```
-
-Segments receive the raw `serde_json::Value` so they own which fields they read — no central schema to update. For git-aware segments take `git: &mut GitCache` and call `git.dir()` / `git.status()` — `git status` is forked at most once per render, shared. For segments that render on their own line below the main one (multi-line debug output), override `fn standalone(&self) -> bool { true }`.
+Segments receive the raw `serde_json::Value` so they own which input fields they read. For git-aware segments take `git: &mut GitCache` and call `git.dir()` / `git.status()` — `git status` is forked at most once per render, shared. For segments that render on their own line below the main one (multi-line debug output), override `fn standalone(&self) -> bool { true }`.
 
 <details>
 <summary>source layout</summary>
@@ -158,10 +168,12 @@ Segments receive the raw `serde_json::Value` so they own which fields they read 
 ```
 src/
 ├── main.rs                 entry: build Renderer, write to stdout
+├── config.rs               loads embedded RON, maps SegmentSpec to segments
 ├── statusline_renderer.rs  owns segments, joins them, truncates to terminal width
 ├── statusline_input.rs     reads + parses stdin JSON from Claude Code
 ├── types.rs / types/       shared types (Color, RESET)
 └── segments/
+    ├── claude_resource_usage.rs  opt-in Linux process-tree CPU/RAM
     ├── context.rs          context window % with gradient
     ├── cwd.rs              shortened cwd
     ├── idle_time.rs        time since last real user input
