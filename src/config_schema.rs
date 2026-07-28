@@ -23,6 +23,13 @@ pub struct CacheTtl {
 }
 
 #[derive(Deserialize)]
+pub struct ClaudeResourceUsage {
+    pub color: Color,
+    pub cpu_prefix: String,
+    pub memory_prefix: String,
+}
+
+#[derive(Deserialize)]
 pub struct Cwd {
     pub color: Color,
 }
@@ -111,6 +118,7 @@ pub struct RateLimit {
 pub enum SegmentSpec {
     Context(Context),
     CacheTtl(CacheTtl),
+    ClaudeResourceUsage(ClaudeResourceUsage),
     Cwd(Cwd),
     Effort(Effort),
     GitBranch(GitBranch),

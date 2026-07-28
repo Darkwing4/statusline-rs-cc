@@ -142,6 +142,22 @@ The whole config is an external [RON](https://github.com/ron-rs/ron) file at [`c
 
 Reorder, drop, or re-colour by editing the list, then rebuild. `Color` variants: `Named(code)` for ANSI 30–37 / 90–97, `Rgb(r, g, b)` for truecolor, `Gradient` (meaningful on `Context`, `CacheTtl`, and `RateLimit` when `color_mode: Gradient`).
 
+### Linux resource usage
+
+`ClaudeResourceUsage` is an opt-in Linux-only segment:
+
+```ron
+ClaudeResourceUsage(
+    color: Named(90),
+    cpu_prefix: "CPU ",
+    memory_prefix: "RAM ",
+)
+```
+
+It validates `session_id` against Claude Code's local session registry instead of guessing by working directory. If no matching live process exists, or on macOS and Windows, it emits nothing. CPU `100%` means one fully used core; RAM is the summed RSS of the Claude process tree. The first CPU sample is shown as `—` because no previous sample exists.
+
+Set `statusLine.refreshInterval` to `1` in Claude Code settings for periodic live updates.
+
 ## extending
 
 Declare the segment's config fields in `src/config_schema.rs` and add a `SegmentSpec` variant for them, define the logic in `src/segments/*.rs` (re-export the schema struct and `impl Segment` for it), register the module in `src/segments.rs`, map the variant in `src/config.rs`, add the segment to `config/default.ron`, then build.
@@ -183,6 +199,7 @@ src/
     ├── context.rs          context window % with gradient
     ├── cwd.rs              shortened cwd
     ├── idle_time.rs        time since last real user input
+    ├── claude_resource_usage.rs  opt-in Linux process-tree CPU/RAM
     ├── git/
     │   ├── tools.rs        GitCache shared by branch + diff (one git status fork)
     │   ├── branch.rs       branch name, worktree marker, state, ahead/behind

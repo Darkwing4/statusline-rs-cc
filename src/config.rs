@@ -8,6 +8,7 @@ impl SegmentSpec {
         match self {
             SegmentSpec::Context(s) => Box::new(s),
             SegmentSpec::CacheTtl(s) => Box::new(s),
+            SegmentSpec::ClaudeResourceUsage(s) => Box::new(s),
             SegmentSpec::Cwd(s) => Box::new(s),
             SegmentSpec::Effort(s) => Box::new(s),
             SegmentSpec::GitBranch(s) => Box::new(s),
