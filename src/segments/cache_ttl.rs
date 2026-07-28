@@ -3,13 +3,15 @@ use std::io::{Read, Seek};
 use std::ops::ControlFlow;
 use std::time::{SystemTime, UNIX_EPOCH};
 
+use serde::Deserialize;
 use serde_json::Value;
 
 pub use crate::config_schema::CacheTtl;
 use crate::gradient::{gradient, Quantization, Rgb};
 use crate::iso8601::parse_iso8601_utc;
 use crate::segments::{GitCache, Segment};
-use crate::transcript_tail_reader::scan_jsonl_lines_from_end;
+use crate::transcript_record_probe::has_type;
+use crate::transcript_tail_reader::{scan_jsonl_records_from_end, JsonlRecord};
 use crate::types::Color;
 
 const TTL_5M_SECS: i64 = 5 * 60;
@@ -30,6 +32,34 @@ const COLD_GRADIENT: &[(f64, Rgb)] = &[
 pub(super) struct CacheSnapshot {
     pub(super) last_activity: i64,
     pub(super) ttl_secs: i64,
+}
+
+#[derive(Deserialize)]
+struct RawLine {
+    #[serde(rename = "type")]
+    kind: Option<String>,
+    #[serde(rename = "isSidechain")]
+    is_sidechain: Option<bool>,
+    timestamp: Option<String>,
+    message: Option<RawMessage>,
+}
+
+#[derive(Deserialize)]
+struct RawMessage {
+    usage: Option<RawUsage>,
+}
+
+#[derive(Deserialize)]
+struct RawUsage {
+    cache_creation_input_tokens: Option<u64>,
+    cache_read_input_tokens: Option<u64>,
+    cache_creation: Option<RawCacheCreation>,
+}
+
+#[derive(Deserialize)]
+struct RawCacheCreation {
+    ephemeral_1h_input_tokens: Option<u64>,
+    ephemeral_5m_input_tokens: Option<u64>,
 }
 
 struct UsageRow {
@@ -95,8 +125,12 @@ fn read_cache_snapshot(json: &Value) -> Option<CacheSnapshot> {
 
 fn read_cache_snapshot_from<R: Read + Seek>(reader: &mut R) -> Option<CacheSnapshot> {
     let mut last_activity: Option<i64> = None;
-    let result = scan_jsonl_lines_from_end(reader, |line| {
-        let Some(row) = parse_usage_row(line) else {
+    let result = scan_jsonl_records_from_end(reader, |record| {
+        if !has_type(record, "assistant") || record.rewind().is_err() {
+            return ControlFlow::Continue(());
+        }
+
+        let Some(row) = parse_usage_row(record) else {
             return ControlFlow::Continue(());
         };
 
@@ -124,45 +158,35 @@ fn read_cache_snapshot_from<R: Read + Seek>(reader: &mut R) -> Option<CacheSnaps
     })
 }
 
-fn parse_usage_row(line: &str) -> Option<UsageRow> {
-    let v: Value = serde_json::from_str(line).ok()?;
+fn parse_usage_row(record: &mut dyn JsonlRecord) -> Option<UsageRow> {
+    let row: RawLine = serde_json::from_reader(record).ok()?;
 
-    if v.get("type").and_then(Value::as_str) != Some("assistant") {
+    if row.kind.as_deref() != Some("assistant") {
         return None;
     }
 
-    if v.get("isSidechain").and_then(Value::as_bool) == Some(true) {
+    if row.is_sidechain == Some(true) {
         return None;
     }
 
-    let usage = v.pointer("/message/usage")?;
+    let usage = row.message?.usage?;
 
-    let creation = usage
-        .get("cache_creation_input_tokens")
-        .and_then(Value::as_u64)
-        .unwrap_or(0);
-    let read = usage
-        .get("cache_read_input_tokens")
-        .and_then(Value::as_u64)
-        .unwrap_or(0);
+    let creation = usage.cache_creation_input_tokens.unwrap_or(0);
+    let read = usage.cache_read_input_tokens.unwrap_or(0);
 
     if creation == 0 && read == 0 {
         return None;
     }
 
-    let timestamp = v
-        .get("timestamp")
-        .and_then(Value::as_str)
-        .and_then(parse_iso8601_utc);
+    let timestamp = row.timestamp.as_deref().and_then(parse_iso8601_utc);
 
-    let e1h = usage
-        .pointer("/cache_creation/ephemeral_1h_input_tokens")
-        .and_then(Value::as_u64)
-        .unwrap_or(0);
-    let e5m = usage
-        .pointer("/cache_creation/ephemeral_5m_input_tokens")
-        .and_then(Value::as_u64)
-        .unwrap_or(0);
+    let (e1h, e5m) = match usage.cache_creation {
+        Some(ephemeral) => (
+            ephemeral.ephemeral_1h_input_tokens.unwrap_or(0),
+            ephemeral.ephemeral_5m_input_tokens.unwrap_or(0),
+        ),
+        None => (0, 0),
+    };
 
     Some(UsageRow {
         timestamp,

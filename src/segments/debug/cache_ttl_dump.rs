@@ -4,13 +4,31 @@ use std::ops::ControlFlow;
 use std::path::PathBuf;
 use std::time::UNIX_EPOCH;
 
+use serde::Deserialize;
 use serde_json::{json, Value};
 
 use crate::ansi::strip_ansi;
 #[cfg(target_os = "linux")]
 use crate::process_stat;
 use crate::segments::cache_ttl::CacheSnapshot;
-use crate::transcript_tail_reader::scan_jsonl_lines_from_end;
+use crate::transcript_record_probe::has_type;
+use crate::transcript_tail_reader::scan_jsonl_records_from_end;
+
+#[derive(Deserialize)]
+struct RawLine {
+    #[serde(rename = "type")]
+    kind: Option<String>,
+    #[serde(rename = "isSidechain")]
+    is_sidechain: Option<bool>,
+    timestamp: Option<String>,
+    message: Option<RawMessage>,
+}
+
+#[derive(Deserialize)]
+struct RawMessage {
+    model: Option<String>,
+    usage: Option<Value>,
+}
 
 pub(in crate::segments) fn append(
     json_input: &Value,
@@ -91,15 +109,22 @@ fn recent_assistant_rows(transcript: &str) -> Vec<Value> {
     };
 
     let mut out: Vec<Value> = Vec::new();
-    let result = scan_jsonl_lines_from_end(&mut file, |line| {
-        let Ok(v) = serde_json::from_str::<Value>(line) else {
-            return ControlFlow::Continue(());
-        };
-        if v.get("type").and_then(Value::as_str) != Some("assistant") {
+    let result = scan_jsonl_records_from_end(&mut file, |record| {
+        if !has_type(record, "assistant") || record.rewind().is_err() {
             return ControlFlow::Continue(());
         }
 
-        let usage = v.pointer("/message/usage");
+        let Ok(row) = serde_json::from_reader::<_, RawLine>(record) else {
+            return ControlFlow::Continue(());
+        };
+        if row.kind.as_deref() != Some("assistant") {
+            return ControlFlow::Continue(());
+        }
+
+        let usage = row
+            .message
+            .as_ref()
+            .and_then(|message| message.usage.as_ref());
         let creation = usage
             .and_then(|u| u.get("cache_creation_input_tokens"))
             .and_then(Value::as_u64)
@@ -118,9 +143,9 @@ fn recent_assistant_rows(transcript: &str) -> Vec<Value> {
             .unwrap_or(0);
 
         out.push(json!({
-            "ts": v.get("timestamp").and_then(Value::as_str),
-            "side": v.get("isSidechain").and_then(Value::as_bool),
-            "model": v.pointer("/message/model").and_then(Value::as_str),
+            "ts": row.timestamp.as_deref(),
+            "side": row.is_sidechain,
+            "model": row.message.as_ref().and_then(|message| message.model.as_deref()),
             "creation": creation,
             "read": read,
             "e1h": e1h,
