@@ -1,0 +1,21 @@
+{
+  "cwd": "fixture-home/workspace",
+  "model": {
+    "display_name": "Opus",
+    "id": "ignored"
+  },
+  "effort": {
+    "level": "high"
+  },
+  "context_window": {
+    "used_percentage": 42.5
+  },
+  "rate_limits": {
+    "five_hour": {
+      "used_percentage": 25.0
+    },
+    "seven_day": {
+      "used_percentage": 60.0
+    }
+  }
+}

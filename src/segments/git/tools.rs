@@ -1,5 +1,5 @@
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::{Component, Path, PathBuf};
 use std::process::Command;
 
 #[derive(Default)]
@@ -128,12 +128,25 @@ fn parse_status_line(line: &str, s: &mut GitStatus) {
         return;
     }
 
-    if line.starts_with("1 ") || line.starts_with("2 ") {
-        let xy = line.get(2..4).unwrap_or("");
-        if xy.contains('D') {
-            s.deleted += 1;
+    let mut fields = line.splitn(3, ' ');
+    if matches!(fields.next(), Some("1" | "2")) {
+        let (Some(xy), Some(_)) = (fields.next(), fields.next()) else {
+            return;
+        };
+        let mut states = xy.chars();
+        let (Some(index), Some(worktree)) = (states.next(), states.next()) else {
+            return;
+        };
+        if states.next().is_some() {
+            return;
         }
-        if xy.chars().any(|c| matches!(c, 'M' | 'A' | 'R' | 'C' | 'U')) {
+
+        if matches!(index, 'D') || matches!(worktree, 'D') {
+            s.deleted += 1;
+        } else if [index, worktree]
+            .into_iter()
+            .any(|state| matches!(state, 'M' | 'A' | 'T' | 'R' | 'C'))
+        {
             s.modified += 1;
         }
         return;
@@ -202,9 +215,131 @@ fn read_trim(path: &Path) -> Option<String> {
 }
 
 pub fn is_worktree(git_dir: &Path) -> bool {
+    if git_dir.join("commondir").is_file() {
+        return true;
+    }
+
     let comps: Vec<_> = git_dir.components().collect();
-    let Some(pos) = comps.iter().position(|c| c.as_os_str() == "worktrees") else {
-        return false;
-    };
-    pos > 0 && comps[pos - 1].as_os_str() == ".git"
+    comps.windows(3).any(|window| {
+        window[0].as_os_str() == ".git"
+            && window[1].as_os_str() == "worktrees"
+            && matches!(window[2], Component::Normal(_))
+    })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{is_worktree, parse_status_line, GitStatus};
+    use std::fs;
+    use std::path::Path;
+
+    fn parse(lines: &[&str]) -> GitStatus {
+        let mut status = GitStatus::default();
+        for line in lines {
+            parse_status_line(line, &mut status);
+        }
+        status
+    }
+
+    #[test]
+    fn parses_branch_and_ahead_behind() {
+        let status = parse(&["# branch.head feature/git", "# branch.ab +12 -3"]);
+
+        assert_eq!(status.branch, "feature/git");
+        assert_eq!(status.ahead, 12);
+        assert_eq!(status.behind, 3);
+    }
+
+    #[test]
+    fn classifies_modified_tracked_entries() {
+        let status = parse(&[
+            "1 M. N... 100644 100644 100644 abc def modified",
+            "1 .M N... 100644 100644 100644 abc def modified-in-worktree",
+            "1 A. N... 100644 100644 100644 abc def added",
+            "1 T. N... 100644 100644 100644 abc def type-changed",
+            "1 .T N... 100644 100644 100644 abc def type-changed-in-worktree",
+            "2 R. N... 100644 100644 100644 abc def R100 renamed\toriginal",
+            "2 C. N... 100644 100644 100644 abc def C100 copied\toriginal",
+        ]);
+
+        assert_eq!(status.modified, 7);
+        assert_eq!(status.deleted, 0);
+    }
+
+    #[test]
+    fn prioritizes_deleted_tracked_entries() {
+        let status = parse(&[
+            "1 D. N... 100644 000000 000000 abc def deleted",
+            "1 .D N... 100644 100644 000000 abc def deleted-in-worktree",
+            "1 MD N... 100644 100644 000000 abc def modified-and-deleted",
+        ]);
+
+        assert_eq!(status.deleted, 3);
+        assert_eq!(status.modified, 0);
+    }
+
+    #[test]
+    fn classifies_untracked_and_unmerged_entries() {
+        let status = parse(&[
+            "? untracked",
+            "u UU N... 100644 100644 100644 100644 abc def ghi conflicted",
+        ]);
+
+        assert_eq!(status.untracked, 1);
+        assert_eq!(status.modified, 1);
+    }
+
+    #[test]
+    fn ignores_malformed_and_ignored_entries() {
+        let status = parse(&[
+            "",
+            "1",
+            "1 M",
+            "1 MOD rest",
+            "2",
+            "2 T",
+            "! ignored",
+            "# branch.oid abc",
+        ]);
+
+        assert!(status.branch.is_empty());
+        assert_eq!(status.ahead, 0);
+        assert_eq!(status.behind, 0);
+        assert_eq!(status.modified, 0);
+        assert_eq!(status.untracked, 0);
+        assert_eq!(status.deleted, 0);
+    }
+
+    #[test]
+    fn detects_linked_worktree_git_dirs() {
+        assert!(is_worktree(Path::new("/repo/.git/worktrees/feature")));
+        assert!(is_worktree(Path::new("/repo/.git/worktrees/feature/logs")));
+        assert!(is_worktree(Path::new(
+            "/external/worktrees/repo/.git/worktrees/feature"
+        )));
+    }
+
+    #[test]
+    fn detects_linked_worktree_with_separate_git_dir() {
+        let root =
+            std::env::temp_dir().join(format!("statusline-worktree-test-{}", std::process::id()));
+        let git_dir = root.join("repo.git/worktrees/feature");
+        fs::create_dir_all(&git_dir).unwrap();
+        fs::write(git_dir.join("commondir"), "../..").unwrap();
+
+        assert!(is_worktree(&git_dir));
+
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn rejects_non_worktree_git_dirs() {
+        assert!(!is_worktree(Path::new("/repo/.git")));
+        assert!(!is_worktree(Path::new("/repo/.git/worktrees")));
+        assert!(!is_worktree(Path::new("/repo/worktrees/feature")));
+        assert!(!is_worktree(Path::new(
+            "/repo/.git/objects/worktrees/feature"
+        )));
+        assert!(!is_worktree(Path::new("/repo/.git/worktrees/../feature")));
+    }
 }
