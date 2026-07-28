@@ -51,3 +51,28 @@ fn format_ahead_behind(ahead: u32, behind: u32) -> Option<String> {
         Some(format!("({})", parts.join(" ")))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::format_ahead_behind;
+
+    #[test]
+    fn omits_ahead_behind_when_counts_are_zero() {
+        assert_eq!(format_ahead_behind(0, 0), None);
+    }
+
+    #[test]
+    fn formats_ahead_count() {
+        assert_eq!(format_ahead_behind(2, 0).as_deref(), Some("(↑2)"));
+    }
+
+    #[test]
+    fn formats_behind_count() {
+        assert_eq!(format_ahead_behind(0, 3).as_deref(), Some("(↓3)"));
+    }
+
+    #[test]
+    fn formats_ahead_and_behind_counts() {
+        assert_eq!(format_ahead_behind(2, 3).as_deref(), Some("(↑2 ↓3)"));
+    }
+}
