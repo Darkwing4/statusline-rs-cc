@@ -1,27 +1,31 @@
-use std::io::{self, Read, Seek, SeekFrom};
+use std::io::{self, BufRead, BufReader, Read, Seek, SeekFrom};
 use std::ops::ControlFlow;
-use std::str;
 
 pub(crate) const BLOCK_SIZE_BYTES: usize = 64 * 1024;
 
-pub(crate) fn scan_jsonl_lines_from_end<R, B, F>(
+pub(crate) trait JsonlRecord: BufRead {
+    fn rewind(&mut self) -> io::Result<()>;
+}
+
+pub(crate) fn scan_jsonl_records_from_end<R, B, F>(
     reader: &mut R,
     mut inspect: F,
 ) -> io::Result<ControlFlow<B>>
 where
     R: Read + Seek,
-    F: FnMut(&str) -> ControlFlow<B>,
+    F: FnMut(&mut dyn JsonlRecord) -> ControlFlow<B>,
 {
+    let mut reader = BufReader::with_capacity(BLOCK_SIZE_BYTES, reader);
     let mut position = reader.seek(SeekFrom::End(0))?;
     if position == 0 {
         return Ok(ControlFlow::Continue(()));
     }
 
-    let mut block = vec![0; BLOCK_SIZE_BYTES];
-    let mut reversed_line = Vec::new();
-    let mut at_end = true;
+    let file_end = position;
+    let mut record_end = file_end;
     let mut terminated_by_newline = false;
     let mut saw_newline = false;
+    let mut block = vec![0; BLOCK_SIZE_BYTES];
 
     while position > 0 {
         let read_size = position.min(BLOCK_SIZE_BYTES as u64) as usize;
@@ -29,35 +33,42 @@ where
         reader.seek(SeekFrom::Start(position))?;
         reader.read_exact(&mut block[..read_size])?;
 
-        for &byte in block[..read_size].iter().rev() {
+        for (index, &byte) in block[..read_size].iter().enumerate().rev() {
             if byte != b'\n' {
-                reversed_line.push(byte);
-                at_end = false;
                 continue;
             }
 
             saw_newline = true;
-            if at_end && reversed_line.is_empty() {
-                at_end = false;
+            let record_start = position + index as u64 + 1;
+            if record_start == file_end {
+                record_end = file_end - 1;
                 terminated_by_newline = true;
                 continue;
             }
 
-            if let ControlFlow::Break(value) =
-                inspect_reversed_line(&mut reversed_line, terminated_by_newline, &mut inspect)
-            {
+            if let ControlFlow::Break(value) = inspect_record(
+                &mut reader,
+                record_start,
+                record_end,
+                terminated_by_newline,
+                &mut inspect,
+            )? {
                 return Ok(ControlFlow::Break(value));
             }
 
+            record_end = record_start - 1;
             terminated_by_newline = true;
-            at_end = false;
         }
     }
 
-    if !reversed_line.is_empty() || saw_newline {
-        if let ControlFlow::Break(value) =
-            inspect_reversed_line(&mut reversed_line, terminated_by_newline, &mut inspect)
-        {
+    if record_end > 0 || saw_newline {
+        if let ControlFlow::Break(value) = inspect_record(
+            &mut reader,
+            0,
+            record_end,
+            terminated_by_newline,
+            &mut inspect,
+        )? {
             return Ok(ControlFlow::Break(value));
         }
     }
@@ -65,24 +76,65 @@ where
     Ok(ControlFlow::Continue(()))
 }
 
-fn inspect_reversed_line<B, F>(
-    reversed_line: &mut Vec<u8>,
+fn inspect_record<R, B, F>(
+    reader: &mut R,
+    record_start: u64,
+    record_end: u64,
     terminated_by_newline: bool,
     inspect: &mut F,
-) -> ControlFlow<B>
+) -> io::Result<ControlFlow<B>>
 where
-    F: FnMut(&str) -> ControlFlow<B>,
+    R: BufRead + Seek,
+    F: FnMut(&mut dyn JsonlRecord) -> ControlFlow<B>,
 {
-    reversed_line.reverse();
-    if terminated_by_newline && reversed_line.last() == Some(&b'\r') {
-        reversed_line.pop();
+    let mut content_end = record_end;
+    if terminated_by_newline && content_end > record_start {
+        reader.seek(SeekFrom::Start(content_end - 1))?;
+        let mut last_byte = [0];
+        reader.read_exact(&mut last_byte)?;
+        if last_byte[0] == b'\r' {
+            content_end -= 1;
+        }
     }
 
-    let result = str::from_utf8(reversed_line)
-        .map(inspect)
-        .unwrap_or(ControlFlow::Continue(()));
-    reversed_line.clear();
-    result
+    reader.seek(SeekFrom::Start(record_start))?;
+    let length = content_end - record_start;
+    let mut record = BoundedRecord {
+        reader: reader.by_ref().take(length),
+        start: record_start,
+        length,
+    };
+    Ok(inspect(&mut record))
+}
+
+struct BoundedRecord<'a, R> {
+    reader: io::Take<&'a mut R>,
+    start: u64,
+    length: u64,
+}
+
+impl<R: Read> Read for BoundedRecord<'_, R> {
+    fn read(&mut self, buffer: &mut [u8]) -> io::Result<usize> {
+        self.reader.read(buffer)
+    }
+}
+
+impl<R: BufRead> BufRead for BoundedRecord<'_, R> {
+    fn fill_buf(&mut self) -> io::Result<&[u8]> {
+        self.reader.fill_buf()
+    }
+
+    fn consume(&mut self, amount: usize) {
+        self.reader.consume(amount);
+    }
+}
+
+impl<R: BufRead + Seek> JsonlRecord for BoundedRecord<'_, R> {
+    fn rewind(&mut self) -> io::Result<()> {
+        self.reader.get_mut().seek(SeekFrom::Start(self.start))?;
+        self.reader.set_limit(self.length);
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -90,7 +142,8 @@ mod tests {
     use std::io::{self, Cursor, Read, Seek, SeekFrom};
     use std::ops::ControlFlow;
 
-    use super::{scan_jsonl_lines_from_end, BLOCK_SIZE_BYTES};
+    use super::{scan_jsonl_records_from_end, BLOCK_SIZE_BYTES};
+    use crate::transcript_record_probe::{has_tool_result, has_type};
 
     #[test]
     fn scans_trailing_newline_newest_first() {
@@ -120,8 +173,10 @@ mod tests {
         };
         let mut lines = Vec::new();
 
-        let _ = scan_jsonl_lines_from_end(&mut reader, |line| {
-            lines.push(line.to_owned());
+        let _ = scan_jsonl_records_from_end(&mut reader, |record| {
+            let mut line = String::new();
+            record.read_to_string(&mut line).unwrap();
+            lines.push(line);
             ControlFlow::<()>::Continue(())
         })
         .unwrap();
@@ -138,6 +193,44 @@ mod tests {
             collect_lines(data.as_bytes()),
             ["last", &long_line, "first"]
         );
+    }
+
+    #[test]
+    fn streams_a_line_larger_than_the_read_buffer() {
+        let long_line = "x".repeat(BLOCK_SIZE_BYTES * 4);
+        let data = format!("{long_line}\n");
+        let mut reader = Cursor::new(data.as_bytes());
+
+        let result = scan_jsonl_records_from_end(&mut reader, |record| {
+            assert_eq!(record.fill_buf().unwrap().len(), BLOCK_SIZE_BYTES);
+            ControlFlow::Break(())
+        })
+        .unwrap();
+
+        assert_eq!(result, ControlFlow::Break(()));
+    }
+
+    #[test]
+    fn probes_tool_result_before_reading_its_content() {
+        let content = "x".repeat(BLOCK_SIZE_BYTES * 8);
+        let data = format!(
+            r#"{{"type":"user","message":{{"content":[{{"type":"tool_result","content":"{content}"}}]}}}}"#
+        );
+        let mut reader = CountingReader {
+            inner: Cursor::new(data.as_bytes()),
+            bytes_read: 0,
+        };
+
+        let result = scan_jsonl_records_from_end(&mut reader, |record| {
+            assert!(has_type(record, "user"));
+            record.rewind().unwrap();
+            assert!(has_tool_result(record));
+            ControlFlow::Break(())
+        })
+        .unwrap();
+
+        assert_eq!(result, ControlFlow::Break(()));
+        assert!(reader.bytes_read < data.len() + BLOCK_SIZE_BYTES * 3);
     }
 
     #[test]
@@ -158,7 +251,9 @@ mod tests {
             bytes_read: 0,
         };
 
-        let result = scan_jsonl_lines_from_end(&mut reader, |line| {
+        let result = scan_jsonl_records_from_end(&mut reader, |record| {
+            let mut line = String::new();
+            record.read_to_string(&mut line).unwrap();
             if line == r#"{"target":true}"# {
                 ControlFlow::Break(())
             } else {
@@ -168,14 +263,17 @@ mod tests {
         .unwrap();
 
         assert_eq!(result, ControlFlow::Break(()));
-        assert!(reader.bytes_read <= BLOCK_SIZE_BYTES);
+        assert!(reader.bytes_read < BLOCK_SIZE_BYTES * 2);
     }
 
     fn collect_lines(data: &[u8]) -> Vec<String> {
         let mut reader = Cursor::new(data.to_vec());
         let mut lines = Vec::new();
-        let _ = scan_jsonl_lines_from_end(&mut reader, |line| {
-            lines.push(line.to_owned());
+        let _ = scan_jsonl_records_from_end(&mut reader, |record| {
+            let mut line = String::new();
+            if record.read_to_string(&mut line).is_ok() {
+                lines.push(line);
+            }
             ControlFlow::<()>::Continue(())
         })
         .unwrap();

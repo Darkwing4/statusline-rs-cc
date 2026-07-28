@@ -8,7 +8,8 @@ use serde_json::Value;
 
 pub use crate::config_schema::CacheTtl;
 use crate::segments::{GitCache, Segment};
-use crate::transcript_tail_reader::scan_jsonl_lines_from_end;
+use crate::transcript_record_probe::has_type;
+use crate::transcript_tail_reader::{scan_jsonl_records_from_end, JsonlRecord};
 use crate::types::Color;
 
 const TTL_5M_SECS: i64 = 5 * 60;
@@ -20,12 +21,12 @@ pub(super) struct CacheSnapshot {
 }
 
 #[derive(Deserialize)]
-struct RawLine<'a> {
+struct RawLine {
     #[serde(rename = "type")]
-    kind: Option<&'a str>,
+    kind: Option<String>,
     #[serde(rename = "isSidechain")]
     is_sidechain: Option<bool>,
-    timestamp: Option<&'a str>,
+    timestamp: Option<String>,
     message: Option<RawMessage>,
 }
 
@@ -110,8 +111,12 @@ fn read_cache_snapshot(json: &Value) -> Option<CacheSnapshot> {
 
 fn read_cache_snapshot_from<R: Read + Seek>(reader: &mut R) -> Option<CacheSnapshot> {
     let mut last_activity: Option<i64> = None;
-    let result = scan_jsonl_lines_from_end(reader, |line| {
-        let Some(row) = parse_usage_row(line) else {
+    let result = scan_jsonl_records_from_end(reader, |record| {
+        if !has_type(record, "assistant") || record.rewind().is_err() {
+            return ControlFlow::Continue(());
+        }
+
+        let Some(row) = parse_usage_row(record) else {
             return ControlFlow::Continue(());
         };
 
@@ -139,10 +144,10 @@ fn read_cache_snapshot_from<R: Read + Seek>(reader: &mut R) -> Option<CacheSnaps
     })
 }
 
-fn parse_usage_row(line: &str) -> Option<UsageRow> {
-    let row: RawLine = serde_json::from_str(line).ok()?;
+fn parse_usage_row(record: &mut dyn JsonlRecord) -> Option<UsageRow> {
+    let row: RawLine = serde_json::from_reader(record).ok()?;
 
-    if row.kind != Some("assistant") {
+    if row.kind.as_deref() != Some("assistant") {
         return None;
     }
 
@@ -159,7 +164,7 @@ fn parse_usage_row(line: &str) -> Option<UsageRow> {
         return None;
     }
 
-    let timestamp = row.timestamp.and_then(parse_iso8601_utc);
+    let timestamp = row.timestamp.as_deref().and_then(parse_iso8601_utc);
 
     let (e1h, e5m) = match usage.cache_creation {
         Some(ephemeral) => (
