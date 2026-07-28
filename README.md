@@ -153,11 +153,11 @@ Reorder, drop, or re-colour by editing the list, then rebuild. `Color` variants:
 ClaudeResourceUsage(
     color: Named(90),
     cpu_prefix: "CPU ",
-    memory_prefix: "RAM ",
+    memory_prefix: "RSS ",
 )
 ```
 
-It validates `session_id` against Claude Code's local session registry instead of guessing by working directory. If no matching live process exists, or on macOS and Windows, it emits nothing. CPU `100%` means one fully used core; RAM is the summed RSS of the Claude process tree. The first CPU sample is shown as `—` because no previous sample exists.
+It validates `session_id` against Claude Code's local session registry instead of guessing by working directory. If no matching live process exists, or on macOS and Windows, it emits nothing. CPU is shown in logical-core equivalents, so `1.00c` means one fully used core. RSS is the summed resident set size of the Claude process tree and is displayed in MiB. The first CPU sample is shown as `—` because no previous sample exists.
 
 Set `statusLine.refreshInterval` to `1` in Claude Code settings for periodic live updates.
 
@@ -202,7 +202,7 @@ src/
     ├── context.rs          context window % with gradient
     ├── cwd.rs              shortened cwd
     ├── idle_time.rs        time since last real user input
-    ├── claude_resource_usage.rs  opt-in Linux process-tree CPU/RAM
+    ├── claude_resource_usage.rs  opt-in Linux process-tree CPU/RSS
     ├── git/
     │   ├── tools.rs        GitCache shared by branch + diff (one git status fork)
     │   ├── branch.rs       branch name, worktree marker, state, ahead/behind

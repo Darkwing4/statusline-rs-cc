@@ -37,14 +37,18 @@ impl Segment for ClaudeResourceUsage {
 }
 
 #[cfg(target_os = "linux")]
-fn format_usage(cpu_prefix: &str, memory_prefix: &str, usage: &ResourceUsage) -> String {
+fn format_usage(cpu_prefix: &str, rss_prefix: &str, usage: &ResourceUsage) -> String {
     let cpu = usage
         .cpu_percent
-        .map(|percent| format!("{percent}%"))
+        .map(|percent| {
+            let whole_cores = percent / 100;
+            let fractional_cores = percent % 100;
+            format!("{whole_cores}.{fractional_cores:02}c")
+        })
         .unwrap_or_else(|| "—".to_string());
-    let memory_mib = usage.memory_bytes.saturating_add(512 * 1024) / (1024 * 1024);
+    let rss_mib = usage.memory_bytes.saturating_add(512 * 1024) / (1024 * 1024);
 
-    format!("{cpu_prefix}{cpu} {memory_prefix}{memory_mib}M")
+    format!("{cpu_prefix}{cpu} {rss_prefix}{rss_mib} MiB")
 }
 
 #[cfg(all(test, target_os = "linux"))]
@@ -52,22 +56,25 @@ mod tests {
     use super::{format_usage, ResourceUsage};
 
     #[test]
-    fn formats_first_sample_with_memory() {
+    fn formats_first_sample_with_rss() {
         let usage = ResourceUsage {
             cpu_percent: None,
             memory_bytes: 684 * 1024 * 1024,
         };
 
-        assert_eq!(format_usage("CPU ", "RAM ", &usage), "CPU — RAM 684M");
+        assert_eq!(format_usage("CPU ", "RSS ", &usage), "CPU — RSS 684 MiB");
     }
 
     #[test]
-    fn formats_live_cpu_and_rounds_memory() {
+    fn formats_cpu_as_cores_and_rounds_rss() {
         let usage = ResourceUsage {
-            cpu_percent: Some(7),
+            cpu_percent: Some(110),
             memory_bytes: 684 * 1024 * 1024 + 600 * 1024,
         };
 
-        assert_eq!(format_usage("CPU ", "RAM ", &usage), "CPU 7% RAM 685M");
+        assert_eq!(
+            format_usage("CPU ", "RSS ", &usage),
+            "CPU 1.10c RSS 685 MiB"
+        );
     }
 }

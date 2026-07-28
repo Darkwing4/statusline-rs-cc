@@ -1,6 +1,6 @@
 ---
 name: statusline-config
-description: Edit the statusline RON config (config/default.ron or config/local.ron), then rebuild and install the binary so Claude Code picks up the change on the next render. Use when the user wants to add/remove/reorder segments, recolour them, change separator, switch RateLimit style, show Linux Claude CPU/RAM usage, toggle git options, or otherwise tweak the statusline appearance.
+description: Edit the statusline RON config (config/default.ron or config/local.ron), then rebuild and install the binary so Claude Code picks up the change on the next render. Use when the user wants to add/remove/reorder segments, recolour them, change separator, switch RateLimit style, show Linux Claude CPU and RSS memory usage, toggle git options, or otherwise tweak the statusline appearance.
 ---
 
 # statusline-config
@@ -13,7 +13,7 @@ Trigger on requests like:
 
 - "change the branch colour", "recolour the bar", "make 5h radial"
 - "add IdleTime", "drop CacheTtl", "reorder the segments"
-- "show Claude CPU and RAM usage"
+- "show Claude CPU and RSS usage", "show Claude CPU and RAM usage"
 - "change the separator", "use truecolor instead of ansi"
 - "make local config like default but without 7d"
 - "rebuild / reinstall the statusline"
@@ -69,7 +69,7 @@ CacheTtl(
 ClaudeResourceUsage(
     color: Named(90),
     cpu_prefix: "CPU ",
-    memory_prefix: "RAM ",
+    memory_prefix: "RSS ",
 )
 
 Cwd(
@@ -144,7 +144,7 @@ If the user only wants to preview / not install yet, skip step 4 and say so.
 - `gradient_midpoint_percentage` defaults to `50.0` when omitted and must be greater than `0` and less than `100`.
 - Don't introduce unknown segment names — only the variants listed above exist in `SegmentSpec`.
 - `Gradient` on `ClaudeResourceUsage` / `Cwd` / `GitBranch` / `GitDiff` / `GitError` / `IdleTime` won't crash but will render as plain text (no colour) — prefer `Named` or `Rgb` there.
-- `ClaudeResourceUsage` is Linux-only and requires a matching live `session_id` entry in Claude Code's local session registry. It emits nothing when the process cannot be resolved or on macOS and Windows. CPU `100%` means one fully used core, RAM is the summed RSS of the Claude process tree, and the first CPU sample is `—`.
+- `ClaudeResourceUsage` is Linux-only and requires a matching live `session_id` entry in Claude Code's local session registry. It emits nothing when the process cannot be resolved or on macOS and Windows. CPU is shown in logical-core equivalents (`1.00c` is one fully used core), RSS is the summed resident set size of the Claude process tree in MiB, and the first CPU sample is `—`.
 - Set `statusLine.refreshInterval` to `1` in Claude Code settings for periodic live resource updates.
 - `RateLimit` only renders after the first response in a Claude.ai session; absent on API plans. Don't expect it to appear immediately in a fresh transcript.
 
