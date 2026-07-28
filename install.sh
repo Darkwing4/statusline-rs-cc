@@ -32,6 +32,7 @@ case "$os-$arch" in
 esac
 
 asset="statusline-${target}.tar.gz"
+checksum="$asset.sha256"
 
 token="${GH_TOKEN:-${GITHUB_TOKEN:-}}"
 if [ -z "$token" ] && command -v gh >/dev/null 2>&1; then
@@ -44,9 +45,13 @@ if [ -n "$token" ]; then
 fi
 
 if [ "$TAG" = "latest" ]; then
+    release_url="https://github.com/$REPO/releases/latest/download"
     api_url="https://api.github.com/repos/$REPO/releases/latest"
+    api_endpoint="repos/$REPO/releases/latest"
 else
+    release_url="https://github.com/$REPO/releases/download/$TAG"
     api_url="https://api.github.com/repos/$REPO/releases/tags/$TAG"
+    api_endpoint="repos/$REPO/releases/tags/$TAG"
 fi
 
 fetch() {
@@ -57,36 +62,123 @@ fetch() {
     fi
 }
 
-echo "fetching release metadata: $api_url"
-release_json="$(fetch -H "Accept: application/vnd.github+json" "$api_url")"
+find_asset_id() {
+    requested_asset="$1"
 
-asset_id="$(printf '%s' "$release_json" | awk -v name="$asset" '
-    /"assets"[[:space:]]*:[[:space:]]*\[/ { in_assets=1 }
-    in_assets && /"id"[[:space:]]*:[[:space:]]*[0-9]+/ {
-        match($0, /[0-9]+/)
-        current_id = substr($0, RSTART, RLENGTH)
-    }
-    in_assets && /"name"[[:space:]]*:[[:space:]]*"[^"]+"/ {
-        n = $0
-        sub(/.*"name"[[:space:]]*:[[:space:]]*"/, "", n)
-        sub(/".*/, "", n)
-        if (n == name) { print current_id; exit }
-    }
-')"
+    if command -v python3 >/dev/null 2>&1; then
+        printf '%s' "$release_json" | python3 -c '
+import json
+import sys
 
-if [ -z "$asset_id" ]; then
-    echo "asset $asset not found in release" >&2
-    echo "release URL: $api_url" >&2
-    exit 1
-fi
-
-asset_url="https://api.github.com/repos/$REPO/releases/assets/$asset_id"
+name = sys.argv[1]
+matches = [
+    str(asset["id"])
+    for asset in json.load(sys.stdin).get("assets", [])
+    if asset.get("name") == name and isinstance(asset.get("id"), int)
+]
+if len(matches) != 1:
+    sys.exit(1)
+print(matches[0])
+' "$requested_asset"
+    elif command -v jq >/dev/null 2>&1; then
+        printf '%s' "$release_json" | jq -er --arg name "$requested_asset" '
+            [.assets[] | select(.name == $name) | .id]
+            | if length == 1 then .[0] else error("asset not found") end
+        '
+    elif command -v gh >/dev/null 2>&1; then
+        GH_TOKEN="$token" gh api "$api_endpoint" --jq '.assets[] | [.name, .id] | @tsv' |
+            awk -F '	' -v name="$requested_asset" '
+                $1 == name {
+                    id = $2
+                    count++
+                }
+                END {
+                    if (count != 1) {
+                        exit 1
+                    }
+                    print id
+                }
+            '
+    else
+        echo "python3, jq, or gh is required for authenticated release downloads" >&2
+        return 1
+    fi
+}
 
 tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
 
 echo "downloading $asset"
-fetch -H "Accept: application/octet-stream" -o "$tmp/$asset" "$asset_url"
+if fetch -o "$tmp/$asset" "$release_url/$asset"; then
+    echo "downloading $checksum"
+    fetch -o "$tmp/$checksum" "$release_url/$checksum"
+else
+    if [ -z "$token" ]; then
+        echo "asset $asset not found in release" >&2
+        echo "release URL: $release_url" >&2
+        exit 1
+    fi
+
+    echo "fetching release metadata: $api_url"
+    release_json="$(fetch -H "Accept: application/vnd.github+json" "$api_url")"
+
+    if ! asset_id="$(find_asset_id "$asset")"; then
+        echo "asset $asset not found in release" >&2
+        echo "release URL: $api_url" >&2
+        exit 1
+    fi
+
+    if ! checksum_id="$(find_asset_id "$checksum")"; then
+        echo "asset $checksum not found in release" >&2
+        echo "release URL: $api_url" >&2
+        exit 1
+    fi
+
+    echo "downloading $asset"
+    fetch -H "Accept: application/octet-stream" -o "$tmp/$asset" \
+        "https://api.github.com/repos/$REPO/releases/assets/$asset_id"
+
+    echo "downloading $checksum"
+    fetch -H "Accept: application/octet-stream" -o "$tmp/$checksum" \
+        "https://api.github.com/repos/$REPO/releases/assets/$checksum_id"
+fi
+
+if ! expected_hash="$(awk -v name="$asset" '
+    NR == 1 {
+        hash = $1
+        file = $2
+        if (file == "*" name) {
+            file = name
+        }
+    }
+    END {
+        if (NR != 1 || NF != 2 || length(hash) != 64 || hash ~ /[^0-9A-Fa-f]/ || file != name) {
+            exit 1
+        }
+        print tolower(hash)
+    }
+' "$tmp/$checksum")"; then
+    echo "invalid checksum file: $checksum" >&2
+    exit 1
+fi
+
+if command -v sha256sum >/dev/null 2>&1; then
+    actual_hash="$(sha256sum "$tmp/$asset")"
+elif command -v shasum >/dev/null 2>&1; then
+    actual_hash="$(shasum -a 256 "$tmp/$asset")"
+else
+    echo "sha256sum or shasum is required to verify $asset" >&2
+    exit 1
+fi
+
+actual_hash="${actual_hash%% *}"
+
+if [ "$actual_hash" != "$expected_hash" ]; then
+    echo "checksum mismatch for $asset" >&2
+    exit 1
+fi
+
+echo "verified $asset"
 
 tar -xzf "$tmp/$asset" -C "$tmp"
 

@@ -33,13 +33,35 @@ $assetObj = $release.assets | Where-Object { $_.name -eq $asset } | Select-Objec
 if (-not $assetObj) {
     throw "asset $asset not found in release ($apiUrl)"
 }
+$checksumAsset = "$asset.sha256"
+$checksumAssetObj = $release.assets | Where-Object { $_.name -eq $checksumAsset } | Select-Object -First 1
+if (-not $checksumAssetObj) {
+    throw "asset $checksumAsset not found in release ($apiUrl)"
+}
 
 $tmp = New-Item -ItemType Directory -Path (Join-Path $env:TEMP ("statusline-" + [guid]::NewGuid().ToString('N')))
 try {
     $zipPath = Join-Path $tmp $asset
+    $checksumPath = Join-Path $tmp $checksumAsset
     Write-Host "downloading $asset"
     Invoke-WebRequest -Uri $assetObj.browser_download_url -OutFile $zipPath -UseBasicParsing -Headers @{ 'User-Agent' = 'statusline-installer' }
+    Write-Host "downloading $checksumAsset"
+    Invoke-WebRequest -Uri $checksumAssetObj.browser_download_url -OutFile $checksumPath -UseBasicParsing -Headers @{ 'User-Agent' = 'statusline-installer' }
 
+    $checksumText = [System.IO.File]::ReadAllText($checksumPath)
+    $checksumPattern = '\A(?<hash>[0-9A-Fa-f]{64})[ \t]+\*?' + [regex]::Escape($asset) + '(?:\r\n|\n)?\z'
+    $checksumMatch = [regex]::Match($checksumText, $checksumPattern, [System.Text.RegularExpressions.RegexOptions]::CultureInvariant)
+    if (-not $checksumMatch.Success) {
+        throw "invalid checksum file ${checksumAsset}: expected exactly one sha256sum line for $asset"
+    }
+
+    $expectedHash = $checksumMatch.Groups['hash'].Value
+    $actualHash = (Get-FileHash -LiteralPath $zipPath -Algorithm SHA256).Hash
+    if (-not [string]::Equals($actualHash, $expectedHash, [System.StringComparison]::OrdinalIgnoreCase)) {
+        throw "checksum mismatch for $asset"
+    }
+
+    Write-Host "verified $asset"
     Expand-Archive -Path $zipPath -DestinationPath $tmp -Force
 
     if (-not (Test-Path $InstallDir)) {
