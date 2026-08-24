@@ -42,11 +42,13 @@ impl Renderer {
 
         let sep = self.separator_color.paint(&self.separator);
 
-        let max = terminal_width()
+        let wrap_width = terminal_width()
             .map(|cols| cols.saturating_sub(4))
-            .filter(|&max| max > 0)
-            .unwrap_or(usize::MAX);
-        let main_block = wrap_segments(&main_parts, &sep, max);
+            .filter(|&max| max > 0);
+        let main_block = match wrap_width {
+            Some(max) => wrap_segments(&main_parts, &sep, max),
+            None => main_parts.join(&sep),
+        };
 
         let mut lines = vec![main_block];
         lines.extend(tail_lines);
