@@ -64,22 +64,7 @@ struct RawCacheCreation {
 
 struct UsageRow {
     timestamp: Option<i64>,
-    e1h: u64,
-    e5m: u64,
-}
-
-impl UsageRow {
-    fn ttl_hint(&self) -> Option<i64> {
-        if self.e1h > 0 {
-            return Some(TTL_1H_SECS);
-        }
-
-        if self.e5m > 0 {
-            return Some(TTL_5M_SECS);
-        }
-
-        None
-    }
+    ttl_hint: Option<i64>,
 }
 
 impl Segment for CacheTtl {
@@ -132,7 +117,7 @@ fn read_cache_snapshot_from<R: Read + Seek>(reader: &mut R) -> Option<CacheSnaps
             }
         }
 
-        if let Some(ttl) = row.ttl_hint() {
+        if let Some(ttl) = row.ttl_hint {
             return ControlFlow::Break(ttl);
         }
 
@@ -172,18 +157,21 @@ fn parse_usage_row(record: &mut dyn JsonlRecord) -> Option<UsageRow> {
 
     let timestamp = row.timestamp.as_deref().and_then(parse_iso8601_utc);
 
-    let (e1h, e5m) = match usage.cache_creation {
-        Some(ephemeral) => (
-            ephemeral.ephemeral_1h_input_tokens.unwrap_or(0),
-            ephemeral.ephemeral_5m_input_tokens.unwrap_or(0),
-        ),
-        None => (0, 0),
-    };
+    let ttl_hint = usage.cache_creation.and_then(|ephemeral| {
+        if ephemeral.ephemeral_1h_input_tokens.unwrap_or(0) > 0 {
+            return Some(TTL_1H_SECS);
+        }
+
+        if ephemeral.ephemeral_5m_input_tokens.unwrap_or(0) > 0 {
+            return Some(TTL_5M_SECS);
+        }
+
+        None
+    });
 
     Some(UsageRow {
         timestamp,
-        e1h,
-        e5m,
+        ttl_hint,
     })
 }
 
