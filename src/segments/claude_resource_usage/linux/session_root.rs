@@ -135,17 +135,10 @@ fn record_matches(
 }
 
 fn unique_root(candidates: Vec<ResolvedRoot>) -> Option<ResolvedRoot> {
-    let mut unique = None;
+    let mut candidates = candidates.into_iter();
+    let first = candidates.next()?;
 
-    for candidate in candidates {
-        match unique {
-            None => unique = Some(candidate),
-            Some(existing) if existing == candidate => {}
-            Some(_) => return None,
-        }
-    }
-
-    unique
+    candidates.all(|candidate| candidate == first).then_some(first)
 }
 
 fn read_regular_file(path: &Path, max_bytes: u64) -> Option<String> {
