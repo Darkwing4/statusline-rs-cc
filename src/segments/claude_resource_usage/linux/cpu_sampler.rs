@@ -58,17 +58,12 @@ fn cpu_delta_percent(
         return None;
     }
 
-    let elapsed_nanos = current.uptime_nanos - previous.uptime_nanos;
-    let cpu_ticks = current.cpu_ticks - previous.cpu_ticks;
-    let numerator = cpu_ticks as f64 * 100.0 * 1_000_000_000.0;
-    let denominator = clock_ticks as f64 * elapsed_nanos as f64;
-    let percent = (numerator / denominator).round();
+    let elapsed_nanos = u128::from(current.uptime_nanos - previous.uptime_nanos);
+    let cpu_ticks = u128::from(current.cpu_ticks - previous.cpu_ticks);
+    let numerator = cpu_ticks * 100 * 1_000_000_000;
+    let denominator = u128::from(clock_ticks) * elapsed_nanos;
 
-    if !percent.is_finite() || percent < 0.0 || percent > u64::MAX as f64 {
-        return None;
-    }
-
-    Some(percent as u64)
+    u64::try_from((numerator * 2 + denominator) / (denominator * 2)).ok()
 }
 
 fn read_uptime_nanos() -> Option<u64> {
@@ -242,6 +237,24 @@ mod tests {
         };
 
         assert_eq!(cpu_delta_percent(&previous, &current, 100), Some(250));
+    }
+
+    #[test]
+    fn rounds_half_percent_up() {
+        let previous = CpuSnapshot {
+            root_pid: 77,
+            root_start: 98765,
+            cpu_ticks: 100,
+            uptime_nanos: 1_000_000_000,
+        };
+        let current = CpuSnapshot {
+            root_pid: 77,
+            root_start: 98765,
+            cpu_ticks: 101,
+            uptime_nanos: 3_000_000_000,
+        };
+
+        assert_eq!(cpu_delta_percent(&previous, &current, 100), Some(1));
     }
 
     #[test]
