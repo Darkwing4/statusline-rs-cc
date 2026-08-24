@@ -46,19 +46,17 @@ where
         }
 
         let mut validated_children = HashSet::new();
-        for _ in 0..2 {
-            let children = read_children(process.pid).unwrap_or_default();
-            for child_pid in children {
-                if visited.contains(&child_pid) || validated_children.contains(&child_pid) {
-                    continue;
-                }
-                let Some(child) = read_stat(child_pid) else {
-                    continue;
-                };
-                if child.pid == child_pid && child.ppid == process.pid {
-                    validated_children.insert(child_pid);
-                    stack.push(child);
-                }
+        let children = read_children(process.pid).unwrap_or_default();
+        for child_pid in children {
+            if visited.contains(&child_pid) || validated_children.contains(&child_pid) {
+                continue;
+            }
+            let Some(child) = read_stat(child_pid) else {
+                continue;
+            };
+            if child.pid == child_pid && child.ppid == process.pid {
+                validated_children.insert(child_pid);
+                stack.push(child);
             }
         }
 
@@ -283,45 +281,6 @@ mod tests {
         assert_eq!(tree, None);
     }
 
-    #[test]
-    fn second_immediate_listing_adds_new_valid_child() {
-        let root = ResolvedRoot {
-            pid: 10,
-            start_time: 100,
-        };
-        let stats = HashMap::from([
-            (10, process(10, 1, 100, 10, 100)),
-            (11, process(11, 10, 110, 20, 200)),
-            (12, process(12, 10, 120, 30, 300)),
-        ]);
-        let mut root_listings = 0;
-        let mut tree = traverse_process_tree(
-            root,
-            |pid| stats.get(&pid).cloned(),
-            |pid| {
-                if pid != 10 {
-                    return Some(Vec::new());
-                }
-                root_listings += 1;
-                if root_listings == 1 {
-                    Some(vec![11])
-                } else {
-                    Some(vec![11, 12])
-                }
-            },
-        )
-        .unwrap();
-        tree.sort_by_key(|entry| entry.pid);
-
-        assert_eq!(
-            tree,
-            vec![
-                process(10, 1, 100, 10, 100),
-                process(11, 10, 110, 20, 200),
-                process(12, 10, 120, 30, 300),
-            ]
-        );
-    }
 
     #[test]
     fn aggregates_only_transitive_process_tree() {
