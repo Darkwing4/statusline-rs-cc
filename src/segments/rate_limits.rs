@@ -38,16 +38,10 @@ impl RateLimit {
 const BAR_GLYPHS: [char; 8] = ['▁', '▂', '▃', '▄', '▅', '▆', '▇', '█'];
 const RADIAL_GLYPHS: [char; 5] = ['○', '◔', '◑', '◕', '●'];
 
-fn bar_glyph(pct: f64) -> char {
-    let idx = (pct * 8.0 / 100.0) as isize;
-    let clamped = idx.clamp(0, 7) as usize;
-    BAR_GLYPHS[clamped]
-}
-
-fn radial_glyph(pct: f64) -> char {
-    let idx = (pct * 5.0 / 100.0) as isize;
-    let clamped = idx.clamp(0, 4) as usize;
-    RADIAL_GLYPHS[clamped]
+fn glyph(glyphs: &[char], pct: f64) -> char {
+    let idx = (pct * glyphs.len() as f64 / 100.0) as isize;
+    let clamped = idx.clamp(0, glyphs.len() as isize - 1) as usize;
+    glyphs[clamped]
 }
 
 impl Segment for RateLimit {
@@ -76,13 +70,18 @@ impl Segment for RateLimit {
 
         let text = match self.style {
             Style::Percent => format!("{}{}%", prefix, rounded),
-            Style::Bar => format!("{}{}", prefix, bar_glyph(glyph_pct)),
+            Style::Bar => format!("{}{}", prefix, glyph(&BAR_GLYPHS, glyph_pct)),
             Style::BarPercent => {
-                format!("{}{} {}%", prefix, bar_glyph(glyph_pct), rounded)
+                format!("{}{} {}%", prefix, glyph(&BAR_GLYPHS, glyph_pct), rounded)
             }
-            Style::Radial => format!("{}{}", prefix, radial_glyph(glyph_pct)),
+            Style::Radial => format!("{}{}", prefix, glyph(&RADIAL_GLYPHS, glyph_pct)),
             Style::RadialPercent => {
-                format!("{}{} {}%", prefix, radial_glyph(glyph_pct), rounded)
+                format!(
+                    "{}{} {}%",
+                    prefix,
+                    glyph(&RADIAL_GLYPHS, glyph_pct),
+                    rounded
+                )
             }
         };
 
@@ -126,7 +125,7 @@ fn color_to_rgb(c: Color, fallback: (u8, u8, u8)) -> (u8, u8, u8) {
 mod tests {
     use serde_json::json;
 
-    use super::{bar_glyph, radial_glyph, ColorMode, Fill, RateLimit, Style, Window};
+    use super::{glyph, ColorMode, Fill, RateLimit, Style, Window, BAR_GLYPHS, RADIAL_GLYPHS};
     use crate::config_schema::Color;
 
     fn rate_limit(window: Window, prefix: &str) -> RateLimit {
@@ -161,7 +160,7 @@ mod tests {
         ];
 
         for (pct, expected) in cases {
-            assert_eq!(bar_glyph(pct), expected, "{pct}");
+            assert_eq!(glyph(&BAR_GLYPHS, pct), expected, "{pct}");
         }
     }
 
@@ -180,7 +179,7 @@ mod tests {
         ];
 
         for (pct, expected) in cases {
-            assert_eq!(radial_glyph(pct), expected, "{pct}");
+            assert_eq!(glyph(&RADIAL_GLYPHS, pct), expected, "{pct}");
         }
     }
 
