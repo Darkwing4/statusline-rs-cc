@@ -2,14 +2,13 @@ use crate::ansi::visible_width;
 
 pub(super) fn wrap_segments(parts: &[String], sep: &str, max: usize) -> String {
     let sep_w = visible_width(sep);
-    let widths: Vec<usize> = parts.iter().map(|p| visible_width(p)).collect();
 
     let mut lines: Vec<String> = Vec::new();
     let mut current = String::new();
     let mut current_w = 0usize;
 
-    for (i, part) in parts.iter().enumerate() {
-        let pw = widths[i];
+    for part in parts {
+        let pw = visible_width(part);
 
         if current.is_empty() {
             current.push_str(part);
