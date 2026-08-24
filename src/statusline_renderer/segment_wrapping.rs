@@ -1,10 +1,6 @@
 use crate::ansi::visible_width;
 
 pub(super) fn wrap_segments(parts: &[String], sep: &str, max: usize) -> String {
-    if parts.is_empty() {
-        return String::new();
-    }
-
     let sep_w = visible_width(sep);
     let widths: Vec<usize> = parts.iter().map(|p| visible_width(p)).collect();
 
