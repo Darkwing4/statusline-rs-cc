@@ -8,7 +8,7 @@ use serde_json::Value;
 
 pub use crate::config_schema::CacheTtl;
 use crate::config_schema::Color;
-use crate::duration_format::format_duration;
+use crate::duration_format::format_duration_padded;
 use crate::gradient::{gradient, Rgb};
 use crate::iso8601::parse_iso8601_utc;
 use crate::segments::{GitCache, Segment};
@@ -177,7 +177,7 @@ fn parse_usage_row(record: &mut dyn JsonlRecord) -> Option<UsageRow> {
 }
 
 fn active_view(prefix: &str, remaining: i64, ttl: i64) -> (String, (u8, u8, u8)) {
-    let text = format!("{}{}", prefix, format_duration(remaining));
+    let text = format!("{}{}", prefix, format_duration_padded(remaining));
     let burned = ((ttl - remaining) as f64 / ttl as f64) * 100.0;
 
     (text, gradient(TTL_GRADIENT, burned))
