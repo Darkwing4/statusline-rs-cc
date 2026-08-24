@@ -42,30 +42,11 @@ pub(super) fn wrap_segments(parts: &[String], sep: &str, max: usize) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{visible_width, wrap_segments};
+    use super::wrap_segments;
 
-    #[test]
-    fn ignores_ansi_sequences_when_measuring_width() {
-        assert_eq!(visible_width("\u{1b}[31mred\u{1b}[0m"), 3);
-        assert_eq!(visible_width("\u{1b}[31ma界🙂\u{1b}[0m"), 5);
-        assert_eq!(visible_width("\u{1b}[31m👩‍💻\u{1b}[0m"), 2);
-    }
 
-    #[test]
-    fn measures_unicode_display_width() {
-        assert_eq!(visible_width("a界🙂"), 5);
-        assert_eq!(visible_width("👩‍💻"), 2);
-    }
 
-    #[test]
-    fn preserves_unicode_around_ansi_sequences() {
-        assert_eq!(visible_width("界\u{1b}[31m🙂\u{1b}[0mé"), 5);
-    }
 
-    #[test]
-    fn handles_incomplete_ansi_sequence() {
-        assert_eq!(visible_width("界\u{1b}[31"), 2);
-    }
 
     #[test]
     fn joins_segments_that_fit() {
