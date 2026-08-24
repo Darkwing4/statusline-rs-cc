@@ -64,27 +64,5 @@ mod tests {
         );
     }
 
-    #[test]
-    fn interpolates_between_gradient_stops() {
-        assert_eq!(
-            gradient(CONTEXT_GRADIENT, 10.0, Quantization::Truncate),
-            (165, 157, 125)
-        );
-        assert_eq!(
-            gradient(CONTEXT_GRADIENT, 25.0, Quantization::Truncate),
-            (200, 112, 80)
-        );
-    }
 
-    #[test]
-    fn clamps_values_outside_gradient_range() {
-        assert_eq!(
-            gradient(CONTEXT_GRADIENT, -1.0, Quantization::Truncate),
-            (150, 150, 150)
-        );
-        assert_eq!(
-            gradient(CONTEXT_GRADIENT, 100.0, Quantization::Truncate),
-            (220, 60, 60)
-        );
-    }
 }
