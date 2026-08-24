@@ -5,7 +5,7 @@ use serde_json::Value;
 pub use crate::config_schema::{ColorMode, Fill, RateLimit, Style, Window};
 use crate::gradient::{gradient, Quantization};
 use crate::segments::{GitCache, Segment};
-use crate::types::{Color, RESET};
+use crate::types::Color;
 
 const COUNTDOWN_TOKEN: &str = "{t}";
 const UNKNOWN_COUNTDOWN: &str = "?";
@@ -107,7 +107,7 @@ impl Segment for RateLimit {
                     (100.0, high),
                 ];
                 let (r, g, b) = gradient(&stops, pct, Quantization::Nearest);
-                format!("\x1b[38;2;{};{};{}m{}{}", r, g, b, text, RESET)
+                Color::Rgb(r, g, b).paint(&text)
             }
         };
 

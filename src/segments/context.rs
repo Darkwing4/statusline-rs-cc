@@ -3,7 +3,7 @@ use serde_json::Value;
 pub use crate::config_schema::Context;
 use crate::gradient::{gradient, Quantization, Rgb};
 use crate::segments::{GitCache, Segment};
-use crate::types::{Color, RESET};
+use crate::types::Color;
 
 const CONTEXT_GRADIENT: &[(f64, Rgb)] = &[
     (0.0, (150, 150, 150)),
@@ -23,7 +23,7 @@ impl Segment for Context {
         let painted_pct = match self.color {
             Color::Gradient => {
                 let (r, g, b) = gradient(CONTEXT_GRADIENT, p, Quantization::Truncate);
-                format!("\x1b[38;2;{};{};{}m{}{}", r, g, b, pct, RESET)
+                Color::Rgb(r, g, b).paint(&pct)
             }
             _ => self.color.paint(&pct),
         };
