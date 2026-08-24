@@ -6,6 +6,7 @@ use crate::segments::Segment;
 
 impl Segment for GitDiff {
     fn render(&self, _json: &Value, git: &mut GitCache) -> Option<String> {
+        git.dir()?;
         let status = git.status()?;
 
         let mut parts = Vec::with_capacity(3);
