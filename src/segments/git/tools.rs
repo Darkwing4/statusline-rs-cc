@@ -1,5 +1,5 @@
 use std::fs;
-use std::path::{Component, Path, PathBuf};
+use std::path::{Path, PathBuf};
 use std::process::Command;
 
 #[derive(Default)]
@@ -213,23 +213,13 @@ fn read_trim(path: &Path) -> Option<String> {
 }
 
 pub fn is_worktree(git_dir: &Path) -> bool {
-    if git_dir.join("commondir").is_file() {
-        return true;
-    }
-
-    let comps: Vec<_> = git_dir.components().collect();
-    comps.windows(3).any(|window| {
-        window[0].as_os_str() == ".git"
-            && window[1].as_os_str() == "worktrees"
-            && matches!(window[2], Component::Normal(_))
-    })
+    git_dir.join("commondir").is_file()
 }
 
 #[cfg(test)]
 mod tests {
     use super::{is_worktree, parse_status_line, GitStatus};
     use std::fs;
-    use std::path::Path;
 
     fn parse(lines: &[&str]) -> GitStatus {
         let mut status = GitStatus::default();
@@ -308,14 +298,6 @@ mod tests {
         assert_eq!(status.deleted, 0);
     }
 
-    #[test]
-    fn detects_linked_worktree_git_dirs() {
-        assert!(is_worktree(Path::new("/repo/.git/worktrees/feature")));
-        assert!(is_worktree(Path::new("/repo/.git/worktrees/feature/logs")));
-        assert!(is_worktree(Path::new(
-            "/external/worktrees/repo/.git/worktrees/feature"
-        )));
-    }
 
     #[test]
     fn detects_linked_worktree_with_separate_git_dir() {
@@ -326,18 +308,9 @@ mod tests {
         fs::write(git_dir.join("commondir"), "../..").unwrap();
 
         assert!(is_worktree(&git_dir));
+        assert!(!is_worktree(&root));
 
         fs::remove_dir_all(root).unwrap();
     }
 
-    #[test]
-    fn rejects_non_worktree_git_dirs() {
-        assert!(!is_worktree(Path::new("/repo/.git")));
-        assert!(!is_worktree(Path::new("/repo/.git/worktrees")));
-        assert!(!is_worktree(Path::new("/repo/worktrees/feature")));
-        assert!(!is_worktree(Path::new(
-            "/repo/.git/objects/worktrees/feature"
-        )));
-        assert!(!is_worktree(Path::new("/repo/.git/worktrees/../feature")));
-    }
 }
