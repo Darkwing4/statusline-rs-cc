@@ -1,14 +1,11 @@
 use serde_json::Value;
 
 pub use crate::config_schema::Effort;
-use crate::segments::{GitCache, Segment};
+use crate::segments::{json_field, GitCache, Segment};
 
 impl Segment for Effort {
     fn render(&self, json: &Value, _git: &mut GitCache) -> Option<String> {
-        let level = json
-            .pointer("/effort/level")
-            .and_then(Value::as_str)
-            .filter(|value| !value.is_empty())?;
+        let level = json_field(json, "/effort/level")?;
 
         Some(self.color.paint(&format!("{}{}", self.prefix, level)))
     }

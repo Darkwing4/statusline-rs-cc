@@ -1,19 +1,12 @@
 use serde_json::Value;
 
 pub use crate::config_schema::Model;
-use crate::segments::{GitCache, Segment};
+use crate::segments::{json_field, GitCache, Segment};
 
 impl Segment for Model {
     fn render(&self, json: &Value, _git: &mut GitCache) -> Option<String> {
-        let name = json
-            .pointer("/model/display_name")
-            .and_then(Value::as_str)
-            .filter(|value| !value.is_empty())
-            .or_else(|| {
-                json.pointer("/model/id")
-                    .and_then(Value::as_str)
-                    .filter(|value| !value.is_empty())
-            })?;
+        let name = json_field(json, "/model/display_name")
+            .or_else(|| json_field(json, "/model/id"))?;
 
         Some(self.color.paint(&format!("{}{}", self.prefix, name)))
     }

@@ -12,6 +12,12 @@ pub use git::GitCache;
 
 use serde_json::Value;
 
+pub(crate) fn json_field<'a>(json: &'a Value, pointer: &str) -> Option<&'a str> {
+    json.pointer(pointer)
+        .and_then(Value::as_str)
+        .filter(|value| !value.is_empty())
+}
+
 pub trait Segment {
     fn render(&self, json: &Value, git: &mut GitCache) -> Option<String>;
 
