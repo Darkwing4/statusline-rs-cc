@@ -8,9 +8,6 @@ pub mod idle_time;
 pub mod model;
 pub mod rate_limits;
 
-#[cfg(debug_assertions)]
-pub mod debug;
-
 pub use git::GitCache;
 
 use serde_json::Value;

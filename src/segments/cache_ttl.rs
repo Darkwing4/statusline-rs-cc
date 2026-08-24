@@ -105,14 +105,6 @@ impl Segment for CacheTtl {
             }
         });
 
-        #[cfg(debug_assertions)]
-        crate::segments::debug::cache_ttl_dump::append(
-            json,
-            now,
-            snapshot.as_ref(),
-            painted.as_deref(),
-        );
-
         painted
     }
 }
