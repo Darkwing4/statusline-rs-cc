@@ -8,13 +8,6 @@ pub fn read() -> Option<Value> {
 
     let parsed: Value = serde_json::from_str(&buf).ok()?;
 
-    #[cfg(debug_assertions)]
-    {
-        if let Ok(pretty) = serde_json::to_string_pretty(&parsed) {
-            let _ = std::fs::write("/tmp/statusline-stdin.json", pretty);
-        }
-    }
-
     Some(parsed)
 }
 
