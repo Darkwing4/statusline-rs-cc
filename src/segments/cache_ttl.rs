@@ -7,6 +7,7 @@ use serde::Deserialize;
 use serde_json::Value;
 
 pub use crate::config_schema::CacheTtl;
+use crate::duration_format::format_duration;
 use crate::gradient::{gradient, Quantization, Rgb};
 use crate::iso8601::parse_iso8601_utc;
 use crate::segments::{GitCache, Segment};
@@ -196,20 +197,6 @@ fn cold_view(prefix: &str, json: &Value) -> (String, (u8, u8, u8)) {
     )
 }
 
-fn format_duration(seconds: i64) -> String {
-    let s = seconds.max(0);
-    let h = s / 3600;
-    let m = (s % 3600) / 60;
-    let sec = s % 60;
-
-    if h > 0 {
-        format!("{}h{:02}m", h, m)
-    } else if m > 0 {
-        format!("{}m{:02}s", m, sec)
-    } else {
-        format!("{}s", sec)
-    }
-}
 
 #[cfg(test)]
 mod tests {

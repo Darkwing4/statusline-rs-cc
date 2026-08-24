@@ -1,6 +1,7 @@
 mod ansi;
 mod config;
 mod config_schema;
+mod duration_format;
 mod gradient;
 mod iso8601;
 #[cfg(target_os = "linux")]

@@ -9,6 +9,7 @@ use serde::{Deserialize, Deserializer};
 use serde_json::Value;
 
 pub use crate::config_schema::IdleTime;
+use crate::duration_format::format_duration;
 use crate::iso8601::parse_iso8601_utc;
 use crate::segments::{GitCache, Segment};
 use crate::transcript_record_probe::{has_tool_result, has_type};
@@ -234,19 +235,6 @@ fn parse_user_input_timestamp(record: &mut dyn JsonlRecord) -> Option<i64> {
     row.timestamp.as_deref().and_then(parse_iso8601_utc)
 }
 
-fn format_duration(seconds: i64) -> String {
-    let s = seconds.max(0);
-    let h = s / 3600;
-    let m = (s % 3600) / 60;
-    let sec = s % 60;
-    if h > 0 {
-        format!("{}h{}m", h, m)
-    } else if m > 0 {
-        format!("{}m{}s", m, sec)
-    } else {
-        format!("{}s", sec)
-    }
-}
 
 #[cfg(test)]
 mod tests {
