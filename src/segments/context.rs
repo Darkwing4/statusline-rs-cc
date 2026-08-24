@@ -1,7 +1,7 @@
 use serde_json::Value;
 
 pub use crate::config_schema::Context;
-use crate::gradient::{gradient, Quantization, Rgb};
+use crate::gradient::{gradient, Rgb};
 use crate::segments::{GitCache, Segment};
 use crate::types::Color;
 
@@ -22,7 +22,7 @@ impl Segment for Context {
 
         let painted_pct = match self.color {
             Color::Gradient => {
-                let (r, g, b) = gradient(CONTEXT_GRADIENT, p, Quantization::Truncate);
+                let (r, g, b) = gradient(CONTEXT_GRADIENT, p);
                 Color::Rgb(r, g, b).paint(&pct)
             }
             _ => self.color.paint(&pct),
@@ -46,20 +46,20 @@ impl Segment for Context {
 
 #[cfg(test)]
 mod tests {
-    use super::{gradient, Quantization, CONTEXT_GRADIENT};
+    use super::{gradient, CONTEXT_GRADIENT};
 
     #[test]
     fn returns_colors_at_gradient_stops() {
         assert_eq!(
-            gradient(CONTEXT_GRADIENT, 0.0, Quantization::Truncate),
+            gradient(CONTEXT_GRADIENT, 0.0),
             (150, 150, 150)
         );
         assert_eq!(
-            gradient(CONTEXT_GRADIENT, 20.0, Quantization::Truncate),
+            gradient(CONTEXT_GRADIENT, 20.0),
             (180, 165, 100)
         );
         assert_eq!(
-            gradient(CONTEXT_GRADIENT, 30.0, Quantization::Truncate),
+            gradient(CONTEXT_GRADIENT, 30.0),
             (220, 60, 60)
         );
     }

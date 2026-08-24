@@ -8,7 +8,7 @@ use serde_json::Value;
 
 pub use crate::config_schema::CacheTtl;
 use crate::duration_format::format_duration;
-use crate::gradient::{gradient, Quantization, Rgb};
+use crate::gradient::{gradient, Rgb};
 use crate::iso8601::parse_iso8601_utc;
 use crate::segments::{GitCache, Segment};
 use crate::transcript_record_probe::has_type;
@@ -180,7 +180,7 @@ fn active_view(prefix: &str, remaining: i64, ttl: i64) -> (String, (u8, u8, u8))
     let text = format!("{}{}", prefix, format_duration(remaining));
     let burned = ((ttl - remaining) as f64 / ttl as f64) * 100.0;
 
-    (text, gradient(TTL_GRADIENT, burned, Quantization::Truncate))
+    (text, gradient(TTL_GRADIENT, burned))
 }
 
 fn cold_view(prefix: &str, json: &Value) -> (String, (u8, u8, u8)) {
@@ -193,7 +193,7 @@ fn cold_view(prefix: &str, json: &Value) -> (String, (u8, u8, u8)) {
 
     (
         text,
-        gradient(COLD_GRADIENT, ctx_pct, Quantization::Truncate),
+        gradient(COLD_GRADIENT, ctx_pct),
     )
 }
 
@@ -203,31 +203,31 @@ mod tests {
     use std::io::Cursor;
 
     use super::{
-        gradient, parse_iso8601_utc, read_cache_snapshot_from, Quantization, COLD_GRADIENT,
-        TTL_1H_SECS, TTL_GRADIENT,
+        gradient, parse_iso8601_utc, read_cache_snapshot_from, COLD_GRADIENT, TTL_1H_SECS,
+        TTL_GRADIENT,
     };
 
     #[test]
     fn preserves_ttl_gradient() {
         assert_eq!(
-            gradient(TTL_GRADIENT, 80.0, Quantization::Truncate),
+            gradient(TTL_GRADIENT, 80.0),
             (215, 140, 70)
         );
         assert_eq!(
-            gradient(TTL_GRADIENT, 95.0, Quantization::Truncate),
-            (242, 75, 55)
+            gradient(TTL_GRADIENT, 95.0),
+            (243, 75, 55)
         );
     }
 
     #[test]
     fn preserves_cold_gradient() {
         assert_eq!(
-            gradient(COLD_GRADIENT, 57.5, Quantization::Truncate),
+            gradient(COLD_GRADIENT, 57.5),
             (215, 140, 70)
         );
         assert_eq!(
-            gradient(COLD_GRADIENT, 87.5, Quantization::Truncate),
-            (242, 75, 55)
+            gradient(COLD_GRADIENT, 87.5),
+            (243, 75, 55)
         );
     }
 

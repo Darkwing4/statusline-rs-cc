@@ -3,7 +3,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use serde_json::Value;
 
 pub use crate::config_schema::{ColorMode, Fill, RateLimit, Style, Window};
-use crate::gradient::{gradient, Quantization};
+use crate::gradient::gradient;
 use crate::segments::{GitCache, Segment};
 use crate::types::Color;
 
@@ -106,7 +106,7 @@ impl Segment for RateLimit {
                     (self.gradient_midpoint_percentage, mid),
                     (100.0, high),
                 ];
-                let (r, g, b) = gradient(&stops, pct, Quantization::Nearest);
+                let (r, g, b) = gradient(&stops, pct);
                 Color::Rgb(r, g, b).paint(&text)
             }
         };
