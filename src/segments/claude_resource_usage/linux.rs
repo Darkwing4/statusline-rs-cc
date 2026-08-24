@@ -7,7 +7,7 @@ use crate::process_stat;
 use super::ResourceUsage;
 
 pub(super) fn collect(session_id: &str) -> Option<ResourceUsage> {
-    if session_id.is_empty() || session_id.len() > 1024 {
+    if session_id.len() > 1024 {
         return None;
     }
 
