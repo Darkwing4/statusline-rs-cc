@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use std::fs;
 use std::path::Path;
 
@@ -16,7 +16,7 @@ pub(super) struct TreeAggregate {
 pub(super) fn collect(root: ResolvedRoot) -> Option<TreeAggregate> {
     let processes = traverse_process_tree(root, process_stat::read, read_process_children)?;
 
-    aggregate_tree(&processes, root)
+    Some(aggregate_tree(&processes))
 }
 
 fn traverse_process_tree<ReadStat, ReadChildren>(
@@ -123,47 +123,17 @@ fn parse_process_children(body: &str) -> Option<Vec<u32>> {
         .ok()
 }
 
-fn aggregate_tree(processes: &[ProcessStat], root: ResolvedRoot) -> Option<TreeAggregate> {
-    let by_pid: HashMap<u32, &ProcessStat> = processes
-        .iter()
-        .map(|process| (process.pid, process))
-        .collect();
-    let root_stat = by_pid.get(&root.pid)?;
-    if root_stat.start_time != root.start_time {
-        return None;
-    }
-
-    let mut children: HashMap<u32, Vec<u32>> = HashMap::new();
-    for process in processes {
-        if process.pid != root.pid {
-            children.entry(process.ppid).or_default().push(process.pid);
-        }
-    }
-
-    let mut aggregate = TreeAggregate {
-        cpu_ticks: 0,
-        rss_pages: 0,
-    };
-    let mut stack = vec![root.pid];
-    let mut visited = HashSet::new();
-
-    while let Some(pid) = stack.pop() {
-        if !visited.insert(pid) {
-            continue;
-        }
-        let Some(process) = by_pid.get(&pid) else {
-            continue;
-        };
-
-        aggregate.cpu_ticks = aggregate.cpu_ticks.saturating_add(process.cpu_ticks);
-        aggregate.rss_pages = aggregate.rss_pages.saturating_add(process.rss_pages);
-
-        if let Some(process_children) = children.get(&pid) {
-            stack.extend(process_children.iter().copied());
-        }
-    }
-
-    Some(aggregate)
+fn aggregate_tree(processes: &[ProcessStat]) -> TreeAggregate {
+    processes.iter().fold(
+        TreeAggregate {
+            cpu_ticks: 0,
+            rss_pages: 0,
+        },
+        |aggregate, process| TreeAggregate {
+            cpu_ticks: aggregate.cpu_ticks.saturating_add(process.cpu_ticks),
+            rss_pages: aggregate.rss_pages.saturating_add(process.rss_pages),
+        },
+    )
 }
 
 #[cfg(test)]
@@ -274,56 +244,28 @@ mod tests {
     }
 
 
+
     #[test]
-    fn aggregates_only_transitive_process_tree() {
+    fn sums_cpu_ticks_and_rss_pages() {
         let processes = vec![
             process(10, 1, 100, 10, 100),
             process(11, 10, 110, 20, 200),
             process(12, 11, 120, 30, 300),
-            process(13, 1, 130, 40, 400),
         ];
 
         assert_eq!(
-            aggregate_tree(
-                &processes,
-                ResolvedRoot {
-                    pid: 10,
-                    start_time: 100,
-                }
-            ),
-            Some(TreeAggregate {
+            aggregate_tree(&processes),
+            TreeAggregate {
                 cpu_ticks: 60,
                 rss_pages: 600,
-            })
+            }
         );
         assert_eq!(
-            aggregate_tree(
-                &processes,
-                ResolvedRoot {
-                    pid: 10,
-                    start_time: 101,
-                }
-            ),
-            None
-        );
-    }
-
-    #[test]
-    fn keeps_cpu_ticks_when_live_child_is_reaped() {
-        let root = ResolvedRoot {
-            pid: 10,
-            start_time: 100,
-        };
-        let before = vec![process(10, 1, 100, 100, 100), process(11, 10, 110, 50, 200)];
-        let after = vec![process(10, 1, 100, 150, 100)];
-
-        assert_eq!(
-            aggregate_tree(&before, root).map(|aggregate| aggregate.cpu_ticks),
-            Some(150)
-        );
-        assert_eq!(
-            aggregate_tree(&after, root).map(|aggregate| aggregate.cpu_ticks),
-            Some(150)
+            aggregate_tree(&[]),
+            TreeAggregate {
+                cpu_ticks: 0,
+                rss_pages: 0,
+            }
         );
     }
 }
