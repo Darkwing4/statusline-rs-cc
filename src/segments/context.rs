@@ -54,4 +54,10 @@ mod tests {
         assert_eq!(gradient(CONTEXT_GRADIENT, 20.0), (180, 165, 100));
         assert_eq!(gradient(CONTEXT_GRADIENT, 30.0), (220, 60, 60));
     }
+
+    #[test]
+    fn interpolates_between_gradient_stops() {
+        assert_eq!(gradient(CONTEXT_GRADIENT, 10.0), (165, 158, 125));
+        assert_eq!(gradient(CONTEXT_GRADIENT, 25.0), (200, 113, 80));
+    }
 }
