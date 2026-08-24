@@ -1,12 +1,9 @@
-use std::io::{self, Read};
+use std::io;
 
 use serde_json::Value;
 
 pub fn read() -> Option<Value> {
-    let mut buf = String::new();
-    io::stdin().read_to_string(&mut buf).ok()?;
-
-    let parsed: Value = serde_json::from_str(&buf).ok()?;
+    let parsed: Value = serde_json::from_reader(io::stdin().lock()).ok()?;
 
     Some(parsed)
 }
