@@ -14,12 +14,9 @@ pub(super) struct TreeAggregate {
 }
 
 pub(super) fn collect(root: ResolvedRoot) -> Option<TreeAggregate> {
-    let processes = read_process_tree(root)?;
-    aggregate_tree(&processes, root)
-}
+    let processes = traverse_process_tree(root, process_stat::read, read_process_children)?;
 
-fn read_process_tree(root: ResolvedRoot) -> Option<Vec<ProcessStat>> {
-    traverse_process_tree(root, process_stat::read, read_process_children)
+    aggregate_tree(&processes, root)
 }
 
 fn traverse_process_tree<ReadStat, ReadChildren>(
