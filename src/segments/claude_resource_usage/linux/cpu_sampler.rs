@@ -83,15 +83,11 @@ fn parse_uptime_nanos(value: &str) -> Option<u64> {
         return None;
     }
 
-    let mut fractional_nanos = 0_u64;
-    let mut digits = 0_u32;
-    for byte in fraction.bytes().take(9) {
-        fractional_nanos = fractional_nanos
-            .saturating_mul(10)
-            .saturating_add(u64::from(byte - b'0'));
-        digits += 1;
-    }
-    fractional_nanos = fractional_nanos.saturating_mul(10_u64.pow(9 - digits));
+    let fractional_nanos = fraction
+        .bytes()
+        .chain(std::iter::repeat(b'0'))
+        .take(9)
+        .fold(0_u64, |nanos, byte| nanos * 10 + u64::from(byte - b'0'));
 
     seconds
         .checked_mul(1_000_000_000)?
