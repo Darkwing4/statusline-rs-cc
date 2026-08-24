@@ -13,7 +13,7 @@ use crate::iso8601::parse_iso8601_utc;
 use crate::segments::{GitCache, Segment};
 use crate::transcript_record_probe::has_type;
 use crate::transcript_tail_reader::{scan_jsonl_records_from_end, JsonlRecord};
-use crate::types::Color;
+use crate::config_schema::Color;
 
 const TTL_5M_SECS: i64 = 5 * 60;
 const TTL_1H_SECS: i64 = 60 * 60;

@@ -11,7 +11,6 @@ mod statusline_input;
 mod statusline_renderer;
 mod transcript_record_probe;
 mod transcript_tail_reader;
-mod types;
 
 use std::io::{self, Write};
 use std::process::ExitCode;

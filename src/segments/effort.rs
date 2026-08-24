@@ -20,7 +20,7 @@ mod tests {
 
     use super::Effort;
     use crate::segments::{GitCache, Segment};
-    use crate::types::Color;
+    use crate::config_schema::Color;
 
     fn render(json: Value, prefix: &str) -> Option<String> {
         let segment = Effort {

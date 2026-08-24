@@ -5,7 +5,7 @@ use serde_json::Value;
 pub use crate::config_schema::{ColorMode, Fill, RateLimit, Style, Window};
 use crate::gradient::gradient;
 use crate::segments::{GitCache, Segment};
-use crate::types::Color;
+use crate::config_schema::Color;
 
 const COUNTDOWN_TOKEN: &str = "{t}";
 const UNKNOWN_COUNTDOWN: &str = "?";
@@ -127,7 +127,7 @@ mod tests {
     use serde_json::json;
 
     use super::{bar_glyph, radial_glyph, ColorMode, Fill, RateLimit, Style, Window};
-    use crate::types::Color;
+    use crate::config_schema::Color;
 
     fn rate_limit(window: Window, prefix: &str) -> RateLimit {
         RateLimit {

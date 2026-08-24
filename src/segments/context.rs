@@ -3,7 +3,7 @@ use serde_json::Value;
 pub use crate::config_schema::Context;
 use crate::gradient::{gradient, Rgb};
 use crate::segments::{GitCache, Segment};
-use crate::types::Color;
+use crate::config_schema::Color;
 
 const CONTEXT_GRADIENT: &[(f64, Rgb)] = &[
     (0.0, (150, 150, 150)),

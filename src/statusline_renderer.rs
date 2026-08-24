@@ -8,7 +8,7 @@ use self::terminal_width::terminal_width;
 
 use crate::segments::{GitCache, Segment};
 use crate::statusline_input;
-use crate::types::Color;
+use crate::config_schema::Color;
 
 pub struct Renderer {
     pub separator: String,
@@ -66,7 +66,7 @@ mod tests {
 
     use super::Renderer;
     use crate::segments::{GitCache, Segment};
-    use crate::types::Color;
+    use crate::config_schema::Color;
 
     struct FixedSegment {
         output: Option<&'static str>,
