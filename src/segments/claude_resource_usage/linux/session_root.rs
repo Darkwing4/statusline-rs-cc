@@ -1,16 +1,12 @@
 use std::collections::HashSet;
 use std::ffi::OsStr;
-use std::fs::{self, OpenOptions};
-use std::io::Read;
-use std::os::raw::c_int;
-use std::os::unix::fs::OpenOptionsExt;
+use std::fs;
 use std::path::{Path, PathBuf};
 
 use serde_json::Value;
 
 use crate::process_stat::{self, ProcessStat};
 
-const O_NOFOLLOW: c_int = 0o400000;
 const MAX_REGISTRY_BYTES: u64 = 64 * 1024;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -100,7 +96,7 @@ fn registry_file_pid(name: &OsStr) -> Option<u32> {
 }
 
 fn read_session_record(path: &Path) -> Option<SessionRecord> {
-    let body = read_regular_file(path, MAX_REGISTRY_BYTES)?;
+    let body = super::read_regular_file(path, MAX_REGISTRY_BYTES, None)?;
     parse_session_record(&body)
 }
 
@@ -141,27 +137,6 @@ fn unique_root(candidates: Vec<ResolvedRoot>) -> Option<ResolvedRoot> {
     candidates
         .all(|candidate| candidate == first)
         .then_some(first)
-}
-
-fn read_regular_file(path: &Path, max_bytes: u64) -> Option<String> {
-    let mut options = OpenOptions::new();
-    options.read(true).custom_flags(O_NOFOLLOW);
-    let file = options.open(path).ok()?;
-    let metadata = file.metadata().ok()?;
-
-    if !metadata.file_type().is_file() {
-        return None;
-    }
-
-    let mut bytes = Vec::new();
-    file.take(max_bytes.saturating_add(1))
-        .read_to_end(&mut bytes)
-        .ok()?;
-    if bytes.len() as u64 > max_bytes {
-        return None;
-    }
-
-    String::from_utf8(bytes).ok()
 }
 
 #[cfg(test)]

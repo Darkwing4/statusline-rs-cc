@@ -1,5 +1,5 @@
 use std::fs::{self, DirBuilder, OpenOptions};
-use std::io::{Read, Write};
+use std::io::Write;
 use std::os::raw::c_int;
 use std::os::unix::fs::{DirBuilderExt, MetadataExt, OpenOptionsExt};
 use std::path::{Path, PathBuf};
@@ -138,7 +138,7 @@ fn state_file_name(root: ResolvedRoot) -> String {
 }
 
 fn read_cpu_snapshot(path: &Path) -> Option<CpuSnapshot> {
-    let body = read_regular_file(path, MAX_STATE_BYTES, effective_uid())?;
+    let body = super::read_regular_file(path, MAX_STATE_BYTES, Some(effective_uid()))?;
     parse_cpu_snapshot(&body)
 }
 
@@ -191,27 +191,6 @@ fn write_cpu_snapshot(path: &Path, snapshot: &CpuSnapshot) -> Option<()> {
     }
 
     Some(())
-}
-
-fn read_regular_file(path: &Path, max_bytes: u64, owner: u32) -> Option<String> {
-    let mut options = OpenOptions::new();
-    options.read(true).custom_flags(O_NOFOLLOW);
-    let file = options.open(path).ok()?;
-    let metadata = file.metadata().ok()?;
-
-    if !metadata.file_type().is_file() || metadata.uid() != owner || metadata.mode() & 0o077 != 0 {
-        return None;
-    }
-
-    let mut bytes = Vec::new();
-    file.take(max_bytes.saturating_add(1))
-        .read_to_end(&mut bytes)
-        .ok()?;
-    if bytes.len() as u64 > max_bytes {
-        return None;
-    }
-
-    String::from_utf8(bytes).ok()
 }
 
 #[cfg(test)]
