@@ -25,7 +25,11 @@ pub(super) fn read(pid: u32) -> Option<ProcessStat> {
 }
 
 pub(super) fn page_size() -> Option<u64> {
-    let value = unsafe { sysconf(SC_PAGESIZE) };
+    positive_sysconf(SC_PAGESIZE)
+}
+
+pub(super) fn positive_sysconf(name: c_int) -> Option<u64> {
+    let value = unsafe { sysconf(name) };
     u64::try_from(value).ok().filter(|value| *value > 0)
 }
 

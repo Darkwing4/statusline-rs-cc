@@ -1,10 +1,11 @@
 use std::fs::{self, DirBuilder, OpenOptions};
 use std::io::{Read, Write};
-use std::os::raw::{c_int, c_long};
+use std::os::raw::c_int;
 use std::os::unix::fs::{DirBuilderExt, MetadataExt, OpenOptionsExt};
 use std::path::{Path, PathBuf};
 
 use super::session_root::ResolvedRoot;
+use crate::process_stat::positive_sysconf;
 
 const PROC_ROOT: &str = "/proc";
 const O_NOFOLLOW: c_int = 0o400000;
@@ -13,7 +14,6 @@ const MAX_STATE_BYTES: u64 = 16 * 1024;
 
 extern "C" {
     fn geteuid() -> u32;
-    fn sysconf(name: c_int) -> c_long;
 }
 
 #[derive(Debug, Eq, PartialEq)]
@@ -96,11 +96,6 @@ fn parse_uptime_nanos(value: &str) -> Option<u64> {
     seconds
         .checked_mul(1_000_000_000)?
         .checked_add(fractional_nanos)
-}
-
-fn positive_sysconf(name: c_int) -> Option<u64> {
-    let value = unsafe { sysconf(name) };
-    u64::try_from(value).ok().filter(|value| *value > 0)
 }
 
 fn cache_directory() -> Option<PathBuf> {
