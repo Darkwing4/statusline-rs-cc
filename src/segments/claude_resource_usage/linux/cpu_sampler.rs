@@ -5,10 +5,10 @@ use std::os::unix::fs::{DirBuilderExt, MetadataExt, OpenOptionsExt};
 use std::path::{Path, PathBuf};
 
 use super::session_root::ResolvedRoot;
+use super::O_NOFOLLOW;
 use crate::process_stat::positive_sysconf;
 
 const PROC_ROOT: &str = "/proc";
-const O_NOFOLLOW: c_int = 0o400000;
 const SC_CLK_TCK: c_int = 2;
 const MAX_STATE_BYTES: u64 = 16 * 1024;
 
