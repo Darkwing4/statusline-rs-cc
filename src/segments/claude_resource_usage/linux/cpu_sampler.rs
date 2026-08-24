@@ -11,6 +11,7 @@ use crate::process_stat::positive_sysconf;
 const PROC_ROOT: &str = "/proc";
 const SC_CLK_TCK: c_int = 2;
 const MAX_STATE_BYTES: u64 = 16 * 1024;
+const STATE_FORMAT_VERSION: &str = "1";
 
 extern "C" {
     fn geteuid() -> u32;
@@ -144,6 +145,10 @@ fn read_cpu_snapshot(path: &Path) -> Option<CpuSnapshot> {
 
 fn parse_cpu_snapshot(body: &str) -> Option<CpuSnapshot> {
     let mut lines = body.lines();
+    if lines.next()? != STATE_FORMAT_VERSION {
+        return None;
+    }
+
     let snapshot = CpuSnapshot {
         root_pid: lines.next()?.parse().ok()?,
         root_start: lines.next()?.parse().ok()?,
@@ -167,8 +172,12 @@ fn write_cpu_snapshot(path: &Path, snapshot: &CpuSnapshot) -> Option<()> {
         snapshot.uptime_nanos
     ));
     let body = format!(
-        "{}\n{}\n{}\n{}\n",
-        snapshot.root_pid, snapshot.root_start, snapshot.cpu_ticks, snapshot.uptime_nanos
+        "{}\n{}\n{}\n{}\n{}\n",
+        STATE_FORMAT_VERSION,
+        snapshot.root_pid,
+        snapshot.root_start,
+        snapshot.cpu_ticks,
+        snapshot.uptime_nanos
     );
     let mut options = OpenOptions::new();
     options
@@ -267,7 +276,7 @@ mod tests {
 
     #[test]
     fn rejects_partial_or_extra_snapshot_state() {
-        let complete = "77\n98765\n350\n2000000000\n";
+        let complete = "1\n77\n98765\n350\n2000000000\n";
         assert_eq!(
             parse_cpu_snapshot(complete),
             Some(CpuSnapshot {
@@ -277,9 +286,10 @@ mod tests {
                 uptime_nanos: 2_000_000_000,
             })
         );
-        assert_eq!(parse_cpu_snapshot("77\n"), None);
+        assert_eq!(parse_cpu_snapshot("1\n77\n"), None);
+        assert_eq!(parse_cpu_snapshot("2\n77\n98765\n350\n2000000000\n"), None);
         assert_eq!(
-            parse_cpu_snapshot("77\n98765\n350\n2000000000\nextra\n"),
+            parse_cpu_snapshot("1\n77\n98765\n350\n2000000000\nextra\n"),
             None
         );
     }
