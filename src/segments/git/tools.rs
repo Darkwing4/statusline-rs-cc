@@ -31,10 +31,10 @@ impl GitCache {
         if self.cwd.is_empty() {
             return None;
         }
-        if self.dir.is_none() {
-            self.dir = Some(find_git_repo(&self.cwd));
-        }
-        self.dir.as_ref().unwrap().as_deref()
+
+        self.dir
+            .get_or_insert_with(|| find_git_repo(&self.cwd))
+            .as_deref()
     }
 
     pub fn status(&mut self) -> Option<&GitStatus> {
@@ -49,10 +49,8 @@ impl GitCache {
         if self.cwd.is_empty() {
             return None;
         }
-        if self.status.is_none() {
-            self.status = Some(run_git_status(&self.cwd));
-        }
-        self.status.as_ref()
+
+        Some(self.status.get_or_insert_with(|| run_git_status(&self.cwd)))
     }
 }
 
