@@ -243,8 +243,6 @@ mod tests {
         assert_eq!(tree, None);
     }
 
-
-
     #[test]
     fn sums_cpu_ticks_and_rss_pages() {
         let processes = vec![

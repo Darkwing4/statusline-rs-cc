@@ -138,7 +138,9 @@ fn unique_root(candidates: Vec<ResolvedRoot>) -> Option<ResolvedRoot> {
     let mut candidates = candidates.into_iter();
     let first = candidates.next()?;
 
-    candidates.all(|candidate| candidate == first).then_some(first)
+    candidates
+        .all(|candidate| candidate == first)
+        .then_some(first)
 }
 
 fn read_regular_file(path: &Path, max_bytes: u64) -> Option<String> {

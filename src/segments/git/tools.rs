@@ -298,7 +298,6 @@ mod tests {
         assert_eq!(status.deleted, 0);
     }
 
-
     #[test]
     fn detects_linked_worktree_with_separate_git_dir() {
         let root =
@@ -312,5 +311,4 @@ mod tests {
 
         fs::remove_dir_all(root).unwrap();
     }
-
 }

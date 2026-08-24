@@ -2,10 +2,10 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use serde_json::Value;
 
+use crate::config_schema::Color;
 pub use crate::config_schema::{ColorMode, Fill, RateLimit, Style, Window};
 use crate::gradient::gradient;
 use crate::segments::{GitCache, Segment};
-use crate::config_schema::Color;
 
 const COUNTDOWN_TOKEN: &str = "{t}";
 const UNKNOWN_COUNTDOWN: &str = "?";

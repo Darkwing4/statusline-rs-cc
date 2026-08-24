@@ -16,8 +16,8 @@ mod tests {
     use serde_json::{json, Value};
 
     use super::Effort;
-    use crate::segments::{GitCache, Segment};
     use crate::config_schema::Color;
+    use crate::segments::{GitCache, Segment};
 
     fn render(json: Value, prefix: &str) -> Option<String> {
         let segment = Effort {

@@ -7,13 +7,13 @@ use serde::Deserialize;
 use serde_json::Value;
 
 pub use crate::config_schema::CacheTtl;
+use crate::config_schema::Color;
 use crate::duration_format::format_duration;
 use crate::gradient::{gradient, Rgb};
 use crate::iso8601::parse_iso8601_utc;
 use crate::segments::{GitCache, Segment};
 use crate::transcript_record_probe::has_type;
 use crate::transcript_tail_reader::{scan_jsonl_records_from_end, JsonlRecord};
-use crate::config_schema::Color;
 
 const TTL_5M_SECS: i64 = 5 * 60;
 const TTL_1H_SECS: i64 = 60 * 60;
@@ -191,12 +191,8 @@ fn cold_view(prefix: &str, json: &Value) -> (String, (u8, u8, u8)) {
         .and_then(Value::as_f64)
         .unwrap_or(0.0);
 
-    (
-        text,
-        gradient(COLD_GRADIENT, ctx_pct),
-    )
+    (text, gradient(COLD_GRADIENT, ctx_pct))
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -209,26 +205,14 @@ mod tests {
 
     #[test]
     fn preserves_ttl_gradient() {
-        assert_eq!(
-            gradient(TTL_GRADIENT, 80.0),
-            (215, 140, 70)
-        );
-        assert_eq!(
-            gradient(TTL_GRADIENT, 95.0),
-            (243, 75, 55)
-        );
+        assert_eq!(gradient(TTL_GRADIENT, 80.0), (215, 140, 70));
+        assert_eq!(gradient(TTL_GRADIENT, 95.0), (243, 75, 55));
     }
 
     #[test]
     fn preserves_cold_gradient() {
-        assert_eq!(
-            gradient(COLD_GRADIENT, 57.5),
-            (215, 140, 70)
-        );
-        assert_eq!(
-            gradient(COLD_GRADIENT, 87.5),
-            (243, 75, 55)
-        );
+        assert_eq!(gradient(COLD_GRADIENT, 57.5), (215, 140, 70));
+        assert_eq!(gradient(COLD_GRADIENT, 87.5), (243, 75, 55));
     }
 
     #[test]

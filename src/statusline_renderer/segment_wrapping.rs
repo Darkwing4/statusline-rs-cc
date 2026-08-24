@@ -39,10 +39,6 @@ pub(super) fn wrap_segments(parts: &[String], sep: &str, max: usize) -> String {
 mod tests {
     use super::wrap_segments;
 
-
-
-
-
     #[test]
     fn joins_segments_that_fit() {
         let parts = vec!["one".to_string(), "two".to_string()];

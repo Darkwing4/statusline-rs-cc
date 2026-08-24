@@ -168,10 +168,7 @@ fn write_cpu_snapshot(path: &Path, snapshot: &CpuSnapshot) -> Option<()> {
     ));
     let body = format!(
         "{}\n{}\n{}\n{}\n",
-        snapshot.root_pid,
-        snapshot.root_start,
-        snapshot.cpu_ticks,
-        snapshot.uptime_nanos
+        snapshot.root_pid, snapshot.root_start, snapshot.cpu_ticks, snapshot.uptime_nanos
     );
     let mut options = OpenOptions::new();
     options

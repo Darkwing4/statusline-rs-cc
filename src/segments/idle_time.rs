@@ -235,7 +235,6 @@ fn parse_user_input_timestamp(record: &mut dyn JsonlRecord) -> Option<i64> {
     row.timestamp.as_deref().and_then(parse_iso8601_utc)
 }
 
-
 #[cfg(test)]
 mod tests {
     use std::io::Cursor;

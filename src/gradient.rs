@@ -60,7 +60,6 @@ mod tests {
         assert_eq!(gradient(STOPS, 75.0), (2, 4, 6));
     }
 
-
     #[test]
     fn uses_configured_stop_position() {
         let stops = [

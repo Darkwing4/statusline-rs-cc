@@ -6,9 +6,9 @@ use serde_json::Value;
 use self::segment_wrapping::wrap_segments;
 use self::terminal_width::terminal_width;
 
+use crate::config_schema::Color;
 use crate::segments::{GitCache, Segment};
 use crate::statusline_input;
-use crate::config_schema::Color;
 
 pub struct Renderer {
     pub separator: String,
@@ -59,8 +59,8 @@ mod tests {
     use serde_json::Value;
 
     use super::Renderer;
-    use crate::segments::{GitCache, Segment};
     use crate::config_schema::Color;
+    use crate::segments::{GitCache, Segment};
 
     struct FixedSegment {
         output: Option<&'static str>,

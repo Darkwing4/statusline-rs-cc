@@ -1,9 +1,9 @@
 use serde_json::Value;
 
+use crate::config_schema::Color;
 pub use crate::config_schema::Context;
 use crate::gradient::{gradient, Rgb};
 use crate::segments::{GitCache, Segment};
-use crate::config_schema::Color;
 
 const CONTEXT_GRADIENT: &[(f64, Rgb)] = &[
     (0.0, (150, 150, 150)),
@@ -50,19 +50,8 @@ mod tests {
 
     #[test]
     fn returns_colors_at_gradient_stops() {
-        assert_eq!(
-            gradient(CONTEXT_GRADIENT, 0.0),
-            (150, 150, 150)
-        );
-        assert_eq!(
-            gradient(CONTEXT_GRADIENT, 20.0),
-            (180, 165, 100)
-        );
-        assert_eq!(
-            gradient(CONTEXT_GRADIENT, 30.0),
-            (220, 60, 60)
-        );
+        assert_eq!(gradient(CONTEXT_GRADIENT, 0.0), (150, 150, 150));
+        assert_eq!(gradient(CONTEXT_GRADIENT, 20.0), (180, 165, 100));
+        assert_eq!(gradient(CONTEXT_GRADIENT, 30.0), (220, 60, 60));
     }
-
-
 }

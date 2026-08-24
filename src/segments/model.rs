@@ -5,8 +5,8 @@ use crate::segments::{json_field, GitCache, Segment};
 
 impl Segment for Model {
     fn render(&self, json: &Value, _git: &mut GitCache) -> Option<String> {
-        let name = json_field(json, "/model/display_name")
-            .or_else(|| json_field(json, "/model/id"))?;
+        let name =
+            json_field(json, "/model/display_name").or_else(|| json_field(json, "/model/id"))?;
 
         Some(self.color.paint(&format!("{}{}", self.prefix, name)))
     }
@@ -17,8 +17,8 @@ mod tests {
     use serde_json::{json, Value};
 
     use super::Model;
-    use crate::segments::{GitCache, Segment};
     use crate::config_schema::Color;
+    use crate::segments::{GitCache, Segment};
 
     fn render(json: Value, prefix: &str) -> Option<String> {
         let segment = Model {
