@@ -99,19 +99,14 @@ where
 
 fn read_task_ids(pid: u32) -> Option<Vec<u32>> {
     let path = Path::new(PROC_ROOT).join(pid.to_string()).join("task");
-    let entries = fs::read_dir(path).ok()?;
-    let mut tids = Vec::new();
 
-    for entry in entries.flatten() {
-        let Some(name) = entry.file_name().to_str().map(str::to_owned) else {
-            continue;
-        };
-        if let Ok(tid) = name.parse() {
-            tids.push(tid);
-        }
-    }
-
-    Some(tids)
+    Some(
+        fs::read_dir(path)
+            .ok()?
+            .flatten()
+            .filter_map(|entry| entry.file_name().to_string_lossy().parse().ok())
+            .collect(),
+    )
 }
 
 fn read_task_children(pid: u32, tid: u32) -> Option<Vec<u32>> {
