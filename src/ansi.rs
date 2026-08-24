@@ -59,4 +59,16 @@ mod tests {
 
         assert_eq!(visible_width(text), 1);
     }
+
+    #[test]
+    fn keeps_multibyte_text_around_escape_sequences() {
+        assert_eq!(visible_width("\x1b[31ma界🙂\x1b[0m"), 5);
+        assert_eq!(visible_width("\x1b[31m👩‍💻\x1b[0m"), 2);
+        assert_eq!(visible_width("界\x1b[31m🙂\x1b[0mé"), 5);
+    }
+
+    #[test]
+    fn ignores_incomplete_escape_tail_after_multibyte_text() {
+        assert_eq!(visible_width("界\x1b[31"), 2);
+    }
 }
