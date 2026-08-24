@@ -15,7 +15,7 @@ pub(super) fn collect(session_id: &str) -> Option<ResourceUsage> {
     let aggregate = process_tree::collect(root)?;
     let page_size = process_stat::page_size()?;
     let memory_bytes = aggregate.rss_pages.saturating_mul(page_size);
-    let cpu_percent = cpu_sampler::sample(session_id, root, aggregate.cpu_ticks);
+    let cpu_percent = cpu_sampler::sample(root, aggregate.cpu_ticks);
 
     Some(ResourceUsage {
         cpu_percent,

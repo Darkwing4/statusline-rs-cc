@@ -18,30 +18,25 @@ extern "C" {
 
 #[derive(Debug, Eq, PartialEq)]
 struct CpuSnapshot {
-    session: String,
     root_pid: u32,
     root_start: u64,
     cpu_ticks: u64,
     uptime_nanos: u64,
 }
 
-pub(super) fn sample(session_id: &str, root: ResolvedRoot, cpu_ticks: u64) -> Option<u64> {
+pub(super) fn sample(root: ResolvedRoot, cpu_ticks: u64) -> Option<u64> {
     let uptime_nanos = read_uptime_nanos()?;
     let clock_ticks = positive_sysconf(SC_CLK_TCK)?;
-    let session = hex_encode(session_id.as_bytes());
     let current = CpuSnapshot {
-        session,
         root_pid: root.pid,
         root_start: root.start_time,
         cpu_ticks,
         uptime_nanos,
     };
     let directory = cache_directory()?;
-    let state_path = directory.join(state_file_name(session_id, root));
+    let state_path = directory.join(state_file_name(root));
     let previous = read_cpu_snapshot(&state_path).filter(|snapshot| {
-        snapshot.session == current.session
-            && snapshot.root_pid == current.root_pid
-            && snapshot.root_start == current.root_start
+        snapshot.root_pid == current.root_pid && snapshot.root_start == current.root_start
     });
     let percent = previous
         .as_ref()
@@ -152,34 +147,8 @@ fn effective_uid() -> u32 {
     unsafe { geteuid() }
 }
 
-fn state_file_name(session_id: &str, root: ResolvedRoot) -> String {
-    format!(
-        "claude-resource-{:016x}-{}-{}.state",
-        stable_hash(session_id.as_bytes()),
-        root.pid,
-        root.start_time
-    )
-}
-
-fn stable_hash(bytes: &[u8]) -> u64 {
-    let mut hash = 0xcbf29ce484222325_u64;
-    for byte in bytes {
-        hash ^= u64::from(*byte);
-        hash = hash.wrapping_mul(0x100000001b3);
-    }
-    hash
-}
-
-fn hex_encode(bytes: &[u8]) -> String {
-    const DIGITS: &[u8; 16] = b"0123456789abcdef";
-    let mut encoded = String::with_capacity(bytes.len().saturating_mul(2));
-
-    for byte in bytes {
-        encoded.push(DIGITS[usize::from(byte >> 4)] as char);
-        encoded.push(DIGITS[usize::from(byte & 0x0f)] as char);
-    }
-
-    encoded
+fn state_file_name(root: ResolvedRoot) -> String {
+    format!("claude-resource-{}-{}.state", root.pid, root.start_time)
 }
 
 fn read_cpu_snapshot(path: &Path) -> Option<CpuSnapshot> {
@@ -194,7 +163,6 @@ fn parse_cpu_snapshot(body: &str) -> Option<CpuSnapshot> {
     }
 
     let snapshot = CpuSnapshot {
-        session: lines.next()?.to_string(),
         root_pid: lines.next()?.parse().ok()?,
         root_start: lines.next()?.parse().ok()?,
         cpu_ticks: lines.next()?.parse().ok()?,
@@ -217,8 +185,7 @@ fn write_cpu_snapshot(path: &Path, snapshot: &CpuSnapshot) -> Option<()> {
         snapshot.uptime_nanos
     ));
     let body = format!(
-        "1\n{}\n{}\n{}\n{}\n{}\n",
-        snapshot.session,
+        "1\n{}\n{}\n{}\n{}\n",
         snapshot.root_pid,
         snapshot.root_start,
         snapshot.cpu_ticks,
@@ -275,14 +242,12 @@ mod tests {
     #[test]
     fn computes_cpu_delta_without_capping_multiple_cores() {
         let previous = CpuSnapshot {
-            session: "abc".to_string(),
             root_pid: 77,
             root_start: 98765,
             cpu_ticks: 100,
             uptime_nanos: 1_000_000_000,
         };
         let current = CpuSnapshot {
-            session: "abc".to_string(),
             root_pid: 77,
             root_start: 98765,
             cpu_ticks: 350,
@@ -295,21 +260,18 @@ mod tests {
     #[test]
     fn resets_cpu_delta_when_counter_or_clock_moves_back() {
         let previous = CpuSnapshot {
-            session: "abc".to_string(),
             root_pid: 77,
             root_start: 98765,
             cpu_ticks: 100,
             uptime_nanos: 2_000_000_000,
         };
         let lower_cpu = CpuSnapshot {
-            session: "abc".to_string(),
             root_pid: 77,
             root_start: 98765,
             cpu_ticks: 99,
             uptime_nanos: 3_000_000_000,
         };
         let lower_uptime = CpuSnapshot {
-            session: "abc".to_string(),
             root_pid: 77,
             root_start: 98765,
             cpu_ticks: 110,
@@ -329,20 +291,19 @@ mod tests {
 
     #[test]
     fn rejects_partial_or_extra_snapshot_state() {
-        let complete = "1\n616263\n77\n98765\n350\n2000000000\n";
+        let complete = "1\n77\n98765\n350\n2000000000\n";
         assert_eq!(
             parse_cpu_snapshot(complete),
             Some(CpuSnapshot {
-                session: "616263".to_string(),
                 root_pid: 77,
                 root_start: 98765,
                 cpu_ticks: 350,
                 uptime_nanos: 2_000_000_000,
             })
         );
-        assert_eq!(parse_cpu_snapshot("1\n616263\n77\n"), None);
+        assert_eq!(parse_cpu_snapshot("1\n77\n"), None);
         assert_eq!(
-            parse_cpu_snapshot("1\n616263\n77\n98765\n350\n2000000000\nextra\n"),
+            parse_cpu_snapshot("1\n77\n98765\n350\n2000000000\nextra\n"),
             None
         );
     }
