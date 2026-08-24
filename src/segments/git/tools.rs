@@ -139,7 +139,7 @@ fn parse_status_line(line: &str, s: &mut GitStatus) {
             return;
         }
 
-        if matches!(index, 'D') || matches!(worktree, 'D') {
+        if index == 'D' || worktree == 'D' {
             s.deleted += 1;
         } else if [index, worktree]
             .into_iter()
