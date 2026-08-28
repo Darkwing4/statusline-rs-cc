@@ -6,6 +6,10 @@ pub(crate) fn visible_width(s: &str) -> usize {
     without_ansi(s).width()
 }
 
+pub(crate) fn strip_ansi(s: &str) -> String {
+    without_ansi(s).into_owned()
+}
+
 fn without_ansi(s: &str) -> Cow<'_, str> {
     if !s.as_bytes().contains(&0x1b) {
         return Cow::Borrowed(s);

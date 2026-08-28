@@ -87,6 +87,28 @@ pub struct IdleTime {
     pub threshold_seconds: u64,
 }
 
+#[derive(Deserialize)]
+pub struct SubagentStats {
+    pub color: Color,
+    pub active_color: Color,
+    pub stall_color: Color,
+    pub prefix: String,
+    pub stall_marker: String,
+    pub stall_seconds: u64,
+    pub show_tokens: bool,
+}
+
+#[derive(Deserialize)]
+pub struct LlmMessage {
+    pub color: Color,
+    pub prefix: String,
+    pub command: String,
+    pub args: Vec<String>,
+    pub prompt: String,
+    pub ttl_seconds: u64,
+    pub max_chars: usize,
+}
+
 #[derive(Clone, Copy, Deserialize)]
 pub enum Window {
     FiveHour,
@@ -160,8 +182,10 @@ pub enum SegmentSpec {
     GitDiff(GitDiff),
     GitError(GitError),
     IdleTime(IdleTime),
+    LlmMessage(LlmMessage),
     Model(Model),
     RateLimit(RateLimit),
+    SubagentStats(SubagentStats),
 }
 
 #[derive(Deserialize)]

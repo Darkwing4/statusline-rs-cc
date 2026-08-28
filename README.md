@@ -127,6 +127,15 @@ The whole config is an external [RON](https://github.com/ron-rs/ron) file at [`c
             mid_color:  Rgb(195, 179, 100),
             high_color: Rgb(220,  60,  60),
         ),
+        SubagentStats(
+            color: Named(90),
+            active_color: Rgb(150, 200, 100),
+            stall_color: Rgb(220, 60, 60),
+            prefix: "agents ",
+            stall_marker: "!",
+            stall_seconds: 120,
+            show_tokens: true,
+        ),
         Cwd(color: Rgb(95, 175, 175)),
         GitBranch(
             color: Named(32), state_color: Named(91),
@@ -144,6 +153,36 @@ The whole config is an external [RON](https://github.com/ron-rs/ron) file at [`c
 
 Reorder, drop, or re-colour by editing the list, then rebuild. `Color` variants: `Named(code)` for ANSI 30–37 / 90–97, `Rgb(r, g, b)` for truecolor, `Gradient` (meaningful on `Context`, `CacheTtl`, and `RateLimit` when `color_mode: Gradient`).
 `RateLimit.gradient_midpoint_percentage` places `mid_color` within the gradient and must be greater than `0` and less than `100`; existing configs without the field use `50.0`.
+
+### Subagent stats
+
+`SubagentStats` counts the `Agent` tool calls in the session and renders `agents 2/7 4m12s 1.2M`: two subagents still running out of seven launched, the oldest running one started 4m12s ago, and 1.2M tokens burned by subagents in total. Once every agent has finished the active counter and the age drop off, leaving `agents 7 1.2M`.
+
+A launch is a `tool_use` block named `Agent` in the main thread; it finishes on its `tool_result` — or, for async agents whose first result is only `async_launched`, on the `<task-notification>` that reports the matching `<tool-use-id>`. Token totals sum `input`, `output`, `cache_creation`, and `cache_read` across `<session>/subagents/**/*.jsonl`, so agents started by `Workflow` are counted in the total and in the tokens even though they never appear as an `Agent` tool call.
+
+`stall_seconds` guards against agents that never report back: when subagents are active but nothing has been written to any of their transcripts for that long, the segment appends `stall_marker` and switches to `stall_color`. Set `show_tokens: false` to skip the token pass entirely.
+
+Both scans are incremental — a cache under `$XDG_CACHE_HOME/statusline` (or `~/.cache/statusline`) keeps the byte offset reached in every transcript, so each render only parses what was appended since the previous one. A truncated or rewritten transcript resets its offset. On a 4 MB transcript with 4 MB of subagent transcripts the first render costs ~31 ms and later ones ~11 ms.
+
+### LLM message
+
+`LlmMessage` runs any command that prints text and renders its last non-empty output line on its own line below the main one:
+
+```ron
+LlmMessage(
+    color: Rgb(150, 140, 120),
+    prefix: "» ",
+    command: "codex",
+    args: ["exec", "--skip-git-repo-check", "-c", "model_reasoning_effort=low"],
+    prompt: "One short motivational line. Text only, no quotes, no explanation.",
+    ttl_seconds: 900,
+    max_chars: 90,
+)
+```
+
+`prompt` is written to the command's stdin — put it in `args` instead if the tool expects it as an argument. The render never waits for the command: it prints the cached text and, when that text is older than `ttl_seconds`, re-executes the binary as `statusline --llm-refresh <fingerprint>` detached in the background. The worker looks up the segment whose command, args, and prompt hash to that fingerprint, runs it, and swaps the result in via a rename, so a render never sees a half-written line. A failed or hanging command leaves the previous text in place and is retried after another `ttl_seconds` — a hanging one is not killed, so pick a command that terminates on its own.
+
+Output is treated as untrusted: ANSI escapes and control characters are stripped, whitespace is collapsed, and the text is cut to `max_chars` with an ellipsis. This segment is opt-in — it is not in `config/default.ron`.
 
 ### Linux resource usage
 
@@ -194,7 +233,9 @@ src/
 │   ├── segment_wrapping.rs wraps segments to lines by visible (ANSI-stripped) width
 │   └── terminal_width.rs   terminal columns via ioctl, COLUMNS, parent process tree
 ├── statusline_input.rs     reads + parses stdin JSON from Claude Code
+├── statusline_cache_dir.rs    XDG cache directory used by cross-render caches
 ├── transcript_tail_reader.rs  scans transcript JSONL backwards in 64 KB blocks
+├── transcript_forward_reader.rs  scans transcript JSONL forward, record by record
 ├── types.rs / types/       shared types (Color, RESET)
 └── segments/
     ├── model.rs            current model name
@@ -203,6 +244,12 @@ src/
     ├── cwd.rs              shortened cwd
     ├── idle_time.rs        time since last real user input
     ├── claude_resource_usage.rs  opt-in Linux process-tree CPU/RSS
+    ├── llm_message.rs      opt-in background command output, cached by TTL
+    ├── subagent_stats.rs   active/launched subagents, age, token totals
+    ├── subagent_stats/
+    │   ├── agent_lifecycle.rs     Agent launches and completions in the main transcript
+    │   ├── agent_token_totals.rs  token sums over the subagent transcripts
+    │   └── session_cache.rs       scan offsets carried between renders
     ├── git/
     │   ├── tools.rs        GitCache shared by branch + diff (one git status fork)
     │   ├── branch.rs       branch name, worktree marker, state, ahead/behind

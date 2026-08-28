@@ -15,8 +15,10 @@ impl SegmentSpec {
             SegmentSpec::GitDiff(s) => Box::new(s),
             SegmentSpec::GitError(s) => Box::new(s),
             SegmentSpec::IdleTime(s) => Box::new(s),
+            SegmentSpec::LlmMessage(s) => Box::new(s),
             SegmentSpec::Model(s) => Box::new(s),
             SegmentSpec::RateLimit(s) => Box::new(s),
+            SegmentSpec::SubagentStats(s) => Box::new(s),
         }
     }
 }

@@ -5,8 +5,10 @@ pub mod cwd;
 pub mod effort;
 pub mod git;
 pub mod idle_time;
+pub mod llm_message;
 pub mod model;
 pub mod rate_limits;
+pub mod subagent_stats;
 
 pub use git::GitCache;
 
