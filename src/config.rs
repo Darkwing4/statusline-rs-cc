@@ -19,6 +19,7 @@ impl SegmentSpec {
             SegmentSpec::Model(s) => Box::new(s),
             SegmentSpec::RateLimit(s) => Box::new(s),
             SegmentSpec::SubagentStats(s) => Box::new(s),
+            SegmentSpec::Weather(s) => Box::new(s),
         }
     }
 }

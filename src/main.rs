@@ -20,8 +20,8 @@ use std::process::ExitCode;
 use statusline_renderer::Renderer;
 
 fn main() -> ExitCode {
-    if let Some(fingerprint) = llm_refresh_request() {
-        segments::llm_message::refresh(&fingerprint);
+    if let Some(fingerprint) = refresh_request() {
+        segments::background_command::refresh(&fingerprint);
         return ExitCode::SUCCESS;
     }
 
@@ -48,10 +48,10 @@ fn main() -> ExitCode {
     ExitCode::SUCCESS
 }
 
-fn llm_refresh_request() -> Option<String> {
+fn refresh_request() -> Option<String> {
     let mut args = std::env::args().skip(1);
 
-    if args.next()? != segments::llm_message::REFRESH_FLAG {
+    if args.next()? != segments::background_command::REFRESH_FLAG {
         return None;
     }
 

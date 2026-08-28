@@ -1,3 +1,4 @@
+pub mod background_command;
 pub mod cache_ttl;
 pub mod claude_resource_usage;
 pub mod context;
@@ -9,6 +10,7 @@ pub mod llm_message;
 pub mod model;
 pub mod rate_limits;
 pub mod subagent_stats;
+pub mod weather;
 
 pub use git::GitCache;
 

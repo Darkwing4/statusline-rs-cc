@@ -180,9 +180,30 @@ LlmMessage(
 )
 ```
 
-`prompt` is written to the command's stdin — put it in `args` instead if the tool expects it as an argument. The render never waits for the command: it prints the cached text and, when that text is older than `ttl_seconds`, re-executes the binary as `statusline --llm-refresh <fingerprint>` detached in the background. The worker looks up the segment whose command, args, and prompt hash to that fingerprint, runs it, and swaps the result in via a rename, so a render never sees a half-written line. A failed or hanging command leaves the previous text in place and is retried after another `ttl_seconds` — a hanging one is not killed, so pick a command that terminates on its own.
+`prompt` is written to the command's stdin — put it in `args` instead if the tool expects it as an argument. The command does not have to be an LLM: `command: "curl"` with `args: ["-s", "https://example.com/tip"]` renders whatever the server answers.
+
+The render never waits for the command: it prints the cached text and, when that text is older than `ttl_seconds`, re-executes the binary as `statusline --refresh <fingerprint>` detached in the background. The worker looks up the segment whose command, args, and stdin hash to that fingerprint, runs it, and swaps the result in via a rename, so a render never sees a half-written line. A failed or hanging command leaves the previous text in place and is retried after another `ttl_seconds` — a hanging one is not killed, so pick a command that terminates on its own.
 
 Output is treated as untrusted: ANSI escapes and control characters are stripped, whitespace is collapsed, and the text is cut to `max_chars` with an ellipsis. This segment is opt-in — it is not in `config/default.ron`.
+
+### Weather
+
+`Weather` renders a [wttr.in](https://wttr.in) one-liner such as `🌦️ +27°C` through the same background refresh as `LlmMessage`:
+
+```ron
+Weather(
+    color: Rgb(120, 170, 200),
+    prefix: "",
+    location: "",
+    format: "%c+%t",
+    ttl_seconds: 1800,
+    max_chars: 24,
+)
+```
+
+`location` is a fallback: the city is taken from the system timezone first — `TZ`, then `/etc/timezone`, then the `/etc/localtime` symlink — so `Asia/Bangkok` becomes `Bangkok`. Timezones that name no city (`UTC`) and systems without either file fall back to the configured `location`; leave both empty and wttr.in resolves the location by IP. `format` is passed to wttr.in as-is (`%c` condition, `%t` temperature, `%l` location, `%w` wind).
+
+The request is `curl -s --max-time 10`, so no HTTP client is linked into the binary. Location and format are filtered before they reach the URL — path characters outside letters, digits, spaces, `-_,.` are dropped and `&#?` in the format are percent-encoded. Also opt-in.
 
 ### Linux resource usage
 
@@ -244,7 +265,11 @@ src/
     ├── cwd.rs              shortened cwd
     ├── idle_time.rs        time since last real user input
     ├── claude_resource_usage.rs  opt-in Linux process-tree CPU/RSS
+    ├── background_command.rs   detached refresh worker + TTL cache shared by the two below
     ├── llm_message.rs      opt-in background command output, cached by TTL
+    ├── weather.rs          opt-in wttr.in line, city from the system timezone
+    ├── weather/
+    │   └── system_location.rs  city name out of TZ / /etc/timezone / /etc/localtime
     ├── subagent_stats.rs   active/launched subagents, age, token totals
     ├── subagent_stats/
     │   ├── agent_lifecycle.rs     Agent launches and completions in the main transcript

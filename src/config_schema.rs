@@ -109,6 +109,16 @@ pub struct LlmMessage {
     pub max_chars: usize,
 }
 
+#[derive(Deserialize)]
+pub struct Weather {
+    pub color: Color,
+    pub prefix: String,
+    pub location: String,
+    pub format: String,
+    pub ttl_seconds: u64,
+    pub max_chars: usize,
+}
+
 #[derive(Clone, Copy, Deserialize)]
 pub enum Window {
     FiveHour,
@@ -186,6 +196,7 @@ pub enum SegmentSpec {
     Model(Model),
     RateLimit(RateLimit),
     SubagentStats(SubagentStats),
+    Weather(Weather),
 }
 
 #[derive(Deserialize)]
