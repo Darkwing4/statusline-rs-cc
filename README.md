@@ -136,6 +136,12 @@ The whole config is an external [RON](https://github.com/ron-rs/ron) file at [`c
             stall_seconds: 120,
             show_tokens: true,
         ),
+        SessionTask(
+            color: Named(90),
+            prefix: "\u{BB} ",
+            max_chars: 48,
+            standalone: false,
+        ),
         Reminder(
             color: Rgb(230, 180, 80),
             prefix: "\u{23F0} ",
@@ -247,6 +253,23 @@ Notices are per session. The session id comes from `--session <id>` or, when it 
 
 The text is stored as JSON in the cache directory (`notice-<session>.json`), written through a temp file and a rename so a render never sees half a notice. It is treated as untrusted on the way out: ANSI escapes and control characters are stripped, whitespace is collapsed, and it is cut to `max_chars`. Set `standalone: false` to render it inline among the other segments instead of on its own line.
 
+### Session task
+
+`SessionTask` shows what this window was last asked to do — the latest prompt the user actually typed:
+
+```ron
+SessionTask(
+    color: Named(90),
+    prefix: "\u{BB} ",
+    max_chars: 48,
+    standalone: false,
+)
+```
+
+It scans the transcript backwards and stops at the first `user` record that is a real prompt: tool results, subagent (`isSidechain`) messages, slash-command wrappers, hook output, and `Caveat:` notes are skipped, so `/compact` in the middle of a session does not replace the task with the word `compact`. Nothing is written anywhere — the transcript is the only source, so the segment costs one backward scan of its tail.
+
+With several Claude Code windows open this is the fastest way to tell them apart. Claude Code has no on-disk todo list to read, so this is the prompt, not a checklist step.
+
 ### Reminders
 
 `Reminder` holds messages that are written now and shown later, across every session on the machine:
@@ -340,6 +363,7 @@ src/
     ├── weather.rs          opt-in wttr.in line, city from the system timezone
     ├── notice.rs           message written by `statusline --notice`, expires by TTL
     ├── reminder.rs         reminders that are due, written by `statusline --remind`
+    ├── session_task.rs     latest real user prompt, scanned from the transcript tail
     ├── single_line_text.rs ANSI/control stripping + truncation for untrusted text
     ├── duration_format.rs  1h02m / 4m12s / 5s durations
     ├── weather/

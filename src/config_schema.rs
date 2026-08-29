@@ -119,6 +119,14 @@ pub struct Notice {
 }
 
 #[derive(Deserialize)]
+pub struct SessionTask {
+    pub color: Color,
+    pub prefix: String,
+    pub max_chars: usize,
+    pub standalone: bool,
+}
+
+#[derive(Deserialize)]
 pub struct Reminder {
     pub color: Color,
     pub prefix: String,
@@ -215,6 +223,7 @@ pub enum SegmentSpec {
     Notice(Notice),
     RateLimit(RateLimit),
     Reminder(Reminder),
+    SessionTask(SessionTask),
     SubagentStats(SubagentStats),
     Weather(Weather),
 }

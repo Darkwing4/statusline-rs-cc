@@ -12,6 +12,7 @@ pub mod model;
 pub mod notice;
 pub mod rate_limits;
 pub mod reminder;
+pub mod session_task;
 pub mod single_line_text;
 pub mod subagent_stats;
 pub mod weather;

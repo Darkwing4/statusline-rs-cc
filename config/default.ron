@@ -52,6 +52,12 @@
             stall_seconds: 120,
             show_tokens: true,
         ),
+        SessionTask(
+            color: Named(90),
+            prefix: "\u{BB} ",
+            max_chars: 48,
+            standalone: false,
+        ),
         Reminder(
             color: Rgb(230, 180, 80),
             prefix: "\u{23F0} ",
