@@ -11,6 +11,7 @@ mod statusline_cache_dir;
 mod statusline_cli;
 mod statusline_input;
 mod statusline_notice_store;
+mod statusline_reminder_store;
 mod statusline_renderer;
 mod transcript_forward_reader;
 mod transcript_record_probe;
@@ -37,7 +38,7 @@ fn main() -> ExitCode {
             segments::background_command::refresh(&fingerprint);
             ExitCode::SUCCESS
         }
-        notice => match statusline_cli::apply_notice(notice) {
+        written => match statusline_cli::apply(written) {
             Ok(()) => ExitCode::SUCCESS,
             Err(message) => {
                 eprintln!("statusline: {}", message);

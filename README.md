@@ -136,6 +136,13 @@ The whole config is an external [RON](https://github.com/ron-rs/ron) file at [`c
             stall_seconds: 120,
             show_tokens: true,
         ),
+        Reminder(
+            color: Rgb(230, 180, 80),
+            prefix: "\u{23F0} ",
+            separator: " \u{B7} ",
+            max_chars: 80,
+            standalone: false,
+        ),
         Notice(
             color: Named(93),
             prefix: "\u{1F4CC} ",
@@ -240,6 +247,31 @@ Notices are per session. The session id comes from `--session <id>` or, when it 
 
 The text is stored as JSON in the cache directory (`notice-<session>.json`), written through a temp file and a rename so a render never sees half a notice. It is treated as untrusted on the way out: ANSI escapes and control characters are stripped, whitespace is collapsed, and it is cut to `max_chars`. Set `standalone: false` to render it inline among the other segments instead of on its own line.
 
+### Reminders
+
+`Reminder` holds messages that are written now and shown later, across every session on the machine:
+
+```ron
+Reminder(
+    color: Rgb(230, 180, 80),
+    prefix: "\u{23F0} ",
+    separator: " \u{B7} ",
+    max_chars: 80,
+    standalone: false,
+)
+```
+
+```sh
+statusline --remind "созвон" --in 30m           # shows up in 30 minutes, stays an hour
+statusline --remind "снять кофе" --in 90s --for 10m
+statusline --remind-clear                       # drop the ones already on screen
+statusline --remind-clear --all                 # drop the pending ones too
+```
+
+`--in` and `--for` take `45s`, `30m`, `2h`, `1d`, or a bare number of seconds; `--for` defaults to an hour and counts from the moment the reminder fires. Reminders live in one machine-wide `reminders.json` — unlike `Notice` they are not tied to a session, so a reminder written in one Claude Code window appears in all of them. Everything due at once is joined with `separator` behind a single `prefix`; expired entries are dropped on the next render.
+
+There is no timer and no daemon: a reminder is a timestamp on disk, and every render compares it to the clock. It therefore appears on the first render after its time — set `statusLine.refreshInterval` in Claude Code settings if you want that to happen without touching the keyboard.
+
 ### Linux resource usage
 
 `ClaudeResourceUsage` is an opt-in Linux-only segment:
@@ -292,6 +324,7 @@ src/
 ├── statusline_cache_dir.rs    XDG cache directory used by cross-render caches
 ├── statusline_cli.rs       argument parsing: render, --refresh, --notice, --notice-clear
 ├── statusline_notice_store.rs per-session notice file, written by the CLI
+├── statusline_reminder_store.rs machine-wide reminders with a show-at timestamp
 ├── transcript_tail_reader.rs  scans transcript JSONL backwards in 64 KB blocks
 ├── transcript_forward_reader.rs  scans transcript JSONL forward, record by record
 ├── types.rs / types/       shared types (Color, RESET)
@@ -306,6 +339,7 @@ src/
     ├── llm_message.rs      opt-in background command output, cached by TTL
     ├── weather.rs          opt-in wttr.in line, city from the system timezone
     ├── notice.rs           message written by `statusline --notice`, expires by TTL
+    ├── reminder.rs         reminders that are due, written by `statusline --remind`
     ├── single_line_text.rs ANSI/control stripping + truncation for untrusted text
     ├── duration_format.rs  1h02m / 4m12s / 5s durations
     ├── weather/

@@ -119,6 +119,15 @@ pub struct Notice {
 }
 
 #[derive(Deserialize)]
+pub struct Reminder {
+    pub color: Color,
+    pub prefix: String,
+    pub separator: String,
+    pub max_chars: usize,
+    pub standalone: bool,
+}
+
+#[derive(Deserialize)]
 pub struct Weather {
     pub color: Color,
     pub prefix: String,
@@ -205,6 +214,7 @@ pub enum SegmentSpec {
     Model(Model),
     Notice(Notice),
     RateLimit(RateLimit),
+    Reminder(Reminder),
     SubagentStats(SubagentStats),
     Weather(Weather),
 }

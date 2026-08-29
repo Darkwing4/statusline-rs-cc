@@ -11,6 +11,7 @@ pub mod llm_message;
 pub mod model;
 pub mod notice;
 pub mod rate_limits;
+pub mod reminder;
 pub mod single_line_text;
 pub mod subagent_stats;
 pub mod weather;

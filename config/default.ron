@@ -52,6 +52,13 @@
             stall_seconds: 120,
             show_tokens: true,
         ),
+        Reminder(
+            color: Rgb(230, 180, 80),
+            prefix: "\u{23F0} ",
+            separator: " \u{B7} ",
+            max_chars: 80,
+            standalone: false,
+        ),
         Notice(
             color: Named(93),
             prefix: "\u{1F4CC} ",

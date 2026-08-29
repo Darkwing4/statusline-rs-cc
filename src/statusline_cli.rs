@@ -2,20 +2,29 @@ use std::env;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::statusline_notice_store::{self, Notice};
+use crate::statusline_reminder_store::{self, Reminder};
 
 pub const REFRESH_FLAG: &str = "--refresh";
 pub const NOTICE_FLAG: &str = "--notice";
 pub const NOTICE_CLEAR_FLAG: &str = "--notice-clear";
 pub const TTL_FLAG: &str = "--ttl";
 pub const SESSION_FLAG: &str = "--session";
+pub const REMIND_FLAG: &str = "--remind";
+pub const REMIND_CLEAR_FLAG: &str = "--remind-clear";
+pub const IN_FLAG: &str = "--in";
+pub const FOR_FLAG: &str = "--for";
+pub const ALL_FLAG: &str = "--all";
 
 const SESSION_ENV: &str = "CLAUDE_CODE_SESSION_ID";
+const DEFAULT_REMINDER_LIFETIME_SECONDS: u64 = 3600;
 
 pub const USAGE: &str = concat!(
     "usage:\n",
     "  statusline                                  render a status line from stdin json\n",
     "  statusline --notice <text> [--ttl <secs>] [--session <id>]\n",
     "  statusline --notice-clear [--session <id>]\n",
+    "  statusline --remind <text> --in <30m> [--for <2h>]\n",
+    "  statusline --remind-clear [--all]\n",
 );
 
 pub enum Command {
@@ -28,6 +37,14 @@ pub enum Command {
     },
     ClearNotice {
         session: Option<String>,
+    },
+    AddReminder {
+        text: String,
+        in_seconds: u64,
+        for_seconds: u64,
+    },
+    ClearReminders {
+        all: bool,
     },
 }
 
@@ -45,11 +62,13 @@ where
         REFRESH_FLAG => parse_refresh(&args[1..]),
         NOTICE_FLAG => parse_set_notice(&args[1..]),
         NOTICE_CLEAR_FLAG => parse_clear_notice(&args[1..]),
+        REMIND_FLAG => parse_add_reminder(&args[1..]),
+        REMIND_CLEAR_FLAG => parse_clear_reminders(&args[1..]),
         unknown => Err(format!("unknown argument {}\n{}", unknown, USAGE)),
     }
 }
 
-pub fn apply_notice(command: Command) -> Result<(), String> {
+pub fn apply(command: Command) -> Result<(), String> {
     match command {
         Command::SetNotice {
             session,
@@ -65,6 +84,26 @@ pub fn apply_notice(command: Command) -> Result<(), String> {
         }
         Command::ClearNotice { session } => {
             statusline_notice_store::clear(&resolve_session(session)?)
+        }
+        Command::AddReminder {
+            text,
+            in_seconds,
+            for_seconds,
+        } => {
+            let now = now_seconds();
+            let show_at = now + in_seconds as i64;
+
+            statusline_reminder_store::add(
+                Reminder {
+                    text,
+                    show_at,
+                    expires_at: show_at + for_seconds as i64,
+                },
+                now,
+            )
+        }
+        Command::ClearReminders { all } => {
+            statusline_reminder_store::clear(!all, now_seconds()).map(|_| ())
         }
         _ => Ok(()),
     }
@@ -127,6 +166,69 @@ fn parse_clear_notice(rest: &[String]) -> Result<Command, String> {
     };
 
     Ok(Command::ClearNotice { session })
+}
+
+fn parse_add_reminder(rest: &[String]) -> Result<Command, String> {
+    let (text, rest) = rest
+        .split_first()
+        .ok_or_else(|| format!("{} needs a text\n{}", REMIND_FLAG, USAGE))?;
+
+    if text.trim().is_empty() {
+        return Err(format!("{} needs a non-empty text", REMIND_FLAG));
+    }
+
+    let mut in_seconds = None;
+    let mut for_seconds = DEFAULT_REMINDER_LIFETIME_SECONDS;
+    let mut index = 0;
+
+    while index < rest.len() {
+        match rest[index].as_str() {
+            IN_FLAG => in_seconds = Some(parse_duration(option_value(rest, index, IN_FLAG)?)?),
+            FOR_FLAG => for_seconds = parse_duration(option_value(rest, index, FOR_FLAG)?)?,
+            unknown => return Err(format!("unknown argument {}\n{}", unknown, USAGE)),
+        }
+
+        index += 2;
+    }
+
+    let in_seconds =
+        in_seconds.ok_or_else(|| format!("{} needs {} <30m>\n{}", REMIND_FLAG, IN_FLAG, USAGE))?;
+
+    Ok(Command::AddReminder {
+        text: text.clone(),
+        in_seconds,
+        for_seconds,
+    })
+}
+
+fn parse_clear_reminders(rest: &[String]) -> Result<Command, String> {
+    match rest {
+        [] => Ok(Command::ClearReminders { all: false }),
+        [flag] if flag == ALL_FLAG => Ok(Command::ClearReminders { all: true }),
+        _ => Err(format!(
+            "{} takes only {}\n{}",
+            REMIND_CLEAR_FLAG, ALL_FLAG, USAGE
+        )),
+    }
+}
+
+fn parse_duration(value: &str) -> Result<u64, String> {
+    let trimmed = value.trim();
+    let (digits, unit_seconds) = match trimmed.chars().last() {
+        Some('s') => (&trimmed[..trimmed.len() - 1], 1),
+        Some('m') => (&trimmed[..trimmed.len() - 1], 60),
+        Some('h') => (&trimmed[..trimmed.len() - 1], 3_600),
+        Some('d') => (&trimmed[..trimmed.len() - 1], 86_400),
+        _ => (trimmed, 1),
+    };
+
+    let amount = digits
+        .parse::<u64>()
+        .map_err(|_| format!("expected a duration like 45s, 30m, 2h, got {}", value))?;
+
+    amount
+        .checked_mul(unit_seconds)
+        .ok_or_else(|| format!("duration is too large: {}", value))
 }
 
 fn option_value<'a>(rest: &'a [String], index: usize, flag: &str) -> Result<&'a str, String> {
@@ -245,5 +347,73 @@ mod tests {
     #[test]
     fn rejects_unknown_commands() {
         assert!(parse_args(&["--help"]).is_err());
+    }
+
+    #[test]
+    fn parses_a_reminder_with_its_delay_and_lifetime() {
+        let Ok(Command::AddReminder {
+            text,
+            in_seconds,
+            for_seconds,
+        }) = parse_args(&["--remind", "созвон", "--in", "30m", "--for", "2h"])
+        else {
+            panic!("expected a reminder command");
+        };
+
+        assert_eq!(text, "созвон");
+        assert_eq!(in_seconds, 1_800);
+        assert_eq!(for_seconds, 7_200);
+    }
+
+    #[test]
+    fn reads_durations_in_seconds_minutes_hours_and_days() {
+        for (argument, expected) in [
+            ("45s", 45),
+            ("90", 90),
+            ("2m", 120),
+            ("1h", 3_600),
+            ("1d", 86_400),
+        ] {
+            let Ok(Command::AddReminder { in_seconds, .. }) =
+                parse_args(&["--remind", "текст", "--in", argument])
+            else {
+                panic!("expected a reminder command for {argument}");
+            };
+
+            assert_eq!(in_seconds, expected);
+        }
+    }
+
+    #[test]
+    fn defaults_a_reminder_to_an_hour_on_screen() {
+        let Ok(Command::AddReminder { for_seconds, .. }) =
+            parse_args(&["--remind", "текст", "--in", "5m"])
+        else {
+            panic!("expected a reminder command");
+        };
+
+        assert_eq!(for_seconds, 3_600);
+    }
+
+    #[test]
+    fn rejects_broken_reminder_arguments() {
+        assert!(parse_args(&["--remind", "текст"]).is_err());
+        assert!(parse_args(&["--remind", "  ", "--in", "5m"]).is_err());
+        assert!(parse_args(&["--remind", "текст", "--in", "soon"]).is_err());
+        assert!(parse_args(&["--remind", "текст", "--in", "5x"]).is_err());
+        assert!(parse_args(&["--remind", "текст", "--in"]).is_err());
+    }
+
+    #[test]
+    fn parses_a_reminder_clear_request() {
+        assert!(matches!(
+            parse_args(&["--remind-clear"]),
+            Ok(Command::ClearReminders { all: false })
+        ));
+        assert!(matches!(
+            parse_args(&["--remind-clear", "--all"]),
+            Ok(Command::ClearReminders { all: true })
+        ));
+        assert!(parse_args(&["--remind-clear", "everything"]).is_err());
     }
 }
