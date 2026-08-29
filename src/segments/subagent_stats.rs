@@ -4,13 +4,14 @@ mod session_cache;
 
 use std::fs::{self, File};
 use std::io::{Seek, SeekFrom};
-use std::path::Path;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use serde_json::Value;
 
 pub use crate::config_schema::SubagentStats;
+use crate::segments::duration_format::format_duration;
 use crate::segments::{GitCache, Segment};
+use crate::statusline_input::session_key;
 
 use self::agent_lifecycle::scan_agent_activity;
 use self::agent_token_totals::collect;
@@ -27,7 +28,7 @@ struct Stats {
 impl Segment for SubagentStats {
     fn render(&self, json: &Value, _git: &mut GitCache) -> Option<String> {
         let transcript = json.get("transcript_path")?.as_str()?;
-        let stats = self.collect_stats(transcript, session_key(json, transcript))?;
+        let stats = self.collect_stats(transcript, &session_key(json)?)?;
 
         let color = if stats.stalled {
             self.stall_color
@@ -112,18 +113,6 @@ impl SubagentStats {
     }
 }
 
-fn session_key<'a>(json: &'a Value, transcript: &'a str) -> &'a str {
-    json.get("session_id")
-        .and_then(Value::as_str)
-        .filter(|value| !value.is_empty())
-        .or_else(|| {
-            Path::new(transcript)
-                .file_stem()
-                .and_then(|stem| stem.to_str())
-        })
-        .unwrap_or("session")
-}
-
 fn rewind_stale_cache(state: &mut TranscriptState, transcript: &str) {
     let current_len = fs::metadata(transcript).map(|meta| meta.len()).unwrap_or(0);
 
@@ -138,21 +127,6 @@ fn is_stalled(now: i64, last_signal: Option<i64>, stall_seconds: u64) -> bool {
     };
 
     now - last_signal > stall_seconds as i64
-}
-
-fn format_duration(seconds: i64) -> String {
-    let total = seconds.max(0);
-    let hours = total / 3600;
-    let minutes = (total % 3600) / 60;
-    let secs = total % 60;
-
-    if hours > 0 {
-        format!("{}h{:02}m", hours, minutes)
-    } else if minutes > 0 {
-        format!("{}m{:02}s", minutes, secs)
-    } else {
-        format!("{}s", secs)
-    }
 }
 
 fn format_tokens(tokens: u64) -> String {

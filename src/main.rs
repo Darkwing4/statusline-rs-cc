@@ -8,7 +8,9 @@ mod iso8601;
 mod process_stat;
 mod segments;
 mod statusline_cache_dir;
+mod statusline_cli;
 mod statusline_input;
+mod statusline_notice_store;
 mod statusline_renderer;
 mod transcript_forward_reader;
 mod transcript_record_probe;
@@ -17,14 +19,35 @@ mod transcript_tail_reader;
 use std::io::{self, Write};
 use std::process::ExitCode;
 
+use statusline_cli::Command;
 use statusline_renderer::Renderer;
 
 fn main() -> ExitCode {
-    if let Some(fingerprint) = refresh_request() {
-        segments::background_command::refresh(&fingerprint);
-        return ExitCode::SUCCESS;
-    }
+    let command = match statusline_cli::parse(std::env::args().skip(1)) {
+        Ok(command) => command,
+        Err(message) => {
+            eprintln!("statusline: {}", message);
+            return ExitCode::FAILURE;
+        }
+    };
 
+    match command {
+        Command::Render => render(),
+        Command::Refresh(fingerprint) => {
+            segments::background_command::refresh(&fingerprint);
+            ExitCode::SUCCESS
+        }
+        notice => match statusline_cli::apply_notice(notice) {
+            Ok(()) => ExitCode::SUCCESS,
+            Err(message) => {
+                eprintln!("statusline: {}", message);
+                ExitCode::FAILURE
+            }
+        },
+    }
+}
+
+fn render() -> ExitCode {
     let cfg = match config::load_embedded() {
         Ok(c) => c,
         Err(e) => {
@@ -46,14 +69,4 @@ fn main() -> ExitCode {
     let line = renderer.render(&json);
     let _ = io::stdout().lock().write_all(line.as_bytes());
     ExitCode::SUCCESS
-}
-
-fn refresh_request() -> Option<String> {
-    let mut args = std::env::args().skip(1);
-
-    if args.next()? != segments::background_command::REFRESH_FLAG {
-        return None;
-    }
-
-    args.next()
 }

@@ -3,12 +3,15 @@ pub mod cache_ttl;
 pub mod claude_resource_usage;
 pub mod context;
 pub mod cwd;
+pub mod duration_format;
 pub mod effort;
 pub mod git;
 pub mod idle_time;
 pub mod llm_message;
 pub mod model;
+pub mod notice;
 pub mod rate_limits;
+pub mod single_line_text;
 pub mod subagent_stats;
 pub mod weather;
 

@@ -110,6 +110,15 @@ pub struct LlmMessage {
 }
 
 #[derive(Deserialize)]
+pub struct Notice {
+    pub color: Color,
+    pub prefix: String,
+    pub max_chars: usize,
+    pub show_remaining: bool,
+    pub standalone: bool,
+}
+
+#[derive(Deserialize)]
 pub struct Weather {
     pub color: Color,
     pub prefix: String,
@@ -194,6 +203,7 @@ pub enum SegmentSpec {
     IdleTime(IdleTime),
     LlmMessage(LlmMessage),
     Model(Model),
+    Notice(Notice),
     RateLimit(RateLimit),
     SubagentStats(SubagentStats),
     Weather(Weather),

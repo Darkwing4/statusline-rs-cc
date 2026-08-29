@@ -136,6 +136,13 @@ The whole config is an external [RON](https://github.com/ron-rs/ron) file at [`c
             stall_seconds: 120,
             show_tokens: true,
         ),
+        Notice(
+            color: Named(93),
+            prefix: "\u{1F4CC} ",
+            max_chars: 120,
+            show_remaining: true,
+            standalone: true,
+        ),
         Cwd(color: Rgb(95, 175, 175)),
         GitBranch(
             color: Named(32), state_color: Named(91),
@@ -205,6 +212,34 @@ Weather(
 
 The request is `curl -s --max-time 10`, so no HTTP client is linked into the binary. Location and format are filtered before they reach the URL — path characters outside letters, digits, spaces, `-_,.` are dropped and `&#?` in the format are percent-encoded. Also opt-in.
 
+### Notice
+
+`Notice` renders a message written from outside the render — a reminder, a hand-off note, whatever Claude Code (or a hook, or a cron job) put there:
+
+```ron
+Notice(
+    color: Named(93),
+    prefix: "\u{1F4CC} ",
+    max_chars: 120,
+    show_remaining: true,
+    standalone: true,
+)
+```
+
+The binary itself is the write side:
+
+```sh
+statusline --notice "созвон 15:00, проверить логи" --ttl 3600
+statusline --notice "без срока живёт до --notice-clear"
+statusline --notice-clear
+```
+
+Notices are per session. The session id comes from `--session <id>` or, when it is omitted, from the `CLAUDE_CODE_SESSION_ID` environment variable that Claude Code exports into every command it runs — so a plain `statusline --notice "..."` from a Claude Code shell lands on that session's status line and nowhere else. Without either, the command fails instead of guessing.
+
+`--ttl <seconds>` sets a deadline; `show_remaining: true` appends the time left as `(9m55s)`. A notice past its deadline is not rendered and its file is deleted on the next render. Without `--ttl` the notice stays until it is replaced or cleared. One notice per session — a second `--notice` overwrites the first.
+
+The text is stored as JSON in the cache directory (`notice-<session>.json`), written through a temp file and a rename so a render never sees half a notice. It is treated as untrusted on the way out: ANSI escapes and control characters are stripped, whitespace is collapsed, and it is cut to `max_chars`. Set `standalone: false` to render it inline among the other segments instead of on its own line.
+
 ### Linux resource usage
 
 `ClaudeResourceUsage` is an opt-in Linux-only segment:
@@ -255,6 +290,8 @@ src/
 │   └── terminal_width.rs   terminal columns via ioctl, COLUMNS, parent process tree
 ├── statusline_input.rs     reads + parses stdin JSON from Claude Code
 ├── statusline_cache_dir.rs    XDG cache directory used by cross-render caches
+├── statusline_cli.rs       argument parsing: render, --refresh, --notice, --notice-clear
+├── statusline_notice_store.rs per-session notice file, written by the CLI
 ├── transcript_tail_reader.rs  scans transcript JSONL backwards in 64 KB blocks
 ├── transcript_forward_reader.rs  scans transcript JSONL forward, record by record
 ├── types.rs / types/       shared types (Color, RESET)
@@ -268,6 +305,9 @@ src/
     ├── background_command.rs   detached refresh worker + TTL cache shared by the two below
     ├── llm_message.rs      opt-in background command output, cached by TTL
     ├── weather.rs          opt-in wttr.in line, city from the system timezone
+    ├── notice.rs           message written by `statusline --notice`, expires by TTL
+    ├── single_line_text.rs ANSI/control stripping + truncation for untrusted text
+    ├── duration_format.rs  1h02m / 4m12s / 5s durations
     ├── weather/
     │   └── system_location.rs  city name out of TZ / /etc/timezone / /etc/localtime
     ├── subagent_stats.rs   active/launched subagents, age, token totals
