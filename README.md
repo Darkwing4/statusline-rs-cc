@@ -295,6 +295,25 @@ statusline --remind-clear --all                 # drop the pending ones too
 
 There is no timer and no daemon: a reminder is a timestamp on disk, and every render compares it to the clock. It therefore appears on the first render after its time — set `statusLine.refreshInterval` in Claude Code settings if you want that to happen without touching the keyboard.
 
+### Failed-command hook
+
+The binary can also be a hook. Point Claude Code's `PostToolUse` at it and a failed shell command lands in the status line as a `Notice`:
+
+```json
+"PostToolUse": [
+  {
+    "matcher": "Bash",
+    "hooks": [
+      { "type": "command", "command": "~/.claude/bin/statusline --hook" }
+    ]
+  }
+]
+```
+
+The hook reads the event JSON on stdin, and for `Bash` calls only: a non-zero `exit_code` or an interrupted command writes `\u{2717} cargo test (exit 101)` for that session, and the next command that succeeds removes it again. `--ttl <secs>` sets how long the message survives (15 minutes by default).
+
+It only ever removes a notice it wrote itself — notices written by `--notice` carry no `source` and are left alone, so a hand-written reminder is not wiped by the next green test run. No jq, no shell wrapper, no extra process: the same binary that renders the line handles the event.
+
 ### Linux resource usage
 
 `ClaudeResourceUsage` is an opt-in Linux-only segment:
@@ -345,7 +364,8 @@ src/
 │   └── terminal_width.rs   terminal columns via ioctl, COLUMNS, parent process tree
 ├── statusline_input.rs     reads + parses stdin JSON from Claude Code
 ├── statusline_cache_dir.rs    XDG cache directory used by cross-render caches
-├── statusline_cli.rs       argument parsing: render, --refresh, --notice, --notice-clear
+├── statusline_cli.rs       argument parsing: render, --refresh, --notice, --remind, --hook
+├── statusline_hook.rs      PostToolUse payload -> notice about a failed command
 ├── statusline_notice_store.rs per-session notice file, written by the CLI
 ├── statusline_reminder_store.rs machine-wide reminders with a show-at timestamp
 ├── transcript_tail_reader.rs  scans transcript JSONL backwards in 64 KB blocks

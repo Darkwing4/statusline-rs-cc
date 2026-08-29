@@ -75,6 +75,7 @@ mod tests {
         Notice {
             text: text.to_string(),
             expires_at,
+            source: None,
         }
     }
 

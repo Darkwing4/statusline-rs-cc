@@ -10,6 +10,8 @@ pub struct Notice {
     pub text: String,
     #[serde(default)]
     pub expires_at: Option<i64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub source: Option<String>,
 }
 
 impl Notice {
@@ -50,6 +52,13 @@ pub fn store(session_key: &str, notice: &Notice) -> Result<PathBuf, String> {
     Ok(path)
 }
 
+pub fn clear_from_source(session_key: &str, source: &str) -> Result<(), String> {
+    match load(session_key) {
+        Some(notice) if notice.source.as_deref() == Some(source) => clear(session_key),
+        _ => Ok(()),
+    }
+}
+
 pub fn clear(session_key: &str) -> Result<(), String> {
     let path = notice_path(session_key).ok_or("no cache directory for the notice")?;
 
@@ -85,6 +94,7 @@ mod tests {
         Notice {
             text: "созвон 15:00".to_string(),
             expires_at,
+            source: None,
         }
     }
 

@@ -9,6 +9,7 @@ mod process_stat;
 mod segments;
 mod statusline_cache_dir;
 mod statusline_cli;
+mod statusline_hook;
 mod statusline_input;
 mod statusline_notice_store;
 mod statusline_reminder_store;

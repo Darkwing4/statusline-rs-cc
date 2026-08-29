@@ -1,6 +1,7 @@
 use std::env;
 use std::time::{SystemTime, UNIX_EPOCH};
 
+use crate::statusline_hook::{self, Outcome};
 use crate::statusline_notice_store::{self, Notice};
 use crate::statusline_reminder_store::{self, Reminder};
 
@@ -14,9 +15,11 @@ pub const REMIND_CLEAR_FLAG: &str = "--remind-clear";
 pub const IN_FLAG: &str = "--in";
 pub const FOR_FLAG: &str = "--for";
 pub const ALL_FLAG: &str = "--all";
+pub const HOOK_FLAG: &str = "--hook";
 
 const SESSION_ENV: &str = "CLAUDE_CODE_SESSION_ID";
 const DEFAULT_REMINDER_LIFETIME_SECONDS: u64 = 3600;
+const DEFAULT_HOOK_NOTICE_SECONDS: u64 = 900;
 
 pub const USAGE: &str = concat!(
     "usage:\n",
@@ -25,6 +28,7 @@ pub const USAGE: &str = concat!(
     "  statusline --notice-clear [--session <id>]\n",
     "  statusline --remind <text> --in <30m> [--for <2h>]\n",
     "  statusline --remind-clear [--all]\n",
+    "  statusline --hook [--ttl <secs>]            PostToolUse hook: report failed commands\n",
 );
 
 pub enum Command {
@@ -46,6 +50,9 @@ pub enum Command {
     ClearReminders {
         all: bool,
     },
+    Hook {
+        ttl_seconds: u64,
+    },
 }
 
 pub fn parse<I>(args: I) -> Result<Command, String>
@@ -64,6 +71,7 @@ where
         NOTICE_CLEAR_FLAG => parse_clear_notice(&args[1..]),
         REMIND_FLAG => parse_add_reminder(&args[1..]),
         REMIND_CLEAR_FLAG => parse_clear_reminders(&args[1..]),
+        HOOK_FLAG => parse_hook(&args[1..]),
         unknown => Err(format!("unknown argument {}\n{}", unknown, USAGE)),
     }
 }
@@ -78,6 +86,7 @@ pub fn apply(command: Command) -> Result<(), String> {
             let notice = Notice {
                 text,
                 expires_at: ttl_seconds.map(|ttl| now_seconds() + ttl as i64),
+                source: None,
             };
 
             statusline_notice_store::store(&resolve_session(session)?, &notice).map(|_| ())
@@ -105,7 +114,30 @@ pub fn apply(command: Command) -> Result<(), String> {
         Command::ClearReminders { all } => {
             statusline_reminder_store::clear(!all, now_seconds()).map(|_| ())
         }
+        Command::Hook { ttl_seconds } => apply_hook(ttl_seconds),
         _ => Ok(()),
+    }
+}
+
+fn apply_hook(ttl_seconds: u64) -> Result<(), String> {
+    let Some(payload) = crate::statusline_input::read() else {
+        return Ok(());
+    };
+
+    match statusline_hook::outcome(&payload) {
+        Outcome::Write { session, text } => {
+            let notice = Notice {
+                text,
+                expires_at: Some(now_seconds() + ttl_seconds as i64),
+                source: Some(statusline_hook::HOOK_SOURCE.to_string()),
+            };
+
+            statusline_notice_store::store(&session, &notice).map(|_| ())
+        }
+        Outcome::ClearOwnNotice { session } => {
+            statusline_notice_store::clear_from_source(&session, statusline_hook::HOOK_SOURCE)
+        }
+        Outcome::Ignore => Ok(()),
     }
 }
 
@@ -199,6 +231,16 @@ fn parse_add_reminder(rest: &[String]) -> Result<Command, String> {
         in_seconds,
         for_seconds,
     })
+}
+
+fn parse_hook(rest: &[String]) -> Result<Command, String> {
+    let ttl_seconds = match rest {
+        [] => DEFAULT_HOOK_NOTICE_SECONDS,
+        [flag, value] if flag == TTL_FLAG => parse_duration(value)?,
+        _ => return Err(format!("{} takes only {}\n{}", HOOK_FLAG, TTL_FLAG, USAGE)),
+    };
+
+    Ok(Command::Hook { ttl_seconds })
 }
 
 fn parse_clear_reminders(rest: &[String]) -> Result<Command, String> {
