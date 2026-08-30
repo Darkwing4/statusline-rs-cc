@@ -7,6 +7,7 @@ pub mod duration_format;
 pub mod effort;
 pub mod git;
 pub mod idle_time;
+pub mod llm_insight;
 pub mod llm_message;
 pub mod model;
 pub mod notice;

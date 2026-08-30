@@ -35,8 +35,11 @@ fn main() -> ExitCode {
 
     match command {
         Command::Render => render(),
-        Command::Refresh(fingerprint) => {
-            segments::background_command::refresh(&fingerprint);
+        Command::Refresh {
+            fingerprint,
+            request_base,
+        } => {
+            segments::background_command::refresh(&fingerprint, request_base);
             ExitCode::SUCCESS
         }
         written => match statusline_cli::apply(written) {

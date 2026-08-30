@@ -206,6 +206,30 @@ The render never waits for the command: it prints the cached text and, when that
 
 Output is treated as untrusted: ANSI escapes and control characters are stripped, whitespace is collapsed, and the text is cut to `max_chars` with an ellipsis. This segment is opt-in — it is not in `config/default.ron`.
 
+### LLM insight
+
+`LlmInsight` is the open slot: you write the prompt, you decide how often it runs. Every `every_turns` prompts in the session it hands the model its own previous answer plus the conversation since then, and renders the one line that comes back.
+
+```ron
+LlmInsight(
+    color: Rgb(150, 190, 150),
+    prefix: "\u{1F3AF} ",
+    command: "codex",
+    args: ["exec", "--skip-git-repo-check", "-m", "gpt-5.6-sol", "-c", "model_reasoning_effort=low"],
+    prompt: "One short sentence: what the user is after and what is being done for it.",
+    every_turns: 2,
+    delta_chars: 4000,
+    max_chars: 128,
+    standalone: true,
+)
+```
+
+The stdin the command receives is assembled from three parts — your `prompt`, `[your previous answer]`, and `[new conversation since then]` — so the model refines a running answer instead of starting cold every time. The delta is the user and assistant text added since the last run, trimmed to the newest `delta_chars` characters; tool results, subagent traffic, and injected blocks are left out.
+
+Add the block twice with different prompts and you get two independent lines — a goal tracker and, say, a critic that suggests what the last prompt was missing. Each instance keys its cache off `command`, `args`, and `prompt`, so they never overwrite each other.
+
+Counting is incremental: every render seeks to the byte offset it stopped at last time, so a long transcript costs nothing to follow. A run is skipped while a previous worker is still starting (30 s guard) and when the delta is empty. `every_turns: 0` freezes the segment on its last answer without ever launching the command again. The first render on a fresh session starts from the last 256 KB of the transcript rather than replaying its whole history.
+
 ### Weather
 
 `Weather` renders a [wttr.in](https://wttr.in) one-liner such as `🌦️ +27°C` through the same background refresh as `LlmMessage`:
@@ -380,6 +404,10 @@ src/
     ├── claude_resource_usage.rs  opt-in Linux process-tree CPU/RSS
     ├── background_command.rs   detached refresh worker + TTL cache shared by the two below
     ├── llm_message.rs      opt-in background command output, cached by TTL
+    ├── llm_insight.rs      opt-in per-session prompt run every N turns on the chat delta
+    ├── llm_insight/
+    │   ├── turn_delta.rs      counts real prompts and collects the text added since last run
+    │   └── insight_cache.rs   scan offset, pending delta, and the paths a worker writes to
     ├── weather.rs          opt-in wttr.in line, city from the system timezone
     ├── notice.rs           message written by `statusline --notice`, expires by TTL
     ├── reminder.rs         reminders that are due, written by `statusline --remind`

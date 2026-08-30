@@ -9,6 +9,8 @@ use crate::segments::single_line_text::sanitize;
 use crate::statusline_cache_dir::cache_dir;
 use crate::statusline_cli::REFRESH_FLAG;
 
+pub const REQUEST_FLAG: &str = "--request";
+
 pub(super) struct BackgroundCommand {
     pub(super) command: String,
     pub(super) args: Vec<String>,
@@ -97,12 +99,12 @@ impl BackgroundCommand {
     }
 }
 
-pub fn refresh(fingerprint: &str) {
+pub fn refresh(fingerprint: &str, request_base: Option<PathBuf>) {
     let Ok(config) = crate::config::load_embedded() else {
         return;
     };
 
-    let Some(command) = config
+    let Some(mut command) = config
         .segments
         .into_iter()
         .filter_map(background_command)
@@ -111,7 +113,10 @@ pub fn refresh(fingerprint: &str) {
         return;
     };
 
-    let Some(paths) = CachePaths::for_command(&command) else {
+    let Some(paths) = (match request_base {
+        Some(base) => CachePaths::for_request(&base, &mut command),
+        None => CachePaths::for_command(&command),
+    }) else {
         return;
     };
 
@@ -124,6 +129,7 @@ pub fn refresh(fingerprint: &str) {
 
 fn background_command(spec: SegmentSpec) -> Option<BackgroundCommand> {
     match spec {
+        SegmentSpec::LlmInsight(segment) => Some(segment.background_command()),
         SegmentSpec::LlmMessage(segment) => Some(segment.background_command()),
         SegmentSpec::Weather(segment) => Some(segment.background_command()),
         _ => None,
@@ -145,6 +151,17 @@ impl CachePaths {
             result: dir.join(format!("command-{fingerprint}.txt")),
             attempt: dir.join(format!("command-{fingerprint}.attempt")),
             pending: dir.join(format!("command-{fingerprint}.pending")),
+        })
+    }
+
+    fn for_request(base: &Path, command: &mut BackgroundCommand) -> Option<Self> {
+        let request = suffixed(base, "request");
+        command.stdin_input = fs::read_to_string(&request).ok()?;
+
+        Some(CachePaths {
+            result: suffixed(base, "txt"),
+            attempt: suffixed(base, "attempt"),
+            pending: suffixed(base, "pending"),
         })
     }
 
@@ -177,6 +194,14 @@ impl CachePaths {
 
         fs::create_dir_all(parent).is_ok()
     }
+}
+
+fn suffixed(base: &Path, suffix: &str) -> PathBuf {
+    let mut name = base.as_os_str().to_os_string();
+    name.push(".");
+    name.push(suffix);
+
+    PathBuf::from(name)
 }
 
 fn age_seconds(path: &Path) -> Option<u64> {
@@ -235,8 +260,14 @@ mod tests {
     fn fingerprint_tracks_command_args_and_stdin() {
         let base = command(&["exec"], "one quote");
 
-        assert_eq!(base.fingerprint(), command(&["exec"], "one quote").fingerprint());
-        assert_ne!(base.fingerprint(), command(&["exec"], "another").fingerprint());
+        assert_eq!(
+            base.fingerprint(),
+            command(&["exec"], "one quote").fingerprint()
+        );
+        assert_ne!(
+            base.fingerprint(),
+            command(&["exec"], "another").fingerprint()
+        );
         assert_ne!(
             base.fingerprint(),
             command(&["exec", "--json"], "one quote").fingerprint()

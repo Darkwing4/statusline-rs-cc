@@ -1,6 +1,8 @@
 use std::env;
+use std::path::PathBuf;
 use std::time::{SystemTime, UNIX_EPOCH};
 
+use crate::segments::background_command::REQUEST_FLAG;
 use crate::statusline_hook::{self, Outcome};
 use crate::statusline_notice_store::{self, Notice};
 use crate::statusline_reminder_store::{self, Reminder};
@@ -33,7 +35,10 @@ pub const USAGE: &str = concat!(
 
 pub enum Command {
     Render,
-    Refresh(String),
+    Refresh {
+        fingerprint: String,
+        request_base: Option<PathBuf>,
+    },
     SetNotice {
         session: Option<String>,
         text: String,
@@ -142,11 +147,23 @@ fn apply_hook(ttl_seconds: u64) -> Result<(), String> {
 }
 
 fn parse_refresh(rest: &[String]) -> Result<Command, String> {
-    let [fingerprint] = rest else {
-        return Err(format!("{} takes exactly one fingerprint", REFRESH_FLAG));
+    let (fingerprint, request_base) = match rest {
+        [fingerprint] => (fingerprint, None),
+        [fingerprint, flag, base] if flag == REQUEST_FLAG => {
+            (fingerprint, Some(PathBuf::from(base)))
+        }
+        _ => {
+            return Err(format!(
+                "{} takes a fingerprint and an optional {} <path>",
+                REFRESH_FLAG, REQUEST_FLAG
+            ))
+        }
     };
 
-    Ok(Command::Refresh(fingerprint.clone()))
+    Ok(Command::Refresh {
+        fingerprint: fingerprint.clone(),
+        request_base,
+    })
 }
 
 fn parse_set_notice(rest: &[String]) -> Result<Command, String> {
@@ -319,7 +336,12 @@ mod tests {
     fn parses_a_refresh_request() {
         assert!(matches!(
             parse_args(&["--refresh", "abc123"]),
-            Ok(Command::Refresh(fingerprint)) if fingerprint == "abc123"
+            Ok(Command::Refresh { fingerprint, request_base: None }) if fingerprint == "abc123"
+        ));
+        assert!(matches!(
+            parse_args(&["--refresh", "abc123", "--request", "/cache/insight-abc"]),
+            Ok(Command::Refresh { request_base: Some(base), .. })
+                if base == std::path::Path::new("/cache/insight-abc")
         ));
         assert!(parse_args(&["--refresh"]).is_err());
         assert!(parse_args(&["--refresh", "abc123", "extra"]).is_err());

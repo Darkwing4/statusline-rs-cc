@@ -136,6 +136,19 @@ pub struct Reminder {
 }
 
 #[derive(Deserialize)]
+pub struct LlmInsight {
+    pub color: Color,
+    pub prefix: String,
+    pub command: String,
+    pub args: Vec<String>,
+    pub prompt: String,
+    pub every_turns: usize,
+    pub delta_chars: usize,
+    pub max_chars: usize,
+    pub standalone: bool,
+}
+
+#[derive(Deserialize)]
 pub struct Weather {
     pub color: Color,
     pub prefix: String,
@@ -218,6 +231,7 @@ pub enum SegmentSpec {
     GitDiff(GitDiff),
     GitError(GitError),
     IdleTime(IdleTime),
+    LlmInsight(LlmInsight),
     LlmMessage(LlmMessage),
     Model(Model),
     Notice(Notice),
