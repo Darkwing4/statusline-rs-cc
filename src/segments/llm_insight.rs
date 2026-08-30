@@ -19,7 +19,16 @@ use crate::statusline_input::session_key;
 use self::insight_cache::InsightState;
 use self::turn_delta::{keep_tail, scan_delta};
 
-const INITIAL_TAIL_BYTES: u64 = 256 * 1024;
+fn append(existing: &str, added: &str, max_chars: usize) -> String {
+    let joined = if existing.is_empty() {
+        added.to_string()
+    } else {
+        format!("{}\n{}", existing, added)
+    };
+
+    keep_tail(&joined, max_chars)
+}
+
 const MIN_REFRESH_GAP_SECONDS: u64 = 30;
 const NO_PREVIOUS_ANSWER: &str = "(none yet)";
 
@@ -69,7 +78,7 @@ impl LlmInsight {
         }
 
         if state.scanned_bytes == 0 {
-            state.scanned_bytes = length.saturating_sub(INITIAL_TAIL_BYTES);
+            state.scanned_bytes = self.first_offset(length);
         }
 
         let Ok(mut file) = File::open(transcript) else {
@@ -85,33 +94,37 @@ impl LlmInsight {
         state.turns_since_run += scan.turns;
 
         if !scan.text.is_empty() {
-            if !state.delta.is_empty() {
-                state.delta.push('\n');
-            }
-
-            state.delta.push_str(&scan.text);
-            state.delta = keep_tail(&state.delta, self.delta_chars);
+            state.context = append(&state.context, &scan.text, self.context_chars);
+            state.fresh = append(&state.fresh, &scan.text, self.context_chars);
         }
 
-        if self.is_due(&state) && self.spawn_worker(base, &state.delta) {
+        if self.is_due(&state) && self.spawn_worker(base, &state) {
             state.turns_since_run = 0;
-            state.delta.clear();
+            state.fresh.clear();
         }
 
         insight_cache::store(base, &state);
+    }
+
+    fn first_offset(&self, length: u64) -> u64 {
+        if self.scan_whole_session {
+            return 0;
+        }
+
+        length.saturating_sub(self.initial_scan_bytes)
     }
 
     fn is_due(&self, state: &InsightState) -> bool {
         self.every_turns > 0 && state.turns_since_run >= self.every_turns
     }
 
-    fn spawn_worker(&self, base: &Path, delta: &str) -> bool {
-        if delta.trim().is_empty() || is_recent(&insight_cache::attempt_path(base)) {
+    fn spawn_worker(&self, base: &Path, state: &InsightState) -> bool {
+        if state.fresh.trim().is_empty() || is_recent(&insight_cache::attempt_path(base)) {
             return false;
         }
 
         let previous = fs::read_to_string(insight_cache::result_path(base)).unwrap_or_default();
-        let request = self.request_body(&previous, delta);
+        let request = self.request_body(&previous, &state.context, &state.fresh);
 
         if fs::write(insight_cache::request_path(base), request).is_err() {
             return false;
@@ -137,7 +150,7 @@ impl LlmInsight {
             .is_ok()
     }
 
-    fn request_body(&self, previous: &str, delta: &str) -> String {
+    fn request_body(&self, previous: &str, context: &str, fresh: &str) -> String {
         let previous = previous.trim();
         let previous = if previous.is_empty() {
             NO_PREVIOUS_ANSWER
@@ -146,10 +159,16 @@ impl LlmInsight {
         };
 
         format!(
-            "{}\n\n[your previous answer]\n{}\n\n[new conversation since then]\n{}\n",
+            concat!(
+                "{}\n\n",
+                "[your previous answer]\n{}\n\n",
+                "[conversation so far, oldest first]\n{}\n\n",
+                "[new since your previous answer]\n{}\n"
+            ),
             self.prompt.trim(),
             previous,
-            delta.trim()
+            context.trim(),
+            fresh.trim()
         )
     }
 }
@@ -179,7 +198,9 @@ mod tests {
             args: vec!["exec".to_string()],
             prompt: "One sentence: the user's goal and what is being done for it.".to_string(),
             every_turns,
-            delta_chars: 4_000,
+            scan_whole_session: false,
+            initial_scan_bytes: 256 * 1024,
+            context_chars: 4_000,
             max_chars: 128,
             standalone: true,
         }
@@ -189,7 +210,8 @@ mod tests {
         InsightState {
             scanned_bytes: 10,
             turns_since_run,
-            delta: "user: почини сборку".to_string(),
+            context: "user: почини сборку".to_string(),
+            fresh: "user: почини сборку".to_string(),
         }
     }
 
@@ -208,23 +230,47 @@ mod tests {
     }
 
     #[test]
-    fn feeds_the_model_its_own_previous_answer_and_the_new_turns() {
-        let body = segment(2).request_body("цель: собрать релиз", "user: теперь тесты");
+    fn feeds_the_model_its_answer_the_history_and_what_is_new() {
+        let body = segment(2).request_body(
+            "цель: собрать релиз",
+            "user: почини сборку\nassistant: починил",
+            "user: теперь тесты",
+        );
 
         assert_eq!(
             body,
             concat!(
                 "One sentence: the user's goal and what is being done for it.\n\n",
                 "[your previous answer]\nцель: собрать релиз\n\n",
-                "[new conversation since then]\nuser: теперь тесты\n"
+                "[conversation so far, oldest first]\nuser: почини сборку\nassistant: починил\n\n",
+                "[new since your previous answer]\nuser: теперь тесты\n"
             )
         );
     }
 
     #[test]
     fn marks_the_first_run_as_having_no_previous_answer() {
-        let body = segment(2).request_body("   ", "user: привет");
+        let body = segment(2).request_body("   ", "user: привет", "user: привет");
 
         assert!(body.contains("[your previous answer]\n(none yet)"));
+    }
+
+    #[test]
+    fn starts_from_the_beginning_only_when_the_whole_session_is_requested() {
+        let mut segment = segment(2);
+        assert_eq!(segment.first_offset(1_000_000), 1_000_000 - 256 * 1024);
+        assert_eq!(segment.first_offset(1_000), 0);
+
+        segment.scan_whole_session = true;
+        assert_eq!(segment.first_offset(50_000_000), 0);
+    }
+
+    #[test]
+    fn keeps_the_context_window_at_its_limit_while_it_grows() {
+        use super::append;
+
+        assert_eq!(append("", "первый", 100), "первый");
+        assert_eq!(append("первый", "второй", 100), "первый\nвторой");
+        assert_eq!(append("первый", "второй", 6), "второй");
     }
 }

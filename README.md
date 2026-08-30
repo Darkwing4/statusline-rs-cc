@@ -218,17 +218,21 @@ LlmInsight(
     args: ["exec", "--skip-git-repo-check", "-m", "gpt-5.6-sol", "-c", "model_reasoning_effort=low"],
     prompt: "One short sentence: what the user is after and what is being done for it.",
     every_turns: 2,
-    delta_chars: 4000,
+    scan_whole_session: true,
+    initial_scan_bytes: 262144,
+    context_chars: 12000,
     max_chars: 128,
     standalone: true,
 )
 ```
 
-The stdin the command receives is assembled from three parts — your `prompt`, `[your previous answer]`, and `[new conversation since then]` — so the model refines a running answer instead of starting cold every time. The delta is the user and assistant text added since the last run, trimmed to the newest `delta_chars` characters; tool results, subagent traffic, and injected blocks are left out.
+The stdin the command receives has four parts: your `prompt`, `[your previous answer]`, `[conversation so far, oldest first]`, and `[new since your previous answer]`. The context window is the newest `context_chars` characters of the session's user and assistant text and is never cleared, so the model can see what has already been done and does not suggest it again; the fresh part holds only what arrived since its last answer and is cleared after each run. Tool results, subagent traffic, and injected blocks are left out of both.
+
+How much history the window starts from is separate from how often the command runs. `scan_whole_session: true` reads the transcript from its first byte on the first render of a session; with `false` it starts `initial_scan_bytes` before the end. Either way the scan is one-off — every later render resumes at the byte offset it stopped at. Reading a 3.4 MB transcript whole cost 69 ms once and 9 ms per render afterwards.
 
 Add the block twice with different prompts and you get two independent lines — a goal tracker and, say, a critic that suggests what the last prompt was missing. Each instance keys its cache off `command`, `args`, and `prompt`, so they never overwrite each other.
 
-Counting is incremental: every render seeks to the byte offset it stopped at last time, so a long transcript costs nothing to follow. A run is skipped while a previous worker is still starting (30 s guard) and when the delta is empty. `every_turns: 0` freezes the segment on its last answer without ever launching the command again. The first render on a fresh session starts from the last 256 KB of the transcript rather than replaying its whole history.
+A run is skipped while a previous worker is still starting (30 s guard) and when nothing new has arrived. `every_turns: 0` freezes the segment on its last answer without ever launching the command again.
 
 ### Weather
 

@@ -143,7 +143,9 @@ pub struct LlmInsight {
     pub args: Vec<String>,
     pub prompt: String,
     pub every_turns: usize,
-    pub delta_chars: usize,
+    pub scan_whole_session: bool,
+    pub initial_scan_bytes: u64,
+    pub context_chars: usize,
     pub max_chars: usize,
     pub standalone: bool,
 }

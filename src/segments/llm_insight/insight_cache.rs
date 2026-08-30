@@ -12,7 +12,9 @@ pub(super) struct InsightState {
     #[serde(default)]
     pub(super) turns_since_run: usize,
     #[serde(default)]
-    pub(super) delta: String,
+    pub(super) context: String,
+    #[serde(default)]
+    pub(super) fresh: String,
 }
 
 pub(super) fn load(base: &Path) -> InsightState {
