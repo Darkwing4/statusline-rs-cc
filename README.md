@@ -136,12 +136,6 @@ The whole config is an external [RON](https://github.com/ron-rs/ron) file at [`c
             stall_seconds: 120,
             show_tokens: true,
         ),
-        SessionTask(
-            color: Named(90),
-            prefix: "\u{BB} ",
-            max_chars: 48,
-            standalone: false,
-        ),
         Reminder(
             color: Rgb(230, 180, 80),
             prefix: "\u{23F0} ",
@@ -167,6 +161,12 @@ The whole config is an external [RON](https://github.com/ron-rs/ron) file at [`c
             deleted_color:   Named(31),
         ),
         GitError(color: Named(91), text: "no git"),
+        SessionTask(
+            color: Named(90),
+            prefix: "\u{BB} ",
+            max_chars: 48,
+            standalone: false,
+        ),
     ],
 )
 ```
