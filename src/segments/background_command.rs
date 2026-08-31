@@ -113,8 +113,8 @@ pub fn refresh(fingerprint: &str, request_base: Option<PathBuf>) {
         return;
     };
 
-    let Some(paths) = (match request_base {
-        Some(base) => CachePaths::for_request(&base, &mut command),
+    let Some(paths) = (match request_base.as_deref() {
+        Some(base) => CachePaths::for_request(base, &mut command),
         None => CachePaths::for_command(&command),
     }) else {
         return;
@@ -125,6 +125,10 @@ pub fn refresh(fingerprint: &str, request_base: Option<PathBuf>) {
     };
 
     paths.store(&text);
+
+    if let Some(base) = request_base.as_deref() {
+        crate::segments::llm_insight::log_run(base, &text);
+    }
 }
 
 fn background_command(spec: SegmentSpec) -> Option<BackgroundCommand> {

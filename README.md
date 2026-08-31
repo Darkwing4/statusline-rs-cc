@@ -226,13 +226,15 @@ LlmInsight(
 )
 ```
 
-The stdin the command receives has four parts: your `prompt`, `[your previous answer]`, `[conversation so far, oldest first]`, and `[new since your previous answer]`. The context window is the newest `context_chars` characters of the session's user and assistant text and is never cleared, so the model can see what has already been done and does not suggest it again; the fresh part holds only what arrived since its last answer and is cleared after each run. Tool results, subagent traffic, and injected blocks are left out of both.
+The stdin the command receives has five parts: your `prompt`, a `[hard limit]` line, `[your previous answer]`, `[conversation so far, oldest first]`, and `[new since your previous answer]`. The hard limit repeats `max_chars` back to the model and tells it to fit the whole thought inside it, so it packs the answer instead of getting cut off — keep the character count out of your own `prompt` and let this line carry it. The context window is the newest `context_chars` characters of the session's user and assistant text and is never cleared, so the model can see what has already been done and does not suggest it again; the fresh part holds only what arrived since its last answer and is cleared after each run. Tool results, subagent traffic, and injected blocks are left out of both.
 
 How much history the window starts from is separate from how often the command runs. `scan_whole_session: true` reads the transcript from its first byte on the first render of a session; with `false` it starts `initial_scan_bytes` before the end. Either way the scan is one-off — every later render resumes at the byte offset it stopped at. Reading a 3.4 MB transcript whole cost 69 ms once and 9 ms per render afterwards.
 
 Add the block twice with different prompts and you get two independent lines — a goal tracker and, say, a critic that suggests what the last prompt was missing. Each instance keys its cache off `command`, `args`, and `prompt`, so they never overwrite each other.
 
 A run is skipped while a previous worker is still starting (30 s guard) and when nothing new has arrived. `every_turns: 0` freezes the segment on its last answer without ever launching the command again.
+
+Every answer is appended to one machine-wide log, `insight-history.jsonl` in the cache directory, as `{at, session, cwd, prompt, input, answer}` — the segment only ever shows its latest line, the log is what lets you look back at what was shown, in which session, and on what input. `input` is the new conversation the answer was based on; the context window is left out of the log because it is recoverable from the transcript. Entries older than three months are dropped, checked whenever the file passes 256 KB.
 
 ### Weather
 
@@ -396,6 +398,7 @@ src/
 ├── statusline_hook.rs      PostToolUse payload -> notice about a failed command
 ├── statusline_notice_store.rs per-session notice file, written by the CLI
 ├── statusline_reminder_store.rs machine-wide reminders with a show-at timestamp
+├── statusline_insight_history.rs append-only log of insight answers, kept 3 months
 ├── transcript_tail_reader.rs  scans transcript JSONL backwards in 64 KB blocks
 ├── transcript_forward_reader.rs  scans transcript JSONL forward, record by record
 ├── types.rs / types/       shared types (Color, RESET)
