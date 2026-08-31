@@ -65,6 +65,10 @@ fn parse_user_prompt(record: &mut dyn JsonlRecord) -> Option<String> {
         return None;
     }
 
+    if row.get("isMeta").and_then(Value::as_bool) == Some(true) {
+        return None;
+    }
+
     let text = message_text(row.get("message")?.get("content")?)?;
 
     typed_prompt(&text)
@@ -136,6 +140,22 @@ mod tests {
         assert_eq!(
             read_last_user_prompt(&mut reader).as_deref(),
             Some("собери релиз")
+        );
+    }
+
+    #[test]
+    fn ignores_slash_commands_and_skills_injected_as_user_records() {
+        let transcript = concat!(
+            r#"{"type":"user","message":{"content":"почини сборку"}}"#,
+            "\n",
+            r#"{"type":"user","isMeta":true,"message":{"content":[{"type":"text","text":"Workflow authoring reference"}]}}"#,
+            "\n",
+        );
+        let mut reader = Cursor::new(transcript.as_bytes());
+
+        assert_eq!(
+            read_last_user_prompt(&mut reader).as_deref(),
+            Some("почини сборку")
         );
     }
 

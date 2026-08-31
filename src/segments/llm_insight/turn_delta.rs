@@ -7,6 +7,7 @@ use crate::transcript_forward_reader::read_records_forward;
 const USER_MARKER: &str = "user:";
 const ASSISTANT_MARKER: &str = "assistant:";
 const CAVEAT_PREFIX: &str = "Caveat:";
+const MAX_MESSAGE_CHARS: usize = 800;
 
 pub(super) struct Scan {
     pub(super) bytes: u64,
@@ -24,6 +25,10 @@ pub(super) fn scan_delta<R: Read>(reader: R) -> Scan {
         };
 
         if row.get("isSidechain").and_then(Value::as_bool) == Some(true) {
+            return;
+        }
+
+        if row.get("isMeta").and_then(Value::as_bool) == Some(true) {
             return;
         }
 
@@ -105,7 +110,19 @@ fn spoken_text(content: &Value) -> Option<String> {
         return None;
     }
 
-    Some(trimmed.split_whitespace().collect::<Vec<_>>().join(" "))
+    let collapsed = trimmed.split_whitespace().collect::<Vec<_>>().join(" ");
+
+    Some(keep_head(&collapsed, MAX_MESSAGE_CHARS))
+}
+
+fn keep_head(text: &str, max_chars: usize) -> String {
+    if text.chars().count() <= max_chars {
+        return text.to_string();
+    }
+
+    let kept: String = text.chars().take(max_chars).collect();
+
+    format!("{}…", kept)
 }
 
 #[cfg(test)]
@@ -142,6 +159,8 @@ mod tests {
         let transcript = concat!(
             r#"{"type":"user","isSidechain":true,"message":{"content":"задача субагента"}}"#,
             "\n",
+            r#"{"type":"user","isMeta":true,"message":{"content":[{"type":"text","text":"Workflow authoring reference"}]}}"#,
+            "\n",
             r#"{"type":"user","message":{"content":"<system-reminder>x</system-reminder>"}}"#,
             "\n",
             r#"{"type":"user","message":{"content":"настоящий вопрос"}}"#,
@@ -166,6 +185,23 @@ mod tests {
 
         assert_eq!(scan.turns, 1);
         assert_eq!(scan.text, "user: готовая строка");
+    }
+
+    #[test]
+    fn cuts_one_oversized_message_so_it_cannot_flood_the_window() {
+        let long = "с".repeat(super::MAX_MESSAGE_CHARS + 50);
+        let transcript = format!(
+            "{{\"type\":\"user\",\"message\":{{\"content\":\"{}\"}}}}\n",
+            long
+        );
+
+        let scan = scan_delta(Cursor::new(transcript.as_bytes()));
+
+        assert_eq!(
+            scan.text.chars().count(),
+            "user: ".chars().count() + super::MAX_MESSAGE_CHARS + 1
+        );
+        assert!(scan.text.ends_with('…'));
     }
 
     #[test]

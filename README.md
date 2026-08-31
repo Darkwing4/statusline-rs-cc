@@ -226,7 +226,7 @@ LlmInsight(
 )
 ```
 
-The stdin the command receives has five parts: your `prompt`, a `[hard limit]` line, `[your previous answer]`, `[conversation so far, oldest first]`, and `[new since your previous answer]`. The hard limit repeats `max_chars` back to the model and tells it to fit the whole thought inside it, so it packs the answer instead of getting cut off — keep the character count out of your own `prompt` and let this line carry it. The context window is the newest `context_chars` characters of the session's user and assistant text and is never cleared, so the model can see what has already been done and does not suggest it again; the fresh part holds only what arrived since its last answer and is cleared after each run. Tool results, subagent traffic, and injected blocks are left out of both.
+The stdin the command receives has five parts: your `prompt`, a `[hard limit]` line, `[your previous answer]`, `[conversation so far, oldest first]`, and `[new since your previous answer]`. The hard limit repeats `max_chars` back to the model and tells it to fit the whole thought inside it, so it packs the answer instead of getting cut off — keep the character count out of your own `prompt` and let this line carry it. The context window is the newest `context_chars` characters of the session's user and assistant text and is never cleared, so the model can see what has already been done and does not suggest it again; the fresh part holds only what arrived since its last answer and is cleared after each run. Tool results, subagent traffic, and records Claude Code marks as `isMeta` — slash-command wrappers and the skill documents they pull in — are left out of both, and a single message is cut at 800 characters so one pasted wall of text cannot push the real conversation out of the window.
 
 How much history the window starts from is separate from how often the command runs. `scan_whole_session: true` reads the transcript from its first byte on the first render of a session; with `false` it starts `initial_scan_bytes` before the end. Either way the scan is one-off — every later render resumes at the byte offset it stopped at. Reading a 3.4 MB transcript whole cost 69 ms once and 9 ms per render afterwards.
 
@@ -296,7 +296,7 @@ SessionTask(
 )
 ```
 
-It scans the transcript backwards and stops at the first `user` record that is a real prompt: tool results, subagent (`isSidechain`) messages, slash-command wrappers, hook output, and `Caveat:` notes are skipped, so `/compact` in the middle of a session does not replace the task with the word `compact`. Nothing is written anywhere — the transcript is the only source, so the segment costs one backward scan of its tail.
+It scans the transcript backwards and stops at the first `user` record that is a real prompt: tool results, subagent (`isSidechain`) messages, `isMeta` records (slash commands and the skill text they inject), hook output, and `Caveat:` notes are skipped, so `/compact` in the middle of a session does not replace the task with the word `compact`. Nothing is written anywhere — the transcript is the only source, so the segment costs one backward scan of its tail.
 
 With several Claude Code windows open this is the fastest way to tell them apart. Claude Code has no on-disk todo list to read, so this is the prompt, not a checklist step.
 
