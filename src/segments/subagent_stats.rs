@@ -163,13 +163,7 @@ mod tests {
         }
     }
 
-    fn stats(
-        active: usize,
-        total: usize,
-        seconds: Option<i64>,
-        tokens: u64,
-        stalled: bool,
-    ) -> Stats {
+    fn stats(active: usize, total: usize, seconds: Option<i64>, tokens: u64, stalled: bool) -> Stats {
         Stats {
             active,
             total,
@@ -193,10 +187,7 @@ mod tests {
     fn drops_the_active_counter_and_age_once_every_agent_finished() {
         let segment = sample();
 
-        assert_eq!(
-            segment.format(&stats(0, 7, None, 42_000, false)),
-            "agents 7 42k"
-        );
+        assert_eq!(segment.format(&stats(0, 7, None, 42_000, false)), "agents 7 42k");
     }
 
     #[test]
@@ -214,10 +205,7 @@ mod tests {
         let mut segment = sample();
         segment.show_tokens = false;
 
-        assert_eq!(
-            segment.format(&stats(1, 1, Some(5), 900_000, false)),
-            "agents 1/1 5s"
-        );
+        assert_eq!(segment.format(&stats(1, 1, Some(5), 900_000, false)), "agents 1/1 5s");
     }
 
     #[test]

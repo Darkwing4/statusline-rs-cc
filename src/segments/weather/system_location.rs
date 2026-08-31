@@ -56,10 +56,7 @@ mod tests {
 
     #[test]
     fn takes_the_city_from_an_iana_timezone() {
-        assert_eq!(
-            city_from_timezone("Europe/Moscow").as_deref(),
-            Some("Moscow")
-        );
+        assert_eq!(city_from_timezone("Europe/Moscow").as_deref(), Some("Moscow"));
         assert_eq!(
             city_from_timezone("America/New_York").as_deref(),
             Some("New York")
