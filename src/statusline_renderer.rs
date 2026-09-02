@@ -1,10 +1,12 @@
 mod segment_wrapping;
 mod terminal_width;
+mod word_wrapping;
 
 use serde_json::Value;
 
 use self::segment_wrapping::wrap_segments;
 use self::terminal_width::terminal_width;
+use self::word_wrapping::wrap_words;
 
 use crate::config_schema::Color;
 use crate::segments::{GitCache, Segment};
@@ -41,17 +43,24 @@ impl Renderer {
         }
 
         let sep = self.separator_color.paint(&self.separator);
-
-        let wrap_width = terminal_width()
+        let width = terminal_width()
             .map(|cols| cols.saturating_sub(4))
-            .filter(|&max| max > 0);
-        let main_block = match wrap_width {
+            .filter(|max| *max > 0);
+
+        let main_block = match width {
             Some(max) => wrap_segments(&main_parts, &sep, max),
             None => main_parts.join(&sep),
         };
 
         let mut lines = vec![main_block];
-        lines.extend(tail_lines);
+
+        for line in tail_lines {
+            lines.push(match width {
+                Some(max) => wrap_words(&line, max),
+                None => line,
+            });
+        }
+
         lines.join("\n")
     }
 }
