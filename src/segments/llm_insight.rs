@@ -207,7 +207,9 @@ impl LlmInsight {
                 "{}\n\n",
                 "[hard limit]\n",
                 "Answer with one finished line of at most {} characters, including spaces. ",
-                "Say less rather than run over the limit, and never stop mid-word.\n\n",
+                "Say less rather than run over the limit, and never stop mid-word. ",
+                "If only a word or two keep you over, contract them ",
+                "(\"сокр-я\" for \"сокращения\") instead of dropping the thought.\n\n",
                 "[your previous answer]\n{}\n\n",
                 "[conversation so far, oldest first]\n{}\n\n",
                 "[new since your previous answer]\n{}\n"
@@ -290,7 +292,9 @@ mod tests {
             concat!(
                 "One sentence: the user's goal and what is being done for it.\n\n",
                 "[hard limit]\nAnswer with one finished line of at most 128 characters, including spaces. ",
-                "Say less rather than run over the limit, and never stop mid-word.\n\n",
+                "Say less rather than run over the limit, and never stop mid-word. ",
+                "If only a word or two keep you over, contract them ",
+                "(\"сокр-я\" for \"сокращения\") instead of dropping the thought.\n\n",
                 "[your previous answer]\nцель: собрать релиз\n\n",
                 "[conversation so far, oldest first]\nuser: почини сборку\nassistant: починил\n\n",
                 "[new since your previous answer]\nuser: теперь тесты\n"

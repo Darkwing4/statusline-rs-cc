@@ -17,6 +17,8 @@ When the line is wider than the terminal, the renderer wraps it across multiple 
 
 <p><img src="docs/screenshots/wrap.png" alt="multi-line wrap when statusline exceeds terminal width"/></p>
 
+Segments on their own line (`standalone: true`, `LlmMessage`) are folded by words to the same width, with the colour reopened on every wrapped line, so an answer wider than a split-screen terminal is wrapped instead of cut off.
+
 Every segment is tweakable from the RON config, and some ship with multiple styles. For example, `RateLimit` has radial dial, bar, and plain percent (plus `BarPercent` / `RadialPercent` which combine a graphic with the number):
 
 <table>
@@ -226,7 +228,7 @@ LlmInsight(
 )
 ```
 
-The stdin the command receives has five parts: your `prompt`, a `[hard limit]` line, `[your previous answer]`, `[conversation so far, oldest first]`, and `[new since your previous answer]`. The hard limit repeats `max_chars` back to the model and tells it to fit the whole thought inside it, so it packs the answer instead of getting cut off — keep the character count out of your own `prompt` and let this line carry it. The context window is the newest `context_chars` characters of the session's user and assistant text and is never cleared, so the model can see what has already been done and does not suggest it again; the fresh part holds only what arrived since its last answer and is cleared after each run. Tool results, subagent traffic, and records Claude Code marks as `isMeta` — slash-command wrappers and the skill documents they pull in — are left out of both, and a single message is cut at 800 characters so one pasted wall of text cannot push the real conversation out of the window.
+The stdin the command receives has five parts: your `prompt`, a `[hard limit]` line, `[your previous answer]`, `[conversation so far, oldest first]`, and `[new since your previous answer]`. The hard limit repeats `max_chars` back to the model and tells it to fit the whole thought inside it, contracting a word or two (`сокр-я`) when that is all it takes, so it packs the answer instead of getting cut off — keep the character count out of your own `prompt` and let this line carry it. The context window is the newest `context_chars` characters of the session's user and assistant text and is never cleared, so the model can see what has already been done and does not suggest it again; the fresh part holds only what arrived since its last answer and is cleared after each run. Tool results, subagent traffic, and records Claude Code marks as `isMeta` — slash-command wrappers and the skill documents they pull in — are left out of both, and a single message is cut at 800 characters so one pasted wall of text cannot push the real conversation out of the window.
 
 How much history the window starts from is separate from how often the command runs. `scan_whole_session: true` reads the transcript from its first byte on the first render of a session; with `false` it starts `initial_scan_bytes` before the end. Either way the scan is one-off — every later render resumes at the byte offset it stopped at. Reading a 3.4 MB transcript whole cost 69 ms once and 9 ms per render afterwards.
 
@@ -391,7 +393,8 @@ src/
 ├── statusline_renderer.rs  owns segments, joins them, wraps to terminal width
 ├── statusline_renderer/
 │   ├── segment_wrapping.rs wraps segments to lines by visible (ANSI-stripped) width
-│   └── terminal_width.rs   terminal columns via ioctl, COLUMNS, parent process tree
+│   ├── terminal_width.rs   terminal columns via ioctl, COLUMNS, parent process tree
+│   └── word_wrapping.rs    folds a standalone line by words, reopening colour per line
 ├── statusline_input.rs     reads + parses stdin JSON from Claude Code
 ├── statusline_cache_dir.rs    XDG cache directory used by cross-render caches
 ├── statusline_cli.rs       argument parsing: render, --refresh, --notice, --remind, --hook
