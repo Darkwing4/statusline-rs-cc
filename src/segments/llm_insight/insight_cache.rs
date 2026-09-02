@@ -3,6 +3,7 @@ use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 
+use crate::private_file;
 use crate::statusline_cache_dir::cache_dir;
 
 #[derive(Default, Deserialize, Serialize)]
@@ -38,7 +39,7 @@ pub(super) fn store(base: &Path, state: &InsightState) {
         return;
     };
 
-    let _ = fs::write(path, body);
+    let _ = private_file::write(&path, body);
 }
 
 pub(super) fn base_path(fingerprint: &str, session_key: &str) -> Option<PathBuf> {

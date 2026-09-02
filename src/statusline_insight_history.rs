@@ -1,10 +1,11 @@
-use std::fs::{self, OpenOptions};
+use std::fs;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use serde::{Deserialize, Serialize};
 
+use crate::private_file;
 use crate::statusline_cache_dir::cache_dir;
 
 const FILE_NAME: &str = "insight-history.jsonl";
@@ -40,7 +41,7 @@ pub fn append(entry: Entry) {
         return;
     };
 
-    let Ok(mut file) = OpenOptions::new().create(true).append(true).open(&path) else {
+    let Ok(mut file) = private_file::append(&path) else {
         return;
     };
 
@@ -70,7 +71,7 @@ fn prune_if_large(path: &Path, now: i64) {
     let kept = retained_lines(&body, now);
     let pending = path.with_extension("pending");
 
-    if fs::write(&pending, kept).is_err() {
+    if private_file::write(&pending, kept).is_err() {
         let _ = fs::remove_file(&pending);
         return;
     }

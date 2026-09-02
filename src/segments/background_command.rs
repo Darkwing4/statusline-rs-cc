@@ -5,6 +5,7 @@ use std::process::{Command, Stdio};
 use std::time::SystemTime;
 
 use crate::config::SegmentSpec;
+use crate::private_file;
 use crate::segments::single_line_text::sanitize;
 use crate::statusline_cache_dir::cache_dir;
 use crate::statusline_cli::REFRESH_FLAG;
@@ -73,9 +74,10 @@ impl BackgroundCommand {
         format!("{hash:016x}")
     }
 
-    fn run(&self) -> Option<String> {
+    fn run(&self, workdir: &Path) -> Option<String> {
         let mut child = Command::new(&self.command)
             .args(&self.args)
+            .current_dir(workdir)
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::null())
@@ -120,7 +122,11 @@ pub fn refresh(fingerprint: &str, request_base: Option<PathBuf>) {
         return;
     };
 
-    let Some(text) = command.run() else {
+    let Some(workdir) = command_workdir() else {
+        return;
+    };
+
+    let Some(text) = command.run(&workdir) else {
         return;
     };
 
@@ -129,6 +135,13 @@ pub fn refresh(fingerprint: &str, request_base: Option<PathBuf>) {
     if let Some(base) = request_base.as_deref() {
         crate::segments::llm_insight::log_run(base, &text);
     }
+}
+
+fn command_workdir() -> Option<PathBuf> {
+    let dir = cache_dir()?.join("workdir");
+    fs::create_dir_all(&dir).ok()?;
+
+    Some(dir)
 }
 
 fn background_command(spec: SegmentSpec) -> Option<BackgroundCommand> {
@@ -182,7 +195,7 @@ impl CachePaths {
             return;
         }
 
-        if fs::write(&self.pending, text).is_err() {
+        if private_file::write(&self.pending, text).is_err() {
             return;
         }
 
@@ -258,6 +271,20 @@ mod tests {
         assert!(is_expired(None, 900));
         assert!(is_expired(Some(900), 900));
         assert!(!is_expired(Some(899), 900));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn runs_the_command_inside_the_given_directory() {
+        let workdir = std::env::temp_dir();
+        let mut command = command(&[], "");
+        command.command = "pwd".to_string();
+        command.max_chars = 0;
+
+        assert_eq!(
+            command.run(&workdir).map(std::path::PathBuf::from),
+            std::fs::canonicalize(&workdir).ok()
+        );
     }
 
     #[test]

@@ -195,12 +195,14 @@ LlmMessage(
     color: Rgb(150, 140, 120),
     prefix: "» ",
     command: "codex",
-    args: ["exec", "--skip-git-repo-check", "-c", "model_reasoning_effort=low"],
+    args: ["exec", "--skip-git-repo-check", "-s", "read-only", "-c", "approval_policy=never", "-c", "model_reasoning_effort=low"],
     prompt: "One short motivational line. Text only, no quotes, no explanation.",
     ttl_seconds: 900,
     max_chars: 90,
 )
 ```
+
+The worker runs the command in an empty `workdir` under the cache directory, never in the project, and its stdout is the only thing taken from it. An agent CLI still has to be told to stay a text model — for `codex` that is `-s read-only -c approval_policy=never` — because whatever it reads on stdin is a prompt-injection path into everything it is allowed to touch. Files the worker writes are created readable by the owner only.
 
 `prompt` is written to the command's stdin — put it in `args` instead if the tool expects it as an argument. The command does not have to be an LLM: `command: "curl"` with `args: ["-s", "https://example.com/tip"]` renders whatever the server answers.
 
@@ -217,7 +219,7 @@ LlmInsight(
     color: Rgb(150, 190, 150),
     prefix: "\u{1F3AF} ",
     command: "codex",
-    args: ["exec", "--skip-git-repo-check", "-m", "gpt-5.6-sol", "-c", "model_reasoning_effort=low"],
+    args: ["exec", "--skip-git-repo-check", "-s", "read-only", "-c", "approval_policy=never", "-m", "gpt-5.6-sol", "-c", "model_reasoning_effort=low"],
     prompt: "One short sentence: what the user is after and what is being done for it.",
     every_turns: 2,
     scan_whole_session: true,
@@ -397,6 +399,7 @@ src/
 │   └── word_wrapping.rs    folds a standalone line by words, reopening colour per line
 ├── statusline_input.rs     reads + parses stdin JSON from Claude Code
 ├── statusline_cache_dir.rs    XDG cache directory used by cross-render caches
+├── private_file.rs         writes cache files readable by the owner only
 ├── statusline_cli.rs       argument parsing: render, --refresh, --notice, --remind, --hook
 ├── statusline_hook.rs      PostToolUse payload -> notice about a failed command
 ├── statusline_notice_store.rs per-session notice file, written by the CLI

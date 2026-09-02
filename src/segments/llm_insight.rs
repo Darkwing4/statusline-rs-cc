@@ -11,6 +11,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 pub use crate::config_schema::LlmInsight;
+use crate::private_file;
 use crate::segments::background_command::{BackgroundCommand, REQUEST_FLAG};
 use crate::segments::single_line_text::sanitize;
 use crate::segments::{GitCache, Segment};
@@ -155,7 +156,7 @@ impl LlmInsight {
         let previous = fs::read_to_string(insight_cache::result_path(base)).unwrap_or_default();
         let request = self.request_body(&previous, &state.context, &state.fresh);
 
-        if fs::write(insight_cache::request_path(base), request).is_err() {
+        if private_file::write(&insight_cache::request_path(base), request).is_err() {
             return false;
         }
 
@@ -190,7 +191,7 @@ impl LlmInsight {
         };
 
         if let Ok(body) = serde_json::to_string(&meta) {
-            let _ = fs::write(insight_cache::meta_path(base), body);
+            let _ = private_file::write(&insight_cache::meta_path(base), body);
         }
     }
 

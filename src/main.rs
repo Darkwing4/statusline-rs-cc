@@ -5,6 +5,7 @@ mod duration_format;
 mod gradient;
 mod iso8601;
 #[cfg(target_os = "linux")]
+mod private_file;
 mod process_stat;
 mod segments;
 mod statusline_cache_dir;
