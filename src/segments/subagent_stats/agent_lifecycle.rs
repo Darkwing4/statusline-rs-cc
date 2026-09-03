@@ -26,6 +26,11 @@ pub(super) fn scan_agent_activity<R: Read>(reader: R, state: &mut TranscriptStat
             return;
         }
 
+        if let Some(id) = queued_notification_id(&row) {
+            finish(&mut state.pending, id);
+            return;
+        }
+
         let timestamp = row.timestamp.as_deref().and_then(parse_iso8601_utc);
         let Some(content) = row.message.and_then(|message| message.content) else {
             return;
@@ -92,6 +97,23 @@ fn finish(pending: &mut Vec<PendingAgent>, tool_use_id: &str) {
     pending.retain(|agent| agent.tool_use_id != tool_use_id);
 }
 
+fn queued_notification_id(row: &TranscriptRow) -> Option<&str> {
+    let queued = row
+        .attachment
+        .as_ref()
+        .and_then(|queued| queued.prompt.as_ref());
+    let text = notification_text(row.content.as_ref()).or_else(|| notification_text(queued))?;
+
+    notification_tool_use_id(text)
+}
+
+fn notification_text(content: Option<&RowContent>) -> Option<&str> {
+    match content? {
+        RowContent::Notification(text) => Some(text),
+        _ => None,
+    }
+}
+
 fn notification_tool_use_id(text: &str) -> Option<&str> {
     if !text.contains(NOTIFICATION_MARKER) {
         return None;
@@ -112,6 +134,13 @@ struct TranscriptRow {
     message: Option<RowMessage>,
     #[serde(rename = "toolUseResult")]
     tool_use_result: Option<ToolUseOutcome>,
+    content: Option<RowContent>,
+    attachment: Option<RowAttachment>,
+}
+
+#[derive(Deserialize)]
+struct RowAttachment {
+    prompt: Option<RowContent>,
 }
 
 #[derive(Deserialize)]
@@ -471,6 +500,38 @@ mod tests {
             r#"{"type":"user","timestamp":"2026-01-01T00:00:09Z","message":{"content":"<task-notification>\n<task-id>a1</task-id>\n<tool-use-id>toolu_1</tool-use-id>\n<status>completed</status>\n</task-notification>"}}"#
         );
         let state = scan(&finished);
+
+        assert_eq!(state.launched, 1);
+        assert!(state.pending.is_empty());
+    }
+
+    #[test]
+    fn finishes_async_agents_whose_notification_was_absorbed_mid_turn() {
+        let transcript = concat!(
+            r#"{"type":"assistant","timestamp":"2026-01-01T00:00:01Z","message":{"content":[{"type":"tool_use","id":"toolu_1","name":"Agent","input":{}}]}}"#,
+            "\n",
+            r#"{"type":"user","timestamp":"2026-01-01T00:00:02Z","message":{"content":[{"type":"tool_result","tool_use_id":"toolu_1","content":"launched"}]},"toolUseResult":{"status":"async_launched","agentId":"a1","isAsync":true}}"#,
+            "\n",
+            r#"{"type":"queue-operation","operation":"enqueue","timestamp":"2026-01-01T00:00:08Z","content":"<task-notification>\n<task-id>a1</task-id>\n<tool-use-id>toolu_1</tool-use-id>\n<status>killed</status>\n</task-notification>"}"#,
+            "\n",
+        );
+        let state = scan(transcript);
+
+        assert_eq!(state.launched, 1);
+        assert!(state.pending.is_empty());
+    }
+
+    #[test]
+    fn finishes_async_agents_from_a_queued_command_attachment() {
+        let transcript = concat!(
+            r#"{"type":"assistant","timestamp":"2026-01-01T00:00:01Z","message":{"content":[{"type":"tool_use","id":"toolu_1","name":"Agent","input":{}}]}}"#,
+            "\n",
+            r#"{"type":"user","timestamp":"2026-01-01T00:00:02Z","message":{"content":[{"type":"tool_result","tool_use_id":"toolu_1","content":"launched"}]},"toolUseResult":{"status":"async_launched","agentId":"a1","isAsync":true}}"#,
+            "\n",
+            r#"{"type":"attachment","isSidechain":false,"timestamp":"2026-01-01T00:00:08Z","attachment":{"type":"queued_command","commandMode":"task-notification","prompt":"<task-notification>\n<task-id>a1</task-id>\n<tool-use-id>toolu_1</tool-use-id>\n<status>completed</status>\n</task-notification>"}}"#,
+            "\n",
+        );
+        let state = scan(transcript);
 
         assert_eq!(state.launched, 1);
         assert!(state.pending.is_empty());
