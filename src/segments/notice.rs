@@ -3,7 +3,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use serde_json::Value;
 
 pub use crate::config_schema::Notice as NoticeSegment;
-use crate::segments::duration_format::format_duration;
+use crate::duration_format::format_duration_padded;
 use crate::segments::single_line_text::sanitize;
 use crate::segments::{GitCache, Segment};
 use crate::statusline_input::session_key;
@@ -40,7 +40,7 @@ impl NoticeSegment {
 
         if self.show_remaining {
             if let Some(remaining) = notice.remaining_seconds(now) {
-                body.push_str(&format!(" ({})", format_duration(remaining)));
+                body.push_str(&format!(" ({})", format_duration_padded(remaining)));
             }
         }
 
@@ -58,8 +58,8 @@ fn now_seconds() -> i64 {
 #[cfg(test)]
 mod tests {
     use super::NoticeSegment;
-    use crate::statusline_notice_store::Notice;
     use crate::config_schema::Color;
+    use crate::statusline_notice_store::Notice;
 
     fn segment() -> NoticeSegment {
         NoticeSegment {

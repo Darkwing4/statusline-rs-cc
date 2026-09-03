@@ -9,7 +9,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use serde_json::Value;
 
 pub use crate::config_schema::SubagentStats;
-use crate::segments::duration_format::format_duration;
+use crate::duration_format::format_duration_padded;
 use crate::segments::{GitCache, Segment};
 use crate::statusline_input::session_key;
 
@@ -101,7 +101,7 @@ impl SubagentStats {
 
         if let Some(seconds) = stats.longest_active_seconds {
             text.push(' ');
-            text.push_str(&format_duration(seconds));
+            text.push_str(&format_duration_padded(seconds));
         }
 
         if self.show_tokens && stats.tokens > 0 {

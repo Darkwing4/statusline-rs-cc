@@ -1,8 +1,8 @@
 use unicode_width::UnicodeWidthChar;
 
 use crate::ansi::visible_width;
-use crate::segments::single_line_text::ELLIPSIS;
 use crate::config_schema::RESET;
+use crate::segments::single_line_text::ELLIPSIS;
 
 pub(super) fn wrap_words(text: &str, max: usize) -> String {
     text.lines()

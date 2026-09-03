@@ -3,7 +3,6 @@ pub mod cache_ttl;
 pub mod claude_resource_usage;
 pub mod context;
 pub mod cwd;
-pub mod duration_format;
 pub mod effort;
 pub mod git;
 pub mod idle_time;

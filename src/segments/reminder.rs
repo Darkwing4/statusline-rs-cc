@@ -39,8 +39,8 @@ impl ReminderSegment {
 #[cfg(test)]
 mod tests {
     use super::ReminderSegment;
-    use crate::statusline_reminder_store::Reminder;
     use crate::config_schema::Color;
+    use crate::statusline_reminder_store::Reminder;
 
     fn segment() -> ReminderSegment {
         ReminderSegment {
