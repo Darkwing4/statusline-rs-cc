@@ -238,8 +238,6 @@ Add the block twice with different prompts and you get two independent lines —
 
 A run is skipped while a previous worker is still starting (30 s guard) and when nothing new has arrived. `every_turns: 0` freezes the segment on its last answer without ever launching the command again.
 
-Every answer is appended to one machine-wide log, `insight-history.jsonl` in the cache directory, as `{at, session, cwd, prompt, input, answer}` — the segment only ever shows its latest line, the log is what lets you look back at what was shown, in which session, and on what input. `input` is the new conversation the answer was based on; the context window is left out of the log because it is recoverable from the transcript. Entries older than three months are dropped, checked whenever the file passes 256 KB.
-
 ### Weather
 
 `Weather` renders a [wttr.in](https://wttr.in) one-liner such as `🌦️ +27°C` through the same background refresh as `LlmMessage`:
@@ -404,7 +402,6 @@ src/
 ├── statusline_hook.rs      PostToolUse payload -> notice about a failed command
 ├── statusline_notice_store.rs per-session notice file, written by the CLI
 ├── statusline_reminder_store.rs machine-wide reminders with a show-at timestamp
-├── statusline_insight_history.rs append-only log of insight answers, kept 3 months
 ├── transcript_tail_reader.rs  scans transcript JSONL backwards in 64 KB blocks
 ├── transcript_forward_reader.rs  scans transcript JSONL forward, record by record
 ├── types.rs / types/       shared types (Color, RESET)

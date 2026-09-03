@@ -58,10 +58,6 @@ pub(super) fn result_path(base: &Path) -> PathBuf {
     with_suffix(base, "txt")
 }
 
-pub(super) fn meta_path(base: &Path) -> PathBuf {
-    with_suffix(base, "meta.json")
-}
-
 pub(super) fn attempt_path(base: &Path) -> PathBuf {
     with_suffix(base, "attempt")
 }

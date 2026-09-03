@@ -131,10 +131,6 @@ pub fn refresh(fingerprint: &str, request_base: Option<PathBuf>) {
     };
 
     paths.store(&text);
-
-    if let Some(base) = request_base.as_deref() {
-        crate::segments::llm_insight::log_run(base, &text);
-    }
 }
 
 fn command_workdir() -> Option<PathBuf> {

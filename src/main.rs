@@ -12,7 +12,6 @@ mod statusline_cache_dir;
 mod statusline_cli;
 mod statusline_hook;
 mod statusline_input;
-mod statusline_insight_history;
 mod statusline_notice_store;
 mod statusline_reminder_store;
 mod statusline_renderer;
