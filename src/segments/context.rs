@@ -46,7 +46,43 @@ impl Segment for Context {
 
 #[cfg(test)]
 mod tests {
-    use super::{gradient, CONTEXT_GRADIENT};
+    use serde_json::json;
+
+    use super::{gradient, Context, CONTEXT_GRADIENT};
+    use crate::config_schema::Color;
+    use crate::segments::{GitCache, Segment};
+
+    fn context(color: Color) -> Context {
+        Context {
+            color,
+            prefix: String::new(),
+            prefix_color: Color::Named(90),
+            suffix: String::new(),
+            suffix_color: Color::Named(90),
+        }
+    }
+
+    #[test]
+    fn paints_with_named_color() {
+        let json = json!({"context_window": {"used_percentage": 10.4}});
+        let mut git = GitCache::new(String::new());
+
+        assert_eq!(
+            context(Color::Named(33)).render(&json, &mut git),
+            Some("\x1b[33m10%\x1b[0m".to_string())
+        );
+    }
+
+    #[test]
+    fn hides_without_context_window() {
+        let mut git = GitCache::new(String::new());
+
+        assert_eq!(context(Color::Gradient).render(&json!({}), &mut git), None);
+        assert_eq!(
+            context(Color::Gradient).render(&json!({"context_window": {}}), &mut git),
+            None
+        );
+    }
 
     #[test]
     fn returns_colors_at_gradient_stops() {

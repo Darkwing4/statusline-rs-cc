@@ -24,8 +24,10 @@ struct SessionRecord {
 
 pub(super) fn resolve(session_id: &str) -> Option<ResolvedRoot> {
     let sessions = session_directory()?;
-    resolve_from_ancestry(session_id, &sessions)
-        .or_else(|| resolve_from_registry(session_id, &sessions))
+    resolve_from_ancestry(std::process::id(), session_id, process_stat::read, |pid| {
+        read_session_record(&sessions.join(format!("{pid}.json")))
+    })
+    .or_else(|| resolve_from_registry(session_id, &sessions))
 }
 
 fn session_directory() -> Option<PathBuf> {
@@ -37,18 +39,26 @@ fn session_directory() -> Option<PathBuf> {
     Some(PathBuf::from(home).join(".claude").join("sessions"))
 }
 
-fn resolve_from_ancestry(session_id: &str, sessions: &Path) -> Option<ResolvedRoot> {
-    let mut pid = std::process::id();
+fn resolve_from_ancestry<ReadStat, ReadRecord>(
+    start_pid: u32,
+    session_id: &str,
+    mut read_stat: ReadStat,
+    mut read_record: ReadRecord,
+) -> Option<ResolvedRoot>
+where
+    ReadStat: FnMut(u32) -> Option<ProcessStat>,
+    ReadRecord: FnMut(u32) -> Option<SessionRecord>,
+{
+    let mut pid = start_pid;
     let mut visited = HashSet::new();
 
     while pid != 0 && visited.insert(pid) {
-        let stat = match process_stat::read(pid) {
+        let stat = match read_stat(pid) {
             Some(stat) => stat,
             None => break,
         };
-        let path = sessions.join(format!("{pid}.json"));
 
-        if let Some(record) = read_session_record(&path) {
+        if let Some(record) = read_record(pid) {
             if record_matches(&record, pid, session_id, &stat) {
                 return Some(ResolvedRoot {
                     pid,
@@ -141,7 +151,12 @@ fn unique_root(candidates: Vec<ResolvedRoot>) -> Option<ResolvedRoot> {
 
 #[cfg(test)]
 mod tests {
-    use super::{parse_session_record, record_matches, unique_root, ResolvedRoot, SessionRecord};
+    use std::collections::HashMap;
+
+    use super::{
+        parse_session_record, record_matches, resolve_from_ancestry, unique_root, ResolvedRoot,
+        SessionRecord,
+    };
     use crate::process_stat::ProcessStat;
 
     fn process(pid: u32, start_time: u64) -> ProcessStat {
@@ -152,6 +167,52 @@ mod tests {
             cpu_ticks: 26,
             rss_pages: 1234,
         }
+    }
+
+    fn ancestor(pid: u32, ppid: u32, start_time: u64) -> ProcessStat {
+        ProcessStat {
+            pid,
+            ppid,
+            start_time,
+            cpu_ticks: 26,
+            rss_pages: 1234,
+        }
+    }
+
+    fn record(session_id: &str) -> SessionRecord {
+        SessionRecord {
+            pid: 100,
+            session_id: session_id.to_string(),
+            proc_start: 98765,
+        }
+    }
+
+    #[test]
+    fn resolves_root_from_ancestor_with_matching_record() {
+        let stats = HashMap::from([
+            (300, ancestor(300, 200, 3)),
+            (200, ancestor(200, 100, 2)),
+            (100, ancestor(100, 1, 98765)),
+            (1, ancestor(1, 0, 1)),
+        ]);
+        let read_stat = |pid: u32| stats.get(&pid).cloned();
+
+        assert_eq!(
+            resolve_from_ancestry(300, "abc", read_stat, |pid| {
+                (pid == 100).then(|| record("abc"))
+            }),
+            Some(ResolvedRoot {
+                pid: 100,
+                start_time: 98765,
+            })
+        );
+        assert_eq!(
+            resolve_from_ancestry(300, "abc", read_stat, |pid| {
+                (pid == 100).then(|| record("other"))
+            }),
+            None
+        );
+        assert_eq!(resolve_from_ancestry(300, "abc", read_stat, |_| None), None);
     }
 
     #[test]

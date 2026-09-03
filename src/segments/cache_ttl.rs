@@ -196,12 +196,17 @@ fn cold_view(prefix: &str, json: &Value) -> (String, (u8, u8, u8)) {
 
 #[cfg(test)]
 mod tests {
+    use std::fs;
     use std::io::Cursor;
 
+    use serde_json::json;
+
     use super::{
-        gradient, parse_iso8601_utc, read_cache_snapshot_from, COLD_GRADIENT, TTL_1H_SECS,
-        TTL_GRADIENT,
+        gradient, parse_iso8601_utc, read_cache_snapshot_from, CacheTtl, COLD_GRADIENT,
+        TTL_1H_SECS, TTL_5M_SECS, TTL_GRADIENT,
     };
+    use crate::config_schema::Color;
+    use crate::segments::{GitCache, Segment};
 
     #[test]
     fn preserves_ttl_gradient() {
@@ -249,5 +254,69 @@ mod tests {
         let mut reader = Cursor::new(transcript.as_bytes());
 
         assert!(read_cache_snapshot_from(&mut reader).is_none());
+    }
+
+    #[test]
+    fn skips_non_assistant_records() {
+        let transcript = concat!(
+            r#"{"type":"assistant","timestamp":"2026-01-01T00:00:01Z","message":{"usage":{"cache_creation_input_tokens":1,"cache_creation":{"ephemeral_5m_input_tokens":1}}}}"#,
+            "\n",
+            r#"{"type":"user","timestamp":"2026-01-01T00:00:02Z","message":{"usage":{"cache_read_input_tokens":1}}}"#,
+        );
+        let mut reader = Cursor::new(transcript.as_bytes());
+
+        let snapshot = read_cache_snapshot_from(&mut reader).unwrap();
+
+        assert_eq!(
+            snapshot.last_activity,
+            parse_iso8601_utc("2026-01-01T00:00:01Z").unwrap()
+        );
+        assert_eq!(snapshot.ttl_secs, TTL_5M_SECS);
+    }
+
+    #[test]
+    fn returns_none_without_ttl_hint() {
+        let transcript = r#"{"type":"assistant","timestamp":"2026-01-01T00:00:01Z","message":{"usage":{"cache_read_input_tokens":1}}}"#;
+        let mut reader = Cursor::new(transcript.as_bytes());
+
+        assert!(read_cache_snapshot_from(&mut reader).is_none());
+    }
+
+    #[test]
+    fn renders_cold_after_ttl_expiry() {
+        let transcript = std::env::temp_dir().join(format!(
+            "statusline-cache-ttl-test-{}.jsonl",
+            std::process::id()
+        ));
+        fs::write(
+            &transcript,
+            r#"{"type":"assistant","timestamp":"2026-01-01T00:00:00Z","message":{"usage":{"cache_creation_input_tokens":1,"cache_creation":{"ephemeral_5m_input_tokens":1}}}}"#,
+        )
+        .unwrap();
+        let json = json!({
+            "transcript_path": transcript,
+            "context_window": {"used_percentage": 0}
+        });
+        let mut git = GitCache::new(String::new());
+
+        let gradient_segment = CacheTtl {
+            color: Color::Gradient,
+            prefix: "cache ".to_string(),
+        };
+        let named_segment = CacheTtl {
+            color: Color::Named(33),
+            prefix: "cache ".to_string(),
+        };
+
+        assert_eq!(
+            gradient_segment.render(&json, &mut git),
+            Some("\x1b[38;2;120;120;120mcache cold\x1b[0m".to_string())
+        );
+        assert_eq!(
+            named_segment.render(&json, &mut git),
+            Some("\x1b[33mcache cold\x1b[0m".to_string())
+        );
+
+        fs::remove_file(transcript).unwrap();
     }
 }

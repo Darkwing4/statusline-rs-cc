@@ -142,6 +142,8 @@ mod tests {
     use std::io::{self, Cursor, Read, Seek, SeekFrom};
     use std::ops::ControlFlow;
 
+    use serde_json::{json, Value};
+
     use super::{scan_jsonl_records_from_end, BLOCK_SIZE_BYTES};
     use crate::transcript_record_probe::{has_tool_result, has_type};
 
@@ -158,6 +160,40 @@ mod tests {
     #[test]
     fn strips_crlf_delimiters() {
         assert_eq!(collect_lines(b"first\r\nsecond\r\n"), ["second", "first"]);
+    }
+
+    #[test]
+    fn parses_json_records_with_crlf_delimiters() {
+        let mut reader = Cursor::new(b"{\"n\":1}\r\n{\"n\":2}\r\n".to_vec());
+        let mut values = Vec::new();
+
+        let _ = scan_jsonl_records_from_end(&mut reader, |record| {
+            values.push(serde_json::from_reader::<_, Value>(record).unwrap());
+            ControlFlow::<()>::Continue(())
+        })
+        .unwrap();
+
+        assert_eq!(values, [json!({"n": 2}), json!({"n": 1})]);
+    }
+
+    #[test]
+    fn has_type_ignores_key_order_and_non_string_type() {
+        let data = concat!(
+            r#"{"type":5}"#,
+            "\n",
+            r#"{"message":{"content":"x"},"type":"user"}"#,
+            "\n",
+        );
+        let mut reader = Cursor::new(data.as_bytes());
+        let mut matches = Vec::new();
+
+        let _ = scan_jsonl_records_from_end(&mut reader, |record| {
+            matches.push(has_type(record, "user"));
+            ControlFlow::<()>::Continue(())
+        })
+        .unwrap();
+
+        assert_eq!(matches, [true, false]);
     }
 
     #[test]

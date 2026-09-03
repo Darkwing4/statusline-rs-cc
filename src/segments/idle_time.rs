@@ -279,4 +279,27 @@ mod tests {
             parse_iso8601_utc("2026-01-01T00:00:02Z")
         );
     }
+
+    #[test]
+    fn skips_assistant_records() {
+        let transcript = concat!(
+            r#"{"type":"user","timestamp":"2026-01-01T00:00:01Z","message":{"content":"hi"}}"#,
+            "\n",
+            r#"{"type":"assistant","timestamp":"2026-01-01T00:00:02Z","message":{"content":[{"type":"text","text":"reply"}]}}"#,
+        );
+        let mut reader = Cursor::new(transcript.as_bytes());
+
+        assert_eq!(
+            read_last_user_input_timestamp(&mut reader),
+            parse_iso8601_utc("2026-01-01T00:00:01Z")
+        );
+    }
+
+    #[test]
+    fn returns_none_without_user_input() {
+        let transcript = r#"{"type":"user","timestamp":"2026-01-01T00:00:03Z","message":{"content":[{"type":"tool_result","content":"done"}]}}"#;
+        let mut reader = Cursor::new(transcript.as_bytes());
+
+        assert_eq!(read_last_user_input_timestamp(&mut reader), None);
+    }
 }

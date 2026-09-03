@@ -1,30 +1,36 @@
 use std::io::Write;
 use std::path::Path;
-use std::process::{Command, Stdio};
+use std::process::{Command, Output, Stdio};
 
-#[test]
-fn renders_default_statusline_end_to_end() {
+fn render(input: &[u8], columns: Option<&str>) -> Output {
     let fixture_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/full_render");
-    let mut child = Command::new(env!("CARGO_BIN_EXE_statusline"))
+    let mut command = Command::new(env!("CARGO_BIN_EXE_statusline"));
+    command
         .current_dir(&fixture_dir)
-        .env("COLUMNS", "1000")
+        .env_remove("COLUMNS")
         .env("HOME", "fixture-home")
         .env("USERPROFILE", "fixture-home")
         .env("PATH", fixture_dir.join("missing-bin"))
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()
-        .unwrap();
+        .stderr(Stdio::piped());
 
-    child
-        .stdin
-        .take()
-        .unwrap()
-        .write_all(include_bytes!("fixtures/full_render/input.json"))
-        .unwrap();
+    if let Some(columns) = columns {
+        command.env("COLUMNS", columns);
+    }
 
-    let output = child.wait_with_output().unwrap();
+    let mut child = command.spawn().unwrap();
+    child.stdin.take().unwrap().write_all(input).unwrap();
+
+    child.wait_with_output().unwrap()
+}
+
+#[test]
+fn renders_default_statusline_end_to_end() {
+    let output = render(
+        include_bytes!("fixtures/full_render/input.json"),
+        Some("1000"),
+    );
 
     assert!(
         output.status.success(),
@@ -51,4 +57,29 @@ fn renders_default_statusline_end_to_end() {
         )
         .as_bytes()
     );
+}
+
+#[test]
+fn treats_invalid_columns_like_absent_columns() {
+    let input = include_bytes!("fixtures/full_render/input.json");
+    let without_columns = render(input, None);
+
+    for columns in ["abc", "0", " ", "-5"] {
+        let output = render(input, Some(columns));
+
+        assert!(output.status.success(), "COLUMNS={columns:?}");
+        assert!(output.stderr.is_empty(), "COLUMNS={columns:?}");
+        assert_eq!(output.stdout, without_columns.stdout, "COLUMNS={columns:?}");
+    }
+}
+
+#[test]
+fn exits_quietly_on_invalid_input() {
+    for input in [&b""[..], b"not json", b"[1, 2"] {
+        let output = render(input, Some("1000"));
+
+        assert!(output.status.success(), "{input:?}");
+        assert!(output.stdout.is_empty(), "{input:?}");
+        assert!(output.stderr.is_empty(), "{input:?}");
+    }
 }

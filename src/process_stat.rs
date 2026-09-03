@@ -69,7 +69,7 @@ fn parse(body: &str) -> Option<ProcessStat> {
 
 #[cfg(test)]
 mod tests {
-    use super::{parse, read, ProcessStat};
+    use super::{page_size, parse, read, ProcessStat};
 
     fn process(
         pid: u32,
@@ -124,6 +124,11 @@ mod tests {
         let body = format!("77 (claude) {}", fields.join(" "));
 
         assert_eq!(parse(&body), Some(process(77, 42, 98765, 18, 1234)));
+    }
+
+    #[test]
+    fn reads_positive_page_size() {
+        assert!(page_size().is_some_and(|size| size > 0));
     }
 
     #[test]

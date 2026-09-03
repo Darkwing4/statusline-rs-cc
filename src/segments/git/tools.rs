@@ -218,7 +218,7 @@ pub fn is_worktree(git_dir: &Path) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::{is_worktree, parse_status_line, GitStatus};
+    use super::{is_worktree, parse_status_line, GitCache, GitStatus};
     use std::fs;
 
     fn parse(lines: &[&str]) -> GitStatus {
@@ -296,6 +296,18 @@ mod tests {
         assert_eq!(status.modified, 0);
         assert_eq!(status.untracked, 0);
         assert_eq!(status.deleted, 0);
+    }
+
+    #[test]
+    fn reports_failure_outside_repository() {
+        let root = std::env::temp_dir().join(format!("statusline-git-test-{}", std::process::id()));
+        fs::create_dir_all(&root).unwrap();
+        let mut git = GitCache::new(root.to_string_lossy().into_owned());
+
+        assert!(git.status().is_none());
+        assert!(git.error().is_some());
+
+        fs::remove_dir_all(root).unwrap();
     }
 
     #[test]

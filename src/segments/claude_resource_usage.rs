@@ -53,7 +53,25 @@ fn format_usage(cpu_prefix: &str, rss_prefix: &str, usage: &ResourceUsage) -> St
 
 #[cfg(all(test, target_os = "linux"))]
 mod tests {
-    use super::{format_usage, ResourceUsage};
+    use serde_json::json;
+
+    use super::{format_usage, ClaudeResourceUsage, ResourceUsage};
+    use crate::config_schema::Color;
+    use crate::segments::{GitCache, Segment};
+
+    #[test]
+    fn returns_none_without_session_id() {
+        let segment = ClaudeResourceUsage {
+            color: Color::Named(90),
+            cpu_prefix: String::new(),
+            memory_prefix: String::new(),
+        };
+        let mut git = GitCache::new(String::new());
+
+        assert_eq!(segment.render(&json!({}), &mut git), None);
+        assert_eq!(segment.render(&json!({"session_id": ""}), &mut git), None);
+        assert_eq!(segment.render(&json!({"session_id": 42}), &mut git), None);
+    }
 
     #[test]
     fn formats_first_sample_with_rss() {

@@ -224,6 +224,60 @@ mod tests {
     }
 
     #[test]
+    fn collects_duplicate_child_once() {
+        let root = ResolvedRoot {
+            pid: 10,
+            start_time: 100,
+        };
+        let stats = HashMap::from([
+            (10, process(10, 1, 100, 10, 100)),
+            (11, process(11, 10, 110, 20, 200)),
+        ]);
+        let children = HashMap::from([(10, vec![11, 11]), (11, vec![10])]);
+        let mut tree = traverse_process_tree(
+            root,
+            |pid| stats.get(&pid).cloned(),
+            |pid| children.get(&pid).cloned(),
+        )
+        .unwrap();
+        tree.sort_by_key(|entry| entry.pid);
+
+        assert_eq!(
+            tree,
+            vec![process(10, 1, 100, 10, 100), process(11, 10, 110, 20, 200)]
+        );
+    }
+
+    #[test]
+    fn skips_tasks_without_children_list() {
+        let task_children = HashMap::from([((10, 10), vec![12, 11])]);
+
+        assert_eq!(
+            collect_task_children(
+                10,
+                |_| Some(vec![10, 101]),
+                |pid, tid| task_children.get(&(pid, tid)).cloned(),
+            ),
+            Some(vec![11, 12])
+        );
+    }
+
+    #[test]
+    fn rejects_root_with_foreign_start_time() {
+        let root = ResolvedRoot {
+            pid: 10,
+            start_time: 100,
+        };
+        let tree = traverse_process_tree(
+            root,
+            |pid| Some(process(pid, 1, 101, 10, 100)),
+            |_| Some(Vec::new()),
+        );
+
+        assert_eq!(tree, None);
+    }
+
+    #[test]
     fn rejects_root_reuse_during_tree_traversal() {
         let root = ResolvedRoot {
             pid: 10,

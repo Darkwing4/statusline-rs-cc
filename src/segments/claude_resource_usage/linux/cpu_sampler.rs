@@ -204,7 +204,13 @@ fn write_cpu_snapshot(path: &Path, snapshot: &CpuSnapshot) -> Option<()> {
 
 #[cfg(test)]
 mod tests {
-    use super::{cpu_delta_percent, parse_cpu_snapshot, parse_uptime_nanos, CpuSnapshot};
+    use std::fs;
+
+    use super::{
+        cpu_delta_percent, create_secure_directory, effective_uid, parse_cpu_snapshot,
+        parse_uptime_nanos, read_cpu_snapshot, state_file_name, write_cpu_snapshot, CpuSnapshot,
+    };
+    use crate::segments::claude_resource_usage::linux::session_root::ResolvedRoot;
 
     #[test]
     fn computes_cpu_delta_without_capping_multiple_cores() {
@@ -272,6 +278,67 @@ mod tests {
         assert_eq!(parse_uptime_nanos("12.34"), Some(12_340_000_000));
         assert_eq!(parse_uptime_nanos("12.1234567899"), Some(12_123_456_789));
         assert_eq!(parse_uptime_nanos("12.bad"), None);
+    }
+
+    #[test]
+    fn names_state_file_by_root_identity() {
+        let root = ResolvedRoot {
+            pid: 77,
+            start_time: 98765,
+        };
+        let name = state_file_name(root);
+
+        assert_ne!(
+            name,
+            state_file_name(ResolvedRoot {
+                pid: 78,
+                start_time: 98765,
+            })
+        );
+        assert_ne!(
+            name,
+            state_file_name(ResolvedRoot {
+                pid: 77,
+                start_time: 98766,
+            })
+        );
+    }
+
+    #[test]
+    fn round_trips_snapshot_through_state_file() {
+        let directory = create_secure_directory(
+            &std::env::temp_dir(),
+            &format!("statusline-cpu-sampler-test-{}", std::process::id()),
+            effective_uid(),
+        )
+        .unwrap();
+        let path = directory.join("root.state");
+        let first = CpuSnapshot {
+            root_pid: 77,
+            root_start: 98765,
+            cpu_ticks: 350,
+            uptime_nanos: 2_000_000_000,
+        };
+        let second = CpuSnapshot {
+            root_pid: 77,
+            root_start: 98765,
+            cpu_ticks: 400,
+            uptime_nanos: 3_000_000_000,
+        };
+
+        assert_eq!(write_cpu_snapshot(&path, &first), Some(()));
+        assert_eq!(read_cpu_snapshot(&path), Some(first));
+        assert_eq!(write_cpu_snapshot(&path, &second), Some(()));
+        assert_eq!(read_cpu_snapshot(&path), Some(second));
+
+        let entries: Vec<_> = fs::read_dir(&directory)
+            .unwrap()
+            .flatten()
+            .map(|entry| entry.file_name())
+            .collect();
+        assert_eq!(entries, ["root.state"]);
+
+        fs::remove_dir_all(directory).unwrap();
     }
 
     #[test]
