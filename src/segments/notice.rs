@@ -59,7 +59,7 @@ fn now_seconds() -> i64 {
 mod tests {
     use super::NoticeSegment;
     use crate::statusline_notice_store::Notice;
-    use crate::types::Color;
+    use crate::config_schema::Color;
 
     fn segment() -> NoticeSegment {
         NoticeSegment {

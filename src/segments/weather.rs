@@ -78,7 +78,7 @@ fn url_query(format: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::{report_url, Weather};
-    use crate::types::Color;
+    use crate::config_schema::Color;
 
     fn segment(location: &str) -> Weather {
         Weather {

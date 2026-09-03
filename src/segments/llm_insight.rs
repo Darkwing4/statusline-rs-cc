@@ -195,7 +195,7 @@ fn is_recent(path: &Path) -> bool {
 mod tests {
     use super::insight_cache::InsightState;
     use super::LlmInsight;
-    use crate::types::Color;
+    use crate::config_schema::Color;
 
     fn segment(every_turns: usize) -> LlmInsight {
         LlmInsight {

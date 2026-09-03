@@ -149,7 +149,7 @@ fn format_tokens(tokens: u64) -> String {
 #[cfg(test)]
 mod tests {
     use super::{format_tokens, is_stalled, Stats, SubagentStats};
-    use crate::types::Color;
+    use crate::config_schema::Color;
 
     fn sample() -> SubagentStats {
         SubagentStats {

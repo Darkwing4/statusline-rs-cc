@@ -7,7 +7,7 @@ pub enum Color {
     Gradient,
 }
 
-const RESET: &str = "\x1b[0m";
+pub(crate) const RESET: &str = "\x1b[0m";
 
 impl Color {
     pub fn paint(&self, body: &str) -> String {
