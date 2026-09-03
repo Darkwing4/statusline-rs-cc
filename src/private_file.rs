@@ -9,13 +9,6 @@ pub fn write(path: &Path, contents: impl AsRef<[u8]>) -> io::Result<()> {
     file.write_all(contents.as_ref())
 }
 
-pub fn append(path: &Path) -> io::Result<File> {
-    let file = owner_only(OpenOptions::new().append(true).create(true)).open(path)?;
-    restrict(&file)?;
-
-    Ok(file)
-}
-
 #[cfg(unix)]
 const OWNER_ONLY: u32 = 0o600;
 
@@ -46,11 +39,10 @@ fn restrict(_file: &File) -> io::Result<()> {
 #[cfg(all(test, unix))]
 mod tests {
     use std::fs;
-    use std::io::Write;
     use std::os::unix::fs::PermissionsExt;
     use std::path::Path;
 
-    use super::{append, write};
+    use super::write;
 
     fn mode(path: &Path) -> u32 {
         fs::metadata(path).unwrap().permissions().mode() & 0o777
@@ -73,11 +65,6 @@ mod tests {
         write(&path, "two").unwrap();
         assert_eq!(mode(&path), 0o600);
         assert_eq!(fs::read_to_string(&path).unwrap(), "two");
-
-        loosen(&path);
-        writeln!(append(&path).unwrap(), "three").unwrap();
-        assert_eq!(mode(&path), 0o600);
-        assert_eq!(fs::read_to_string(&path).unwrap(), "twothree\n");
 
         fs::remove_dir_all(&dir).unwrap();
     }
