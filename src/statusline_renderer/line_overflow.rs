@@ -1,4 +1,7 @@
+use unicode_width::UnicodeWidthChar;
+
 use crate::ansi::visible_width;
+use crate::segments::single_line_text::ELLIPSIS;
 use crate::types::RESET;
 
 pub(super) fn wrap_words(text: &str, max: usize) -> String {
@@ -6,6 +9,58 @@ pub(super) fn wrap_words(text: &str, max: usize) -> String {
         .map(|line| wrap_line(line, max))
         .collect::<Vec<_>>()
         .join("\n")
+}
+
+pub(super) fn truncate_line(line: &str, max: usize) -> String {
+    if visible_width(line) <= max {
+        return line.to_string();
+    }
+
+    let room = max.saturating_sub(1);
+    let mut kept = String::new();
+    let mut kept_w = 0usize;
+    let mut styles = String::new();
+    let mut chars = line.chars();
+
+    while let Some(ch) = chars.next() {
+        if ch == '\u{1b}' {
+            let escape = read_escape(ch, &mut chars);
+            track_styles(&mut styles, &escape);
+            kept.push_str(&escape);
+            continue;
+        }
+
+        let ch_w = ch.width().unwrap_or(0);
+
+        if kept_w + ch_w > room {
+            break;
+        }
+
+        kept.push(ch);
+        kept_w += ch_w;
+    }
+
+    kept.push(ELLIPSIS);
+
+    if !styles.is_empty() {
+        kept.push_str(RESET);
+    }
+
+    kept
+}
+
+fn read_escape(first: char, chars: &mut std::str::Chars<'_>) -> String {
+    let mut escape = String::from(first);
+
+    for ch in chars.by_ref() {
+        escape.push(ch);
+
+        if ch.is_ascii_alphabetic() {
+            break;
+        }
+    }
+
+    escape
 }
 
 fn wrap_line(line: &str, max: usize) -> String {
@@ -45,8 +100,8 @@ fn wrap_line(line: &str, max: usize) -> String {
     lines.join("\n")
 }
 
-fn track_styles(styles: &mut String, word: &str) {
-    let mut rest = word;
+fn track_styles(styles: &mut String, text: &str) {
+    let mut rest = text;
 
     while let Some(start) = rest.find("\u{1b}[") {
         let sequence = &rest[start..];
@@ -74,11 +129,12 @@ fn is_reset(escape: &str) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::wrap_words;
+    use super::{truncate_line, wrap_words};
 
     #[test]
     fn keeps_a_line_that_fits() {
         assert_eq!(wrap_words("one two", 7), "one two");
+        assert_eq!(truncate_line("one two", 7), "one two");
     }
 
     #[test]
@@ -119,5 +175,24 @@ mod tests {
     #[test]
     fn wraps_each_existing_line_on_its_own() {
         assert_eq!(wrap_words("one two\nthree four", 7), "one two\nthree\nfour");
+    }
+
+    #[test]
+    fn cuts_at_the_limit_and_ends_with_an_ellipsis() {
+        assert_eq!(truncate_line("one two three", 7), "one tw…");
+        assert_eq!(truncate_line("界界界", 5), "界界…");
+        assert_eq!(truncate_line("界界界", 4), "界…");
+    }
+
+    #[test]
+    fn closes_the_colour_after_the_ellipsis() {
+        assert_eq!(
+            truncate_line("\u{1b}[31mone two three\u{1b}[0m", 7),
+            "\u{1b}[31mone tw…\u{1b}[0m"
+        );
+        assert_eq!(
+            truncate_line("\u{1b}[31mred\u{1b}[0m plain text", 6),
+            "\u{1b}[31mred\u{1b}[0m p…"
+        );
     }
 }

@@ -28,10 +28,20 @@ pub(crate) fn json_field<'a>(json: &'a Value, pointer: &str) -> Option<&'a str> 
         .filter(|value| !value.is_empty())
 }
 
+#[derive(Clone, Copy)]
+pub enum Overflow {
+    Wrap,
+    Truncate,
+}
+
 pub trait Segment {
     fn render(&self, json: &Value, git: &mut GitCache) -> Option<String>;
 
     fn standalone(&self) -> bool {
         false
+    }
+
+    fn overflow(&self) -> Overflow {
+        Overflow::Wrap
     }
 }

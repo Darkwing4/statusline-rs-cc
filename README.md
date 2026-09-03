@@ -17,7 +17,7 @@ When the line is wider than the terminal, the renderer wraps it across multiple 
 
 <p><img src="docs/screenshots/wrap.png" alt="multi-line wrap when statusline exceeds terminal width"/></p>
 
-Segments on their own line (`standalone: true`, `LlmMessage`) are folded by words to the same width, with the colour reopened on every wrapped line, so an answer wider than a split-screen terminal is wrapped instead of cut off.
+Segments on their own line (`standalone: true`, `LlmMessage`) are folded by words to the same width, with the colour reopened on every wrapped line, so an answer wider than a split-screen terminal is wrapped instead of cut off. `SessionTask` is the one exception: it stays a single line and is cut at the terminal width with `…`, so `max_chars: 0` lets the prompt run as wide as the window.
 
 Every segment is tweakable from the RON config, and some ship with multiple styles. For example, `RateLimit` has radial dial, bar, and plain percent (plus `BarPercent` / `RadialPercent` which combine a graphic with the number):
 
@@ -298,6 +298,8 @@ SessionTask(
 )
 ```
 
+Inline, `max_chars` keeps it from crowding the main line. On its own line (`standalone: true`) set `max_chars: 0` and the prompt is cut only where the terminal ends.
+
 It scans the transcript backwards and stops at the first `user` record that is a real prompt: tool results, subagent (`isSidechain`) messages, `isMeta` records (slash commands and the skill text they inject), hook output, and `Caveat:` notes are skipped, so `/compact` in the middle of a session does not replace the task with the word `compact`. Nothing is written anywhere — the transcript is the only source, so the segment costs one backward scan of its tail.
 
 With several Claude Code windows open this is the fastest way to tell them apart. Claude Code has no on-disk todo list to read, so this is the prompt, not a checklist step.
@@ -380,7 +382,7 @@ IdleTime(
 )
 ```
 
-Segments receive the raw `serde_json::Value` so they own which input fields they read — only the config fields go through `config_schema.rs`, which `build.rs` uses to reject an invalid config at build time. For git-aware segments take `git: &mut GitCache` and call `git.dir()` / `git.status()` — `git status` is forked at most once per render, shared. For segments that render on their own line below the main one (multi-line debug output), override `fn standalone(&self) -> bool { true }`.
+Segments receive the raw `serde_json::Value` so they own which input fields they read — only the config fields go through `config_schema.rs`, which `build.rs` uses to reject an invalid config at build time. For git-aware segments take `git: &mut GitCache` and call `git.dir()` / `git.status()` — `git status` is forked at most once per render, shared. For segments that render on their own line below the main one (multi-line debug output), override `fn standalone(&self) -> bool { true }`; such a line is wrapped by words unless the segment also overrides `fn overflow(&self) -> Overflow { Overflow::Truncate }`.
 
 <details>
 <summary>source layout</summary>
@@ -394,7 +396,7 @@ src/
 ├── statusline_renderer/
 │   ├── segment_wrapping.rs wraps segments to lines by visible (ANSI-stripped) width
 │   ├── terminal_width.rs   terminal columns via ioctl, COLUMNS, parent process tree
-│   └── word_wrapping.rs    folds a standalone line by words, reopening colour per line
+│   └── line_overflow.rs    folds a standalone line by words or cuts it at the width, reopening colour per line
 ├── statusline_input.rs     reads + parses stdin JSON from Claude Code
 ├── statusline_cache_dir.rs    XDG cache directory used by cross-render caches
 ├── private_file.rs         writes cache files readable by the owner only

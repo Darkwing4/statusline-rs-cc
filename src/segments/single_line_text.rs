@@ -1,6 +1,6 @@
 use crate::ansi::strip_ansi;
 
-const ELLIPSIS: char = '…';
+pub(crate) const ELLIPSIS: char = '…';
 
 pub(super) fn sanitize(text: &str, max_chars: usize) -> String {
     let plain = strip_ansi(text);

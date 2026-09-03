@@ -6,7 +6,7 @@ use serde_json::Value;
 
 pub use crate::config_schema::SessionTask;
 use crate::segments::single_line_text::sanitize;
-use crate::segments::{GitCache, Segment};
+use crate::segments::{GitCache, Overflow, Segment};
 use crate::transcript_record_probe::{has_tool_result, has_type};
 use crate::transcript_tail_reader::{scan_jsonl_records_from_end, JsonlRecord};
 
@@ -28,6 +28,10 @@ impl Segment for SessionTask {
 
     fn standalone(&self) -> bool {
         self.standalone
+    }
+
+    fn overflow(&self) -> Overflow {
+        Overflow::Truncate
     }
 }
 
