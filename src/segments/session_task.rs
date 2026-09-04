@@ -8,9 +8,8 @@ pub use crate::config_schema::SessionTask;
 use crate::segments::single_line_text::sanitize;
 use crate::segments::{GitCache, Overflow, Segment};
 use crate::transcript_record_probe::{has_tool_result, has_type};
+use crate::transcript_spoken_text::{is_conversation_record, spoken_text};
 use crate::transcript_tail_reader::{scan_jsonl_records_from_end, JsonlRecord};
-
-const CAVEAT_PREFIX: &str = "Caveat:";
 
 impl Segment for SessionTask {
     fn render(&self, json: &Value, _git: &mut GitCache) -> Option<String> {
@@ -65,49 +64,18 @@ fn parse_user_prompt(record: &mut dyn JsonlRecord) -> Option<String> {
         return None;
     }
 
-    if row.get("isSidechain").and_then(Value::as_bool) == Some(true) {
+    if !is_conversation_record(&row) {
         return None;
     }
 
-    if row.get("isMeta").and_then(Value::as_bool) == Some(true) {
-        return None;
-    }
-
-    let text = message_text(row.get("message")?.get("content")?)?;
-
-    typed_prompt(&text)
-}
-
-fn message_text(content: &Value) -> Option<String> {
-    match content {
-        Value::String(text) => Some(text.clone()),
-        Value::Array(blocks) => Some(
-            blocks
-                .iter()
-                .filter(|block| block.get("type").and_then(Value::as_str) == Some("text"))
-                .filter_map(|block| block.get("text").and_then(Value::as_str))
-                .collect::<Vec<_>>()
-                .join(" "),
-        ),
-        _ => None,
-    }
-}
-
-fn typed_prompt(text: &str) -> Option<String> {
-    let trimmed = text.trim();
-
-    if trimmed.is_empty() || trimmed.starts_with('<') || trimmed.starts_with(CAVEAT_PREFIX) {
-        return None;
-    }
-
-    Some(trimmed.to_string())
+    spoken_text(row.get("message")?.get("content")?)
 }
 
 #[cfg(test)]
 mod tests {
     use std::io::Cursor;
 
-    use super::{read_last_user_prompt, typed_prompt};
+    use super::read_last_user_prompt;
 
     #[test]
     fn takes_the_latest_prompt_the_user_actually_typed() {
@@ -180,12 +148,36 @@ mod tests {
     }
 
     #[test]
-    fn keeps_only_prompts_a_human_could_have_typed() {
+    fn walks_past_the_marker_left_by_interrupting_a_turn() {
+        let transcript = concat!(
+            r#"{"type":"user","isSidechain":false,"message":{"content":"собери билд"}}"#,
+            "\n",
+            r#"{"type":"user","isSidechain":false,"interruptedMessageId":"msg_1","message":{"content":[{"type":"text","text":"[Request interrupted by user for tool use]"}]}}"#,
+            "\n",
+            r#"{"type":"user","isSidechain":false,"message":{"content":[{"type":"text","text":"[Request interrupted by user]"}]}}"#,
+            "\n",
+        );
+        let mut reader = Cursor::new(transcript.as_bytes());
+
         assert_eq!(
-            typed_prompt("  собери билд  ").as_deref(),
+            read_last_user_prompt(&mut reader).as_deref(),
             Some("собери билд")
         );
-        assert_eq!(typed_prompt("<system-reminder>x</system-reminder>"), None);
-        assert_eq!(typed_prompt("   "), None);
+    }
+
+    #[test]
+    fn walks_past_the_summary_a_compact_writes_as_a_user_record() {
+        let transcript = concat!(
+            r#"{"type":"user","isSidechain":false,"message":{"content":"собери билд"}}"#,
+            "\n",
+            r#"{"type":"user","isSidechain":false,"isCompactSummary":true,"isVisibleInTranscriptOnly":true,"message":{"content":"This session is being continued from a previous conversation that ran out of context."}}"#,
+            "\n",
+        );
+        let mut reader = Cursor::new(transcript.as_bytes());
+
+        assert_eq!(
+            read_last_user_prompt(&mut reader).as_deref(),
+            Some("собери билд")
+        );
     }
 }

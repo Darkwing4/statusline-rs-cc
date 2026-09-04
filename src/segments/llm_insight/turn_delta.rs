@@ -3,10 +3,10 @@ use std::io::Read;
 use serde_json::Value;
 
 use crate::transcript_forward_reader::read_records_forward;
+use crate::transcript_spoken_text::{is_conversation_record, spoken_text};
 
 const USER_MARKER: &str = "user:";
 const ASSISTANT_MARKER: &str = "assistant:";
-const CAVEAT_PREFIX: &str = "Caveat:";
 const MAX_MESSAGE_CHARS: usize = 800;
 
 pub(super) struct Scan {
@@ -24,11 +24,7 @@ pub(super) fn scan_delta<R: Read>(reader: R) -> Scan {
             return;
         };
 
-        if row.get("isSidechain").and_then(Value::as_bool) == Some(true) {
-            return;
-        }
-
-        if row.get("isMeta").and_then(Value::as_bool) == Some(true) {
+        if !is_conversation_record(&row) {
             return;
         }
 
@@ -49,7 +45,7 @@ pub(super) fn scan_delta<R: Read>(reader: R) -> Scan {
                     return;
                 }
 
-                let Some(text) = spoken_text(content) else {
+                let Some(text) = message_line(content) else {
                     return;
                 };
 
@@ -57,7 +53,7 @@ pub(super) fn scan_delta<R: Read>(reader: R) -> Scan {
                 lines.push(format!("{} {}", USER_MARKER, text));
             }
             "assistant" => {
-                if let Some(text) = spoken_text(content) {
+                if let Some(text) = message_line(content) {
                     lines.push(format!("{} {}", ASSISTANT_MARKER, text));
                 }
             }
@@ -92,25 +88,9 @@ fn holds_tool_result(content: &Value) -> bool {
         .any(|block| block.get("type").and_then(Value::as_str) == Some("tool_result"))
 }
 
-fn spoken_text(content: &Value) -> Option<String> {
-    let joined = match content {
-        Value::String(text) => text.clone(),
-        Value::Array(blocks) => blocks
-            .iter()
-            .filter(|block| block.get("type").and_then(Value::as_str) == Some("text"))
-            .filter_map(|block| block.get("text").and_then(Value::as_str))
-            .collect::<Vec<_>>()
-            .join(" "),
-        _ => return None,
-    };
-
-    let trimmed = joined.trim();
-
-    if trimmed.is_empty() || trimmed.starts_with('<') || trimmed.starts_with(CAVEAT_PREFIX) {
-        return None;
-    }
-
-    let collapsed = trimmed.split_whitespace().collect::<Vec<_>>().join(" ");
+fn message_line(content: &Value) -> Option<String> {
+    let text = spoken_text(content)?;
+    let collapsed = text.split_whitespace().collect::<Vec<_>>().join(" ");
 
     Some(keep_head(&collapsed, MAX_MESSAGE_CHARS))
 }
@@ -164,6 +144,23 @@ mod tests {
             r#"{"type":"user","message":{"content":"<system-reminder>x</system-reminder>"}}"#,
             "\n",
             r#"{"type":"user","message":{"content":"настоящий вопрос"}}"#,
+            "\n",
+        );
+
+        let scan = scan_delta(Cursor::new(transcript.as_bytes()));
+
+        assert_eq!(scan.turns, 1);
+        assert_eq!(scan.text, "user: настоящий вопрос");
+    }
+
+    #[test]
+    fn ignores_records_the_harness_wrote_on_the_user_behalf() {
+        let transcript = concat!(
+            r#"{"type":"user","isSidechain":false,"message":{"content":"настоящий вопрос"}}"#,
+            "\n",
+            r#"{"type":"user","isSidechain":false,"interruptedMessageId":"msg_1","message":{"content":[{"type":"text","text":"[Request interrupted by user]"}]}}"#,
+            "\n",
+            r#"{"type":"user","isSidechain":false,"isCompactSummary":true,"isVisibleInTranscriptOnly":true,"message":{"content":"This session is being continued from a previous conversation that ran out of context."}}"#,
             "\n",
         );
 

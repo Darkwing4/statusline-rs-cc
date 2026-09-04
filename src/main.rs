@@ -17,6 +17,7 @@ mod statusline_reminder_store;
 mod statusline_renderer;
 mod transcript_forward_reader;
 mod transcript_record_probe;
+mod transcript_spoken_text;
 mod transcript_tail_reader;
 
 use std::io::{self, Write};
