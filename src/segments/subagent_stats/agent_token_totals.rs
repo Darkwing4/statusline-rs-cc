@@ -28,7 +28,10 @@ pub(super) fn collect(
         collect_transcripts(&root, MAX_SCAN_DEPTH, &mut transcripts);
     }
 
-    let last_written_at = transcripts.iter().filter_map(|entry| entry.modified_at).max();
+    let last_written_at = transcripts
+        .iter()
+        .filter_map(|entry| entry.modified_at)
+        .max();
     let count = transcripts.len();
 
     if !count_tokens {
