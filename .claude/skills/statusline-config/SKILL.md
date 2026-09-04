@@ -109,6 +109,7 @@ IdleTime(
 Model(
     color: Rgb(180, 142, 173),
     prefix: "",              // model display name, falls back to model id
+    replacements: [],        // optional literal (search, replace) pairs applied in order
 )
 
 RateLimit(

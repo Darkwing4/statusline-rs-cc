@@ -145,6 +145,23 @@ The whole config is an external [RON](https://github.com/ron-rs/ron) file at [`c
 Reorder, drop, or re-colour by editing the list, then rebuild. `Color` variants: `Named(code)` for ANSI 30–37 / 90–97, `Rgb(r, g, b)` for truecolor, `Gradient` (meaningful on `Context`, `CacheTtl`, and `RateLimit` when `color_mode: Gradient`).
 `RateLimit.gradient_midpoint_percentage` places `mid_color` within the gradient and must be greater than `0` and less than `100`; existing configs without the field use `50.0`.
 
+### Shortening the model name
+
+`Model.replacements` is an optional list of literal `(search, replace)` pairs applied in order to the model name before it is coloured:
+
+```ron
+Model(
+    color: Rgb(180, 142, 173),
+    prefix: "",
+    replacements: [
+        ("Opus 5 (1M context)", "Opus"),
+        (" (1M context)", ""),
+    ],
+)
+```
+
+Substring matches, no regex. The search string must not be empty. Existing configs without the field replace nothing, and the segment hides itself if the replacements leave an empty name.
+
 ### Linux resource usage
 
 `ClaudeResourceUsage` is an opt-in Linux-only segment:

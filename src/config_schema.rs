@@ -56,6 +56,23 @@ pub struct Effort {
 pub struct Model {
     pub color: Color,
     pub prefix: String,
+    #[serde(default, deserialize_with = "deserialize_replacements")]
+    pub replacements: Vec<(String, String)>,
+}
+
+fn deserialize_replacements<'de, D>(deserializer: D) -> Result<Vec<(String, String)>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let pairs = Vec::<(String, String)>::deserialize(deserializer)?;
+
+    if pairs.iter().any(|(from, _)| from.is_empty()) {
+        return Err(serde::de::Error::custom(
+            "model replacements must not search for an empty string",
+        ));
+    }
+
+    Ok(pairs)
 }
 
 #[derive(Deserialize)]
@@ -215,6 +232,36 @@ mod tests {
             separator: " ",
             separator_color: Named(90),
             segments: [Unknown()],
+        )"#;
+
+        assert!(parse(body).is_err());
+    }
+
+    #[test]
+    fn parses_model_replacements() {
+        let body = r#"(
+            separator: " ",
+            separator_color: Named(90),
+            segments: [Model(
+                color: Named(36),
+                prefix: "",
+                replacements: [("Opus 5 (1M context)", "Opus")],
+            )],
+        )"#;
+
+        assert!(parse(body).is_ok());
+    }
+
+    #[test]
+    fn rejects_model_replacement_with_empty_search() {
+        let body = r#"(
+            separator: " ",
+            separator_color: Named(90),
+            segments: [Model(
+                color: Named(36),
+                prefix: "",
+                replacements: [("", "Opus")],
+            )],
         )"#;
 
         assert!(parse(body).is_err());
