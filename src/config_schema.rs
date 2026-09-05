@@ -7,7 +7,7 @@ pub enum Color {
     Gradient,
 }
 
-const RESET: &str = "\x1b[0m";
+pub(crate) const RESET: &str = "\x1b[0m";
 
 impl Color {
     pub fn paint(&self, body: &str) -> String {
@@ -104,6 +104,79 @@ pub struct IdleTime {
     pub threshold_seconds: u64,
 }
 
+#[derive(Deserialize)]
+pub struct SubagentStats {
+    pub color: Color,
+    pub active_color: Color,
+    pub stall_color: Color,
+    pub prefix: String,
+    pub stall_marker: String,
+    pub stall_seconds: u64,
+    pub show_tokens: bool,
+}
+
+#[derive(Deserialize)]
+pub struct LlmMessage {
+    pub color: Color,
+    pub prefix: String,
+    pub command: String,
+    pub args: Vec<String>,
+    pub prompt: String,
+    pub ttl_seconds: u64,
+    pub max_chars: usize,
+}
+
+#[derive(Deserialize)]
+pub struct Notice {
+    pub color: Color,
+    pub prefix: String,
+    pub max_chars: usize,
+    pub show_remaining: bool,
+    pub standalone: bool,
+}
+
+#[derive(Deserialize)]
+pub struct SessionTask {
+    pub color: Color,
+    pub prefix: String,
+    pub max_chars: usize,
+    pub standalone: bool,
+}
+
+#[derive(Deserialize)]
+pub struct Reminder {
+    pub color: Color,
+    pub prefix: String,
+    pub separator: String,
+    pub max_chars: usize,
+    pub standalone: bool,
+}
+
+#[derive(Deserialize)]
+pub struct LlmInsight {
+    pub color: Color,
+    pub prefix: String,
+    pub command: String,
+    pub args: Vec<String>,
+    pub prompt: String,
+    pub every_turns: usize,
+    pub scan_whole_session: bool,
+    pub initial_scan_bytes: u64,
+    pub context_chars: usize,
+    pub max_chars: usize,
+    pub standalone: bool,
+}
+
+#[derive(Deserialize)]
+pub struct Weather {
+    pub color: Color,
+    pub prefix: String,
+    pub location: String,
+    pub format: String,
+    pub ttl_seconds: u64,
+    pub max_chars: usize,
+}
+
 #[derive(Clone, Copy, Deserialize)]
 pub enum Window {
     FiveHour,
@@ -177,8 +250,15 @@ pub enum SegmentSpec {
     GitDiff(GitDiff),
     GitError(GitError),
     IdleTime(IdleTime),
+    LlmInsight(LlmInsight),
+    LlmMessage(LlmMessage),
     Model(Model),
+    Notice(Notice),
     RateLimit(RateLimit),
+    Reminder(Reminder),
+    SessionTask(SessionTask),
+    SubagentStats(SubagentStats),
+    Weather(Weather),
 }
 
 #[derive(Deserialize)]

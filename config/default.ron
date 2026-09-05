@@ -43,6 +43,29 @@
             mid_color: Rgb(195, 179, 100),
             high_color: Rgb(220, 60, 60),
         ),
+        SubagentStats(
+            color: Named(90),
+            active_color: Rgb(150, 200, 100),
+            stall_color: Rgb(220, 60, 60),
+            prefix: "agents ",
+            stall_marker: "!",
+            stall_seconds: 120,
+            show_tokens: true,
+        ),
+        Reminder(
+            color: Rgb(230, 180, 80),
+            prefix: "\u{23F0} ",
+            separator: " \u{B7} ",
+            max_chars: 80,
+            standalone: false,
+        ),
+        Notice(
+            color: Named(93),
+            prefix: "\u{1F4CC} ",
+            max_chars: 120,
+            show_remaining: true,
+            standalone: true,
+        ),
         Cwd(
             color: Rgb(95, 175, 175),
         ),
@@ -61,6 +84,12 @@
         GitError(
             color: Named(91),
             text: "no git",
+        ),
+        SessionTask(
+            color: Named(90),
+            prefix: "\u{BB} ",
+            max_chars: 48,
+            standalone: false,
         ),
     ],
 )

@@ -1,13 +1,15 @@
+mod line_overflow;
 mod segment_wrapping;
 mod terminal_width;
 
 use serde_json::Value;
 
+use self::line_overflow::{truncate_line, wrap_words};
 use self::segment_wrapping::wrap_segments;
 use self::terminal_width::terminal_width;
 
 use crate::config_schema::Color;
-use crate::segments::{GitCache, Segment};
+use crate::segments::{GitCache, Overflow, Segment};
 use crate::statusline_input;
 
 pub struct Renderer {
@@ -22,7 +24,7 @@ impl Renderer {
         let mut git = GitCache::new(cwd);
 
         let mut main_parts: Vec<String> = Vec::new();
-        let mut tail_lines: Vec<String> = Vec::new();
+        let mut tail_lines: Vec<(String, Overflow)> = Vec::new();
 
         for segment in &self.segments {
             let Some(rendered) = segment.render(json, &mut git) else {
@@ -34,24 +36,32 @@ impl Renderer {
             }
 
             if segment.standalone() {
-                tail_lines.push(rendered);
+                tail_lines.push((rendered, segment.overflow()));
             } else {
                 main_parts.push(rendered);
             }
         }
 
         let sep = self.separator_color.paint(&self.separator);
-
-        let wrap_width = terminal_width()
+        let width = terminal_width()
             .map(|cols| cols.saturating_sub(4))
-            .filter(|&max| max > 0);
-        let main_block = match wrap_width {
+            .filter(|max| *max > 0);
+
+        let main_block = match width {
             Some(max) => wrap_segments(&main_parts, &sep, max),
             None => main_parts.join(&sep),
         };
 
         let mut lines = vec![main_block];
-        lines.extend(tail_lines);
+
+        for (line, overflow) in tail_lines {
+            lines.push(match (width, overflow) {
+                (Some(max), Overflow::Wrap) => wrap_words(&line, max),
+                (Some(max), Overflow::Truncate) => truncate_line(&line, max),
+                (None, _) => line,
+            });
+        }
+
         lines.join("\n")
     }
 }
