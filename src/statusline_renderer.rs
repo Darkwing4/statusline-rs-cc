@@ -71,6 +71,7 @@ mod tests {
     use serde_json::Value;
 
     use super::Renderer;
+    use crate::ansi::visible_width;
     use crate::config_schema::Color;
     use crate::segments::spacer::Spacer;
     use crate::segments::{GitCache, Segment};
@@ -157,8 +158,10 @@ mod tests {
 
         assert_eq!(lines.len(), 4);
         assert_eq!(lines[0], "main");
-        assert!(lines[1].trim().is_empty());
-        assert!(lines[2].trim().is_empty());
+        assert_eq!(visible_width(lines[1]), 0);
+        assert_eq!(visible_width(lines[2]), 0);
+        assert!(!lines[1].is_empty());
+        assert!(!lines[2].is_empty());
         assert_eq!(lines[3], "below");
     }
 

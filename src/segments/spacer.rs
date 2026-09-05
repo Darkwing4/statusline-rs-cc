@@ -3,7 +3,7 @@ use serde_json::Value;
 pub use crate::config_schema::Spacer;
 use crate::segments::{GitCache, Segment};
 
-const BLANK: &str = " ";
+const BLANK: &str = "\u{2060}";
 
 impl Segment for Spacer {
     fn render(&self, _json: &Value, _git: &mut GitCache) -> Option<String> {
@@ -19,7 +19,8 @@ impl Segment for Spacer {
 mod tests {
     use serde_json::json;
 
-    use super::Spacer;
+    use super::{Spacer, BLANK};
+    use crate::ansi::visible_width;
     use crate::segments::{GitCache, Segment};
 
     fn render(standalone: bool) -> (Option<String>, bool) {
@@ -30,10 +31,13 @@ mod tests {
     }
 
     #[test]
-    fn renders_blank_text_the_renderer_keeps() {
+    fn renders_text_that_takes_no_space_and_survives_trimming() {
         let (rendered, _) = render(false);
 
-        assert_eq!(rendered.as_deref(), Some(" "));
+        assert_eq!(rendered.as_deref(), Some(BLANK));
+        assert_eq!(visible_width(BLANK), 0);
+        assert!(!BLANK.trim().is_empty());
+        assert!(!BLANK.split_whitespace().collect::<String>().is_empty());
     }
 
     #[test]
