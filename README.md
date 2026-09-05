@@ -17,7 +17,7 @@ When the line is wider than the terminal, the renderer wraps it across multiple 
 
 <p><img src="docs/screenshots/wrap.png" alt="multi-line wrap when statusline exceeds terminal width"/></p>
 
-Segments on their own line (`standalone: true`, `LlmMessage`) are folded by words to the same width, with the colour reopened on every wrapped line, so an answer wider than a split-screen terminal is wrapped instead of cut off. `SessionTask` is the one exception: it stays a single line and is cut at the terminal width with `…`, so `max_chars: 0` lets the prompt run as wide as the window.
+Segments on their own line (`standalone: true`, `LlmAnswer`) are folded by words to the same width, with the colour reopened on every wrapped line, so an answer wider than a split-screen terminal is wrapped instead of cut off. `MyLastPrompt` is the one exception: it stays a single line and is cut at the terminal width with `…`, so `max_chars: 0` lets the prompt run as wide as the window.
 
 Every segment is tweakable from the RON config, and some ship with multiple styles. For example, `RateLimit` has radial dial, bar, and plain percent (plus `BarPercent` / `RadialPercent` which combine a graphic with the number):
 
@@ -99,81 +99,25 @@ The whole config is an external [RON](https://github.com/ron-rs/ron) file at [`c
     separator: " ",
     separator_color: Named(90),
     segments: [
-        Model(
-            color: Rgb(180, 142, 173),
-            prefix: "",
-        ),
-        Effort(
-            color: Named(90),
-            prefix: "",
-        ),
-        Context(
+        Model(color: Rgb(180, 142, 173), prefix: "", replacements: []),
+        ContextUsage(
             color: Gradient,
             prefix: "", prefix_color: Rgb(180, 142, 173),
             suffix: "", suffix_color: Rgb(180, 142, 173),
         ),
-        CacheTtl(color: Gradient, prefix: "cache "),
-        RateLimit(
-            window: FiveHour, style: Bar, fill: Remaining, color_mode: Gradient,
-            gradient_midpoint_percentage: 50.0,
-            prefix: "5h ",
-            low_color:  Rgb(103, 175, 103),
-            mid_color:  Rgb(195, 179, 100),
-            high_color: Rgb(220,  60,  60),
-        ),
-        RateLimit(
-            window: SevenDay, style: Bar, fill: Remaining, color_mode: Gradient,
-            gradient_midpoint_percentage: 50.0,
-            prefix: "7d ",
-            low_color:  Rgb(103, 175, 103),
-            mid_color:  Rgb(195, 179, 100),
-            high_color: Rgb(220,  60,  60),
-        ),
-        SubagentStats(
-            color: Named(90),
-            active_color: Rgb(150, 200, 100),
-            stall_color: Rgb(220, 60, 60),
-            prefix: "agents ",
-            stall_marker: "!",
-            stall_seconds: 120,
-            show_tokens: true,
-        ),
-        Reminder(
-            color: Rgb(230, 180, 80),
-            prefix: "\u{23F0} ",
-            separator: " \u{B7} ",
-            max_chars: 80,
-            standalone: false,
-        ),
-        Notice(
-            color: Named(93),
-            prefix: "\u{1F4CC} ",
-            max_chars: 120,
-            show_remaining: true,
-            standalone: true,
-        ),
+        Spacer(standalone: false),
         Cwd(color: Rgb(95, 175, 175)),
         GitBranch(
             color: Named(32), state_color: Named(91),
             show_worktree: true, show_ahead_behind: true, show_state: true,
         ),
-        GitDiff(
-            modified_color:  Named(33),
-            untracked_color: Named(32),
-            deleted_color:   Named(31),
-        ),
-        GitError(color: Named(91), text: "no git"),
-        SessionTask(
-            color: Named(90),
-            prefix: "\u{BB} ",
-            max_chars: 48,
-            standalone: false,
-        ),
     ],
 )
 ```
 
-Reorder, drop, or re-colour by editing the list, then rebuild. `Color` variants: `Named(code)` for ANSI 30–37 / 90–97, `Rgb(r, g, b)` for truecolor, `Gradient` (meaningful on `Context`, `CacheTtl`, and `RateLimit` when `color_mode: Gradient`).
+Every segment is one file under [`src/segments/`](src/segments/) and one struct in [`src/config_schema.rs`](src/config_schema.rs), pitched there in a single line — that struct list is the catalogue of what exists, and its fields are the options each segment takes. [`config/default.ron`](config/default.ron) is a working example of most of them, and the [statusline builder](https://darkwing4.github.io/statusline-rs-cc/) assembles a line by dragging instead of typing.
+
+Reorder, drop, or re-colour by editing the list, then rebuild. `Color` variants: `Named(code)` for ANSI 30–37 / 90–97, `Rgb(r, g, b)` for truecolor, `Gradient` (meaningful on `ContextUsage`, `PromptCacheTtl`, and `RateLimit` when `color_mode: Gradient`).
 `RateLimit.gradient_midpoint_percentage` places `mid_color` within the gradient and must be greater than `0` and less than `100`; existing configs without the field use `50.0`.
 
 ### Shortening the model name
@@ -203,21 +147,9 @@ A launch is a `tool_use` block named `Agent` in the main thread; it finishes on 
 
 Both scans are incremental — a cache under `$XDG_CACHE_HOME/statusline` (or `~/.cache/statusline`) keeps the byte offset reached in every transcript, so each render only parses what was appended since the previous one. A truncated or rewritten transcript resets its offset. On a 4 MB transcript with 4 MB of subagent transcripts the first render costs ~31 ms and later ones ~11 ms.
 
-### LLM message
+### LLM answer
 
-`LlmMessage` runs any command that prints text and renders its last non-empty output line on its own line below the main one:
-
-```ron
-LlmMessage(
-    color: Rgb(150, 140, 120),
-    prefix: "» ",
-    command: "codex",
-    args: ["exec", "--skip-git-repo-check", "-s", "read-only", "-c", "approval_policy=never", "-c", "model_reasoning_effort=low"],
-    prompt: "One short motivational line. Text only, no quotes, no explanation.",
-    ttl_seconds: 900,
-    max_chars: 90,
-)
-```
+`LlmAnswer` runs any command that prints text and renders its last non-empty output line on its own line below the main one.
 
 The worker runs the command in an empty `workdir` under the cache directory, never in the project, and its stdout is the only thing taken from it. An agent CLI still has to be told to stay a text model — for `codex` that is `-s read-only -c approval_policy=never` — because whatever it reads on stdin is a prompt-injection path into everything it is allowed to touch. Files the worker writes are created readable by the owner only.
 
@@ -231,22 +163,6 @@ Output is treated as untrusted: ANSI escapes and control characters are stripped
 
 `LlmInsight` is the open slot: you write the prompt, you decide how often it runs. Every `every_turns` prompts in the session it hands the model its own previous answer plus the conversation since then, and renders the one line that comes back.
 
-```ron
-LlmInsight(
-    color: Rgb(150, 190, 150),
-    prefix: "\u{1F3AF} ",
-    command: "codex",
-    args: ["exec", "--skip-git-repo-check", "-s", "read-only", "-c", "approval_policy=never", "-m", "gpt-5.6-sol", "-c", "model_reasoning_effort=low"],
-    prompt: "One short sentence: what the user is after and what is being done for it.",
-    every_turns: 2,
-    scan_whole_session: true,
-    initial_scan_bytes: 262144,
-    context_chars: 12000,
-    max_chars: 128,
-    standalone: true,
-)
-```
-
 The stdin the command receives has five parts: your `prompt`, a `[hard limit]` line, `[your previous answer]`, `[conversation so far, oldest first]`, and `[new since your previous answer]`. The hard limit repeats `max_chars` back to the model and tells it to fit the whole thought inside it, contracting a word or two (`сокр-я`) when that is all it takes, so it packs the answer instead of getting cut off — keep the character count out of your own `prompt` and let this line carry it. The context window is the newest `context_chars` characters of the session's user and assistant text and is never cleared, so the model can see what has already been done and does not suggest it again; the fresh part holds only what arrived since its last answer and is cleared after each run. Tool results, subagent traffic, and records Claude Code marks as `isMeta` — slash-command wrappers and the skill documents they pull in — are left out of both, and a single message is cut at 800 characters so one pasted wall of text cannot push the real conversation out of the window.
 
 How much history the window starts from is separate from how often the command runs. `scan_whole_session: true` reads the transcript from its first byte on the first render of a session; with `false` it starts `initial_scan_bytes` before the end. Either way the scan is one-off — every later render resumes at the byte offset it stopped at. Reading a 3.4 MB transcript whole cost 69 ms once and 9 ms per render afterwards.
@@ -257,36 +173,15 @@ A run is skipped while a previous worker is still starting (30 s guard) and when
 
 ### Weather
 
-`Weather` renders a [wttr.in](https://wttr.in) one-liner such as `🌦️ +27°C` through the same background refresh as `LlmMessage`:
-
-```ron
-Weather(
-    color: Rgb(120, 170, 200),
-    prefix: "",
-    location: "",
-    format: "%c+%t",
-    ttl_seconds: 1800,
-    max_chars: 24,
-)
-```
+`Weather` renders a [wttr.in](https://wttr.in) one-liner such as `🌦️ +27°C` through the same background refresh as `LlmAnswer`.
 
 `location` is a fallback: the city is taken from the system timezone first — `TZ`, then `/etc/timezone`, then the `/etc/localtime` symlink — so `Asia/Bangkok` becomes `Bangkok`. Timezones that name no city (`UTC`) and systems without either file fall back to the configured `location`; leave both empty and wttr.in resolves the location by IP. `format` is passed to wttr.in as-is (`%c` condition, `%t` temperature, `%l` location, `%w` wind).
 
 The request is `curl -s --max-time 10`, so no HTTP client is linked into the binary. Location and format are filtered before they reach the URL — path characters outside letters, digits, spaces, `-_,.` are dropped and `&#?` in the format are percent-encoded. Also opt-in.
 
-### Notice
+### Session notice
 
-`Notice` renders a message written from outside the render — a reminder, a hand-off note, whatever Claude Code (or a hook, or a cron job) put there:
-
-```ron
-Notice(
-    color: Named(93),
-    prefix: "\u{1F4CC} ",
-    max_chars: 120,
-    show_remaining: true,
-    standalone: true,
-)
-```
+`SessionNotice` renders a message written from outside the render — a reminder, a hand-off note, whatever Claude Code (or a hook, or a cron job) put there.
 
 The binary itself is the write side:
 
@@ -302,18 +197,9 @@ Notices are per session. The session id comes from `--session <id>` or, when it 
 
 The text is stored as JSON in the cache directory (`notice-<session>.json`), written through a temp file and a rename so a render never sees half a notice. It is treated as untrusted on the way out: ANSI escapes and control characters are stripped, whitespace is collapsed, and it is cut to `max_chars`. Set `standalone: false` to render it inline among the other segments instead of on its own line.
 
-### Session task
+### My last prompt
 
-`SessionTask` shows what this window was last asked to do — the latest prompt the user actually typed:
-
-```ron
-SessionTask(
-    color: Named(90),
-    prefix: "\u{BB} ",
-    max_chars: 48,
-    standalone: false,
-)
-```
+`MyLastPrompt` shows what this window was last asked to do — the latest prompt the user actually typed.
 
 Inline, `max_chars` keeps it from crowding the main line. On its own line (`standalone: true`) set `max_chars: 0` and the prompt is cut only where the terminal ends.
 
@@ -323,17 +209,7 @@ With several Claude Code windows open this is the fastest way to tell them apart
 
 ### Reminders
 
-`Reminder` holds messages that are written now and shown later, across every session on the machine:
-
-```ron
-Reminder(
-    color: Rgb(230, 180, 80),
-    prefix: "\u{23F0} ",
-    separator: " \u{B7} ",
-    max_chars: 80,
-    standalone: false,
-)
-```
+`Reminder` holds messages that are written now and shown later, across every session on the machine.
 
 ```sh
 statusline --remind "созвон" --in 30m           # shows up in 30 minutes, stays an hour
@@ -342,25 +218,13 @@ statusline --remind-clear                       # drop the ones already on scree
 statusline --remind-clear --all                 # drop the pending ones too
 ```
 
-`--in` and `--for` take `45s`, `30m`, `2h`, `1d`, or a bare number of seconds; `--for` defaults to an hour and counts from the moment the reminder fires. Reminders live in one machine-wide `reminders.json` — unlike `Notice` they are not tied to a session, so a reminder written in one Claude Code window appears in all of them. Everything due at once is joined with `separator` behind a single `prefix`; expired entries are dropped on the next render.
+`--in` and `--for` take `45s`, `30m`, `2h`, `1d`, or a bare number of seconds; `--for` defaults to an hour and counts from the moment the reminder fires. Reminders live in one machine-wide `reminders.json` — unlike `SessionNotice` they are not tied to a session, so a reminder written in one Claude Code window appears in all of them. Everything due at once is joined with `separator` behind a single `prefix`; expired entries are dropped on the next render.
 
 There is no timer and no daemon: a reminder is a timestamp on disk, and every render compares it to the clock. It therefore appears on the first render after its time — set `statusLine.refreshInterval` in Claude Code settings if you want that to happen without touching the keyboard.
 
-### Spacer
-
-`Spacer` renders nothing but a blank. With `standalone: true` it takes a line of its own, so every one of them is an empty line below the status line — put two in the list and two empty lines separate the status line from the prompt:
-
-```ron
-Spacer(
-    standalone: true,
-),
-```
-
-With `standalone: false` it is an extra gap between two neighbours on the main line. It has no colour and no text, reads no input, and never hides itself.
-
 ### Failed-command hook
 
-The binary can also be a hook. Point Claude Code's `PostToolUse` at it and a failed shell command lands in the status line as a `Notice`:
+The binary can also be a hook. Point Claude Code's `PostToolUse` at it and a failed shell command lands in the status line as a `SessionNotice`:
 
 ```json
 "PostToolUse": [
@@ -379,15 +243,7 @@ It only ever removes a notice it wrote itself — notices written by `--notice` 
 
 ### Linux resource usage
 
-`ClaudeResourceUsage` is an opt-in Linux-only segment:
-
-```ron
-ClaudeResourceUsage(
-    color: Named(90),
-    cpu_prefix: "CPU ",
-    memory_prefix: "RSS ",
-)
-```
+`ClaudeResourceUsage` is an opt-in Linux-only segment.
 
 It validates `session_id` against Claude Code's local session registry instead of guessing by working directory. If no matching live process exists, or on macOS and Windows, it emits nothing. CPU is shown in logical-core equivalents, so `1.00c` means one fully used core. RSS is the summed resident set size of the Claude process tree and is displayed in MiB. The first CPU sample is shown as `—` because no previous sample exists.
 
@@ -397,14 +253,16 @@ Set `statusLine.refreshInterval` to `1` in Claude Code settings for periodic liv
 
 Declare the segment's config fields in `src/config_schema.rs` and add a `SegmentSpec` variant for them, define the logic in `src/segments/*.rs` (re-export the schema struct and `impl Segment` for it), register the module in `src/segments.rs`, map the variant in `src/config.rs`, add the segment to `config/default.ron`, then build.
 
-`IdleTime` is the concrete extension example, added in [`fac22e1`](https://github.com/Darkwing4/statusline-rs-cc/commit/fac22e1c1b04822b332c00268305bfc9224547b1). It reads `transcript_path`, ignores tool-result messages, finds the latest real user input timestamp, and renders values like `idle 42s`, `idle 3m12s`, or `idle 1h0m`.
+The config struct carries a single `///` line saying what the segment shows — that line is the segment's entry in the catalogue, so nothing has to be added to this page for a new segment to be documented.
 
-To make `IdleTime` tick without new Claude events, opt in with `statusLine.refreshInterval` in Claude Code settings.
+`UserIdleTime` is the concrete extension example, added in [`fac22e1`](https://github.com/Darkwing4/statusline-rs-cc/commit/fac22e1c1b04822b332c00268305bfc9224547b1). It reads `transcript_path`, ignores tool-result messages, finds the latest real user input timestamp, and renders values like `idle 42s`, `idle 3m12s`, or `idle 1h0m`.
 
-Register it with `pub mod idle_time;` in `src/segments.rs`, then add it to `config/default.ron`:
+To make `UserIdleTime` tick without new Claude events, opt in with `statusLine.refreshInterval` in Claude Code settings.
+
+Register it with `pub mod user_idle_time;` in `src/segments.rs`, then add it to `config/default.ron`:
 
 ```ron
-IdleTime(
+UserIdleTime(
     color: Named(90),
     prefix: "idle ",
     threshold_seconds: 0,
@@ -436,37 +294,10 @@ src/
 ├── transcript_tail_reader.rs  scans transcript JSONL backwards in 64 KB blocks
 ├── transcript_forward_reader.rs  scans transcript JSONL forward, record by record
 ├── types.rs / types/       shared types (Color, RESET)
-└── segments/
-    ├── model.rs            current model name
-    ├── effort.rs           current reasoning effort level
-    ├── context.rs          context window % with gradient
-    ├── cwd.rs              shortened cwd
-    ├── idle_time.rs        time since last real user input
-    ├── claude_resource_usage.rs  opt-in Linux process-tree CPU/RSS
-    ├── background_command.rs   detached refresh worker + TTL cache shared by the two below
-    ├── llm_message.rs      opt-in background command output, cached by TTL
-    ├── llm_insight.rs      opt-in per-session prompt run every N turns on the chat delta
-    ├── llm_insight/
-    │   ├── turn_delta.rs      counts real prompts and collects the text added since last run
-    │   └── insight_cache.rs   scan offset, pending delta, and the paths a worker writes to
-    ├── weather.rs          opt-in wttr.in line, city from the system timezone
-    ├── notice.rs           message written by `statusline --notice`, expires by TTL
-    ├── reminder.rs         reminders that are due, written by `statusline --remind`
-    ├── session_task.rs     latest real user prompt, scanned from the transcript tail
-    ├── spacer.rs           blank gap on the main line, blank line when standalone
+└── segments/            one file per segment, each pitched in one line in config_schema.rs
+    ├── background_command.rs   detached refresh worker + TTL cache shared by the command-driven ones
     ├── single_line_text.rs ANSI/control stripping + truncation for untrusted text
-    ├── duration_format.rs  1h02m / 4m12s / 5s durations
-    ├── weather/
-    │   └── system_location.rs  city name out of TZ / /etc/timezone / /etc/localtime
-    ├── subagent_stats.rs   active/launched subagents, age, token totals
-    ├── subagent_stats/
-    │   ├── agent_lifecycle.rs     Agent launches and completions in the main transcript
-    │   ├── agent_token_totals.rs  token sums over the subagent transcripts
-    │   └── session_cache.rs       scan offsets carried between renders
-    ├── git/
-    │   ├── tools.rs        GitCache shared by branch + diff (one git status fork)
-    │   ├── branch.rs       branch name, worktree marker, state, ahead/behind
-    │   └── diff.rs         ~N +N -N counts
+    ├── git/                GitCache shared by branch + diff (one git status fork)
     └── debug/              gated behind cfg(debug_assertions), see Debug below
 ```
 
