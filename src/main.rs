@@ -7,6 +7,7 @@ mod iso8601;
 #[cfg(target_os = "linux")]
 mod private_file;
 mod process_stat;
+mod segment_catalog;
 mod segments;
 mod statusline_cache_dir;
 mod statusline_cli;
@@ -21,6 +22,7 @@ mod transcript_spoken_text;
 mod transcript_tail_reader;
 
 use std::io::{self, Write};
+use std::path::Path;
 use std::process::ExitCode;
 
 use statusline_cli::Command;
@@ -36,7 +38,9 @@ fn main() -> ExitCode {
     };
 
     match command {
-        Command::Render => render(),
+        Command::Render { config_path } => render(config_path.as_deref()),
+        Command::CheckConfig { path } => check_config(&path),
+        Command::Schema => print_schema(),
         Command::Refresh {
             fingerprint,
             request_base,
@@ -58,11 +62,16 @@ fn main() -> ExitCode {
     }
 }
 
-fn render() -> ExitCode {
-    let cfg = match config::load_embedded() {
+fn render(config_path: Option<&Path>) -> ExitCode {
+    let loaded = match config_path {
+        Some(path) => config::load_path(path),
+        None => config::load_default(),
+    };
+
+    let cfg = match loaded {
         Ok(c) => c,
         Err(e) => {
-            eprintln!("statusline: config parse error: {}", e);
+            eprintln!("statusline: {}", e);
             return ExitCode::FAILURE;
         }
     };
@@ -80,4 +89,27 @@ fn render() -> ExitCode {
     let line = renderer.render(&json);
     let _ = io::stdout().lock().write_all(line.as_bytes());
     ExitCode::SUCCESS
+}
+
+fn check_config(path: &Path) -> ExitCode {
+    match config::load_path(path) {
+        Ok(_) => ExitCode::SUCCESS,
+        Err(e) => {
+            eprintln!("statusline: {}", e);
+            ExitCode::FAILURE
+        }
+    }
+}
+
+fn print_schema() -> ExitCode {
+    match segment_catalog::to_json() {
+        Ok(json) => {
+            let _ = writeln!(io::stdout().lock(), "{}", json);
+            ExitCode::SUCCESS
+        }
+        Err(message) => {
+            eprintln!("statusline: {}", message);
+            ExitCode::FAILURE
+        }
+    }
 }

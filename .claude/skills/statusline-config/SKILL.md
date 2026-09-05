@@ -26,7 +26,7 @@ Trigger on requests like:
 - `build.rs` — picks the config path from `STATUSLINE_CONFIG` env var (relative to manifest dir) or falls back to `config/default.ron`, then writes it to `$OUT_DIR/embedded_config.ron`.
 - `src/config_schema.rs` — the schema: `RootConfig`, the `SegmentSpec` enum, and one struct per segment.
 - `src/config.rs` — maps each `SegmentSpec` variant to its segment implementation.
-- `install-local.sh` — `cargo build --release` + copy binary to `$HOME/.claude/bin/statusline`. Auto-selects `config/local.ron` if present.
+- `install-local.sh` — `cargo build --release`, `--check-config` on the selected file, copy binary to `$HOME/.claude/bin/statusline`, copy the selected file to `$HOME/.claude/statusline/config.ron` (the runtime config the binary loads before falling back to the embedded one). Auto-selects `config/local.ron` if present.
 
 **Default target:** edit `config/local.ron` for personal tweaks (so `default.ron` stays the published baseline). Edit `default.ron` only when the user explicitly says it's "for the repo" / "for everyone" / "to commit".
 
@@ -64,7 +64,7 @@ Segment order in the vec controls render order. Empty `segments: []` renders not
 2. Read the target file; if it doesn't exist and the target is `local.ron`, copy `default.ron` first.
 3. Read the segment's struct in `src/config_schema.rs` and write every field it declares.
 4. Make the edit. Keep RON formatting consistent with the rest of the file (4-space indent, trailing commas, tagged variants like `Named(32)` / `Rgb(r,g,b)`).
-5. Run `./install-local.sh` from the project root. This rebuilds and copies the binary to `~/.claude/bin/statusline`.
+5. Run `./install-local.sh` from the project root. This rebuilds, validates the file, copies the binary to `~/.claude/bin/statusline`, and installs the file as `~/.claude/statusline/config.ron`.
 6. Report what changed in one line.
 
 Do not invoke `cargo build` directly — `install-local.sh` already does the right thing (picks `local.ron` if present, copies binary into place).

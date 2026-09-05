@@ -7,6 +7,9 @@ use crate::statusline_hook::{self, Outcome};
 use crate::statusline_notice_store::{self, Notice};
 use crate::statusline_reminder_store::{self, Reminder};
 
+pub const CONFIG_FLAG: &str = "--config";
+pub const CHECK_CONFIG_FLAG: &str = "--check-config";
+pub const SCHEMA_FLAG: &str = "--schema";
 pub const REFRESH_FLAG: &str = "--refresh";
 pub const USAGE_REFRESH_FLAG: &str = "--refresh-usage";
 pub const NOTICE_FLAG: &str = "--notice";
@@ -26,7 +29,9 @@ const DEFAULT_HOOK_NOTICE_SECONDS: u64 = 900;
 
 pub const USAGE: &str = concat!(
     "usage:\n",
-    "  statusline                                  render a status line from stdin json\n",
+    "  statusline [--config <path>]                render a status line from stdin json\n",
+    "  statusline --check-config <path>            validate a config without rendering\n",
+    "  statusline --schema                         print the segment catalogue as json\n",
     "  statusline --notice <text> [--ttl <secs>] [--session <id>]\n",
     "  statusline --notice-clear [--session <id>]\n",
     "  statusline --remind <text> --in <30m> [--for <2h>]\n",
@@ -35,7 +40,13 @@ pub const USAGE: &str = concat!(
 );
 
 pub enum Command {
-    Render,
+    Render {
+        config_path: Option<PathBuf>,
+    },
+    CheckConfig {
+        path: PathBuf,
+    },
+    Schema,
     Refresh {
         fingerprint: String,
         request_base: Option<PathBuf>,
@@ -69,10 +80,13 @@ where
     let args: Vec<String> = args.into_iter().collect();
 
     let Some(first) = args.first() else {
-        return Ok(Command::Render);
+        return Ok(Command::Render { config_path: None });
     };
 
     match first.as_str() {
+        CONFIG_FLAG => parse_config(&args[1..]),
+        CHECK_CONFIG_FLAG => parse_check_config(&args[1..]),
+        SCHEMA_FLAG => parse_schema(&args[1..]),
         REFRESH_FLAG => parse_refresh(&args[1..]),
         USAGE_REFRESH_FLAG => parse_refresh_usage(&args[1..]),
         NOTICE_FLAG => parse_set_notice(&args[1..]),
@@ -147,6 +161,32 @@ fn apply_hook(ttl_seconds: u64) -> Result<(), String> {
         }
         Outcome::Ignore => Ok(()),
     }
+}
+
+fn parse_config(rest: &[String]) -> Result<Command, String> {
+    match rest {
+        [path] => Ok(Command::Render {
+            config_path: Some(PathBuf::from(path)),
+        }),
+        _ => Err(format!("{} takes a path\n{}", CONFIG_FLAG, USAGE)),
+    }
+}
+
+fn parse_check_config(rest: &[String]) -> Result<Command, String> {
+    match rest {
+        [path] => Ok(Command::CheckConfig {
+            path: PathBuf::from(path),
+        }),
+        _ => Err(format!("{} takes a path\n{}", CHECK_CONFIG_FLAG, USAGE)),
+    }
+}
+
+fn parse_schema(rest: &[String]) -> Result<Command, String> {
+    if !rest.is_empty() {
+        return Err(format!("{} takes no arguments", SCHEMA_FLAG));
+    }
+
+    Ok(Command::Schema)
 }
 
 fn parse_refresh(rest: &[String]) -> Result<Command, String> {
@@ -340,7 +380,36 @@ mod tests {
 
     #[test]
     fn renders_when_no_arguments_are_given() {
-        assert!(matches!(parse_args(&[]), Ok(Command::Render)));
+        assert!(matches!(
+            parse_args(&[]),
+            Ok(Command::Render { config_path: None })
+        ));
+    }
+
+    #[test]
+    fn renders_with_an_explicit_config() {
+        assert!(matches!(
+            parse_args(&["--config", "custom.ron"]),
+            Ok(Command::Render { config_path: Some(path) })
+                if path == std::path::Path::new("custom.ron")
+        ));
+        assert!(parse_args(&["--config"]).is_err());
+        assert!(parse_args(&["--config", "custom.ron", "extra"]).is_err());
+    }
+
+    #[test]
+    fn parses_a_config_check() {
+        assert!(matches!(
+            parse_args(&["--check-config", "custom.ron"]),
+            Ok(Command::CheckConfig { path }) if path == std::path::Path::new("custom.ron")
+        ));
+        assert!(parse_args(&["--check-config"]).is_err());
+    }
+
+    #[test]
+    fn parses_a_schema_request() {
+        assert!(matches!(parse_args(&["--schema"]), Ok(Command::Schema)));
+        assert!(parse_args(&["--schema", "extra"]).is_err());
     }
 
     #[test]
