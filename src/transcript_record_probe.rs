@@ -218,7 +218,7 @@ impl<'de> DeserializeSeed<'de> for ContentBlockSeed<'_> {
     where
         D: serde::Deserializer<'de>,
     {
-        deserializer.deserialize_map(ContentBlockVisitor { found: self.found })
+        deserializer.deserialize_any(ContentBlockVisitor { found: self.found })
     }
 }
 
@@ -249,6 +249,38 @@ impl<'de> Visitor<'de> for ContentBlockVisitor<'_> {
             }
         }
 
+        Ok(())
+    }
+
+    fn visit_seq<A>(self, mut sequence: A) -> Result<Self::Value, A::Error>
+    where
+        A: SeqAccess<'de>,
+    {
+        while sequence.next_element::<IgnoredAny>()?.is_some() {}
+        Ok(())
+    }
+
+    fn visit_str<E>(self, _value: &str) -> Result<Self::Value, E> {
+        Ok(())
+    }
+
+    fn visit_bool<E>(self, _value: bool) -> Result<Self::Value, E> {
+        Ok(())
+    }
+
+    fn visit_i64<E>(self, _value: i64) -> Result<Self::Value, E> {
+        Ok(())
+    }
+
+    fn visit_u64<E>(self, _value: u64) -> Result<Self::Value, E> {
+        Ok(())
+    }
+
+    fn visit_f64<E>(self, _value: f64) -> Result<Self::Value, E> {
+        Ok(())
+    }
+
+    fn visit_unit<E>(self) -> Result<Self::Value, E> {
         Ok(())
     }
 }

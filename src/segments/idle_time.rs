@@ -1,11 +1,9 @@
-use std::fmt;
 use std::fs::File;
 use std::io::{Read, Seek};
 use std::ops::ControlFlow;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use serde::de::{IgnoredAny, MapAccess, SeqAccess, Visitor};
-use serde::{Deserialize, Deserializer};
+use serde::Deserialize;
 use serde_json::Value;
 
 pub use crate::config_schema::IdleTime;
@@ -17,164 +15,7 @@ use crate::transcript_tail_reader::{scan_jsonl_records_from_end, JsonlRecord};
 
 #[derive(Deserialize)]
 struct RawUserLine {
-    #[serde(rename = "type")]
-    kind: Option<String>,
     timestamp: Option<String>,
-    message: Option<RawUserMessage>,
-}
-
-#[derive(Deserialize)]
-struct RawUserMessage {
-    content: Option<UserContent>,
-}
-
-struct UserContent {
-    is_input: bool,
-}
-
-impl<'de> Deserialize<'de> for UserContent {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        deserializer.deserialize_any(UserContentVisitor)
-    }
-}
-
-struct UserContentVisitor;
-
-impl<'de> Visitor<'de> for UserContentVisitor {
-    type Value = UserContent;
-
-    fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        formatter.write_str("Claude message content")
-    }
-
-    fn visit_str<E>(self, _value: &str) -> Result<Self::Value, E> {
-        Ok(UserContent { is_input: true })
-    }
-
-    fn visit_string<E>(self, _value: String) -> Result<Self::Value, E> {
-        Ok(UserContent { is_input: true })
-    }
-
-    fn visit_seq<A>(self, mut sequence: A) -> Result<Self::Value, A::Error>
-    where
-        A: SeqAccess<'de>,
-    {
-        let mut has_tool_result = false;
-        while let Some(block) = sequence.next_element::<ContentBlock>()? {
-            has_tool_result |= block.kind.as_deref() == Some("tool_result");
-        }
-
-        Ok(UserContent {
-            is_input: !has_tool_result,
-        })
-    }
-
-    fn visit_map<A>(self, mut map: A) -> Result<Self::Value, A::Error>
-    where
-        A: MapAccess<'de>,
-    {
-        while map.next_entry::<String, IgnoredAny>()?.is_some() {}
-        Ok(UserContent { is_input: false })
-    }
-
-    fn visit_bool<E>(self, _value: bool) -> Result<Self::Value, E> {
-        Ok(UserContent { is_input: false })
-    }
-
-    fn visit_i64<E>(self, _value: i64) -> Result<Self::Value, E> {
-        Ok(UserContent { is_input: false })
-    }
-
-    fn visit_u64<E>(self, _value: u64) -> Result<Self::Value, E> {
-        Ok(UserContent { is_input: false })
-    }
-
-    fn visit_f64<E>(self, _value: f64) -> Result<Self::Value, E> {
-        Ok(UserContent { is_input: false })
-    }
-
-    fn visit_unit<E>(self) -> Result<Self::Value, E> {
-        Ok(UserContent { is_input: false })
-    }
-}
-
-struct ContentBlock {
-    kind: Option<String>,
-}
-
-impl<'de> Deserialize<'de> for ContentBlock {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        deserializer.deserialize_any(ContentBlockVisitor)
-    }
-}
-
-struct ContentBlockVisitor;
-
-impl<'de> Visitor<'de> for ContentBlockVisitor {
-    type Value = ContentBlock;
-
-    fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        formatter.write_str("a Claude content block")
-    }
-
-    fn visit_map<A>(self, mut map: A) -> Result<Self::Value, A::Error>
-    where
-        A: MapAccess<'de>,
-    {
-        let mut kind = None;
-        while let Some(key) = map.next_key::<String>()? {
-            if key == "type" {
-                let value = map.next_value::<Value>()?;
-                kind = value.as_str().map(str::to_owned);
-            } else {
-                map.next_value::<IgnoredAny>()?;
-            }
-        }
-
-        Ok(ContentBlock { kind })
-    }
-
-    fn visit_seq<A>(self, mut sequence: A) -> Result<Self::Value, A::Error>
-    where
-        A: SeqAccess<'de>,
-    {
-        while sequence.next_element::<IgnoredAny>()?.is_some() {}
-        Ok(ContentBlock { kind: None })
-    }
-
-    fn visit_str<E>(self, _value: &str) -> Result<Self::Value, E> {
-        Ok(ContentBlock { kind: None })
-    }
-
-    fn visit_string<E>(self, _value: String) -> Result<Self::Value, E> {
-        Ok(ContentBlock { kind: None })
-    }
-
-    fn visit_bool<E>(self, _value: bool) -> Result<Self::Value, E> {
-        Ok(ContentBlock { kind: None })
-    }
-
-    fn visit_i64<E>(self, _value: i64) -> Result<Self::Value, E> {
-        Ok(ContentBlock { kind: None })
-    }
-
-    fn visit_u64<E>(self, _value: u64) -> Result<Self::Value, E> {
-        Ok(ContentBlock { kind: None })
-    }
-
-    fn visit_f64<E>(self, _value: f64) -> Result<Self::Value, E> {
-        Ok(ContentBlock { kind: None })
-    }
-
-    fn visit_unit<E>(self) -> Result<Self::Value, E> {
-        Ok(ContentBlock { kind: None })
-    }
 }
 
 impl Segment for IdleTime {
@@ -221,16 +62,6 @@ fn read_last_user_input_timestamp<R: Read + Seek>(reader: &mut R) -> Option<i64>
 
 fn parse_user_input_timestamp(record: &mut dyn JsonlRecord) -> Option<i64> {
     let row: RawUserLine = serde_json::from_reader(record).ok()?;
-
-    if row.kind.as_deref() != Some("user") {
-        return None;
-    }
-
-    let content = row.message?.content?;
-
-    if !content.is_input {
-        return None;
-    }
 
     row.timestamp.as_deref().and_then(parse_iso8601_utc)
 }

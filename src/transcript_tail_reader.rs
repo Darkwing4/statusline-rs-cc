@@ -270,6 +270,28 @@ mod tests {
     }
 
     #[test]
+    fn has_tool_result_looks_past_non_object_content_blocks() {
+        let transcript = concat!(
+            r#"{"type":"user","message":{"content":[null,"text",5,{"type":"tool_result"}]}}"#,
+            "\n",
+            r#"{"type":"user","message":{"content":[null,"text",5,{"type":"text"}]}}"#,
+            "\n",
+        );
+        let mut reader = Cursor::new(transcript.as_bytes().to_vec());
+        let mut found = Vec::new();
+
+        let result = scan_jsonl_records_from_end(&mut reader, |record| {
+            found.push(has_tool_result(record));
+            ControlFlow::<()>::Continue(())
+        })
+        .unwrap();
+
+        assert_eq!(result, ControlFlow::Continue(()));
+
+        assert_eq!(found, [false, true]);
+    }
+
+    #[test]
     fn skips_invalid_utf8_lines() {
         let mut data = b"first\n".to_vec();
         data.extend_from_slice(&[0xff, 0xfe, b'\n']);
