@@ -1,0 +1,54 @@
+name: pages
+
+on:
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: deploy site
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: install rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: generate the segment catalogue
+        run: cargo run --locked -- --schema > site/segment-catalog.json
+
+      - name: install node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: check site assets
+        run: |
+          node --check site/app.js
+          node --test site/app.test.cjs
+          node site/every-segment-ron.cjs > "$RUNNER_TEMP/every-segment.ron"
+          target/debug/statusline --check-config "$RUNNER_TEMP/every-segment.ron"
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+      - name: deploy
+        id: deploy
+        uses: actions/deploy-pages@v4

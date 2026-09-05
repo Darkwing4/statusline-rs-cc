@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#0a0a0b">
+  <title>statusline builder</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="stage">
+    <header class="masthead">
+      <div class="masthead-title">
+        <h1>statusline<span class="caret" aria-hidden="true"></span> <span id="catalogVersion" class="masthead-version"></span></h1>
+        <p>Build the line for Claude Code by moving its pieces.</p>
+      </div>
+
+      <div class="masthead-controls">
+        <label class="field">
+          <span>Session</span>
+          <select id="scenarioSelect"></select>
+        </label>
+        <label class="field field-width">
+          <span>Width <output id="terminalWidthValue">120</output></span>
+          <input id="terminalWidth" type="range" min="40" max="200" step="4" value="120">
+        </label>
+      </div>
+
+      <div class="masthead-actions">
+        <button id="resetButton" class="button" type="button">Reset</button>
+        <button id="ronButton" class="button" type="button">View RON</button>
+        <button id="installButton" class="button button-primary" type="button">Install command</button>
+      </div>
+    </header>
+
+    <section class="line-stage" aria-labelledby="lineTitle">
+      <h2 id="lineTitle" class="sr-only">Statusline preview</h2>
+      <div class="line-frame">
+        <div class="line-rail">
+          <span id="lineScenario">Active worktree</span>
+          <span id="lineDimensions">0 / 116 cols · 0 rows</span>
+        </div>
+        <div class="line-screen">
+          <span class="line-prompt" aria-hidden="true">❯</span>
+          <div id="lineCanvas" class="line-canvas" role="group" aria-label="Pieces on the statusline"></div>
+        </div>
+      </div>
+      <div class="line-footer">
+        <p class="line-hint">Drag a piece to reorder it. Drag it down to take it off the line. Standalone pieces get a line of their own.</p>
+        <div id="hiddenPieces" class="hidden-pieces"></div>
+      </div>
+    </section>
+
+    <div class="lower">
+    <section class="shelf-stage" aria-labelledby="shelfTitle">
+      <h2 id="shelfTitle">Off the line</h2>
+      <div id="shelf" class="shelf" role="group" aria-label="Pieces that are not on the statusline"></div>
+    </section>
+
+    <section class="inspector" aria-labelledby="inspectorTitle">
+      <div class="inspector-head">
+        <div>
+          <span id="inspectorKind" class="inspector-kind">Separator</span>
+          <h2 id="inspectorTitle">Whole line</h2>
+          <p id="inspectorDescription">What sits between every piece.</p>
+        </div>
+        <button id="removeSelectedButton" class="button button-quiet" type="button" hidden>Take off the line</button>
+      </div>
+      <div id="inspectorControls" class="control-grid"></div>
+    </section>
+    </div>
+  </div>
+
+  <dialog id="ronDialog" class="sheet" aria-labelledby="ronDialogTitle">
+    <form method="dialog" class="sheet-head">
+      <h2 id="ronDialogTitle">config.ron</h2>
+      <div class="sheet-head-actions">
+        <button id="downloadButton" class="button" type="button">Download</button>
+        <button class="button button-quiet" value="close" type="submit">Close</button>
+      </div>
+    </form>
+    <p class="sheet-note">The same file the install command writes to <code>~/.claude/statusline/config.ron</code>. On Windows put it at <code>%USERPROFILE%\.claude\statusline\config.ron</code> and the installed binary picks it up.</p>
+    <div id="ronProblems" class="sheet-error" role="alert" hidden></div>
+    <pre id="ronOutput" tabindex="0"></pre>
+  </dialog>
+
+  <dialog id="installDialog" class="sheet" aria-labelledby="installDialogTitle">
+    <form method="dialog" class="sheet-head">
+      <h2 id="installDialogTitle">Install command</h2>
+      <div class="sheet-head-actions">
+        <button id="copyCommandButton" class="button button-primary" type="button">Copy</button>
+        <button class="button button-quiet" value="close" type="submit">Close</button>
+      </div>
+    </form>
+    <p class="sheet-note">Paste it into a terminal on Linux or macOS. It downloads the latest release, checks this exact config with the downloaded binary, writes it next to the binary, and points Claude Code at it.</p>
+    <div id="sessionError" class="sheet-error" role="alert" hidden></div>
+    <div id="sessionResult" hidden>
+      <textarea id="commandOutput" rows="4" readonly aria-label="Install command"></textarea>
+      <dl class="sheet-meta">
+        <div>
+          <dt>Targets</dt>
+          <dd>Linux x86_64 / aarch64 · macOS x86_64 / aarch64</dd>
+        </div>
+        <div>
+          <dt>Payload</dt>
+          <dd id="configSizeOutput"></dd>
+        </div>
+      </dl>
+    </div>
+  </dialog>
+
+  <div id="liveRegion" class="sr-only" aria-live="polite"></div>
+  <script src="app.js" defer></script>
+</body>
+</html>

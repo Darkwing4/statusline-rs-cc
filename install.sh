@@ -7,6 +7,8 @@ SETTINGS="${STATUSLINE_SETTINGS:-$HOME/.claude/settings.json}"
 TAG="${STATUSLINE_TAG:-latest}"
 BIN="statusline"
 SKIP_SETTINGS="${STATUSLINE_SKIP_SETTINGS:-}"
+CONFIG_CODE="${STATUSLINE_INSTALL_CONFIG:-}"
+CONFIG_PATH="${STATUSLINE_CONFIG_PATH:-$HOME/.claude/statusline/config.ron}"
 
 os="$(uname -s | tr '[:upper:]' '[:lower:]')"
 arch="$(uname -m)"
@@ -181,12 +183,57 @@ fi
 echo "verified $asset"
 
 tar -xzf "$tmp/$asset" -C "$tmp"
+chmod 0755 "$tmp/$BIN"
+
+if [ -n "$CONFIG_CODE" ]; then
+    case "$CONFIG_CODE" in
+        *[!A-Za-z0-9_-]*)
+            echo "STATUSLINE_INSTALL_CONFIG is not a config code from the builder" >&2
+            exit 1
+            ;;
+    esac
+
+    if ! command -v python3 >/dev/null 2>&1; then
+        echo "python3 is required to decode STATUSLINE_INSTALL_CONFIG" >&2
+        exit 1
+    fi
+
+    CODE="$CONFIG_CODE" python3 - "$tmp/config.ron" <<'PY'
+import base64
+import gzip
+import os
+import sys
+
+code = os.environ["CODE"]
+padded = code + "=" * (-len(code) % 4)
+try:
+    body = gzip.decompress(base64.urlsafe_b64decode(padded))
+except (ValueError, OSError, EOFError) as error:
+    sys.exit(f"invalid config code: {error}")
+if not body or len(body) > 65536 or b"\0" in body:
+    sys.exit("invalid config code: unexpected size or content")
+with open(sys.argv[1], "wb") as output:
+    output.write(body)
+PY
+
+    "$tmp/$BIN" --check-config "$tmp/config.ron"
+    echo "config code decodes to a valid config"
+fi
 
 mkdir -p "$INSTALL_DIR"
 install -m 0755 "$tmp/$BIN" "$INSTALL_DIR/$BIN"
 
 echo
 echo "installed: $INSTALL_DIR/$BIN"
+
+if [ -n "$CONFIG_CODE" ]; then
+    config_dir="$(dirname "$CONFIG_PATH")"
+    mkdir -p "$config_dir"
+    pending_config="$(mktemp "$config_dir/.config.ron.XXXXXX")"
+    install -m 0644 "$tmp/config.ron" "$pending_config"
+    mv -f "$pending_config" "$CONFIG_PATH"
+    echo "installed config: $CONFIG_PATH"
+fi
 
 print_snippet() {
     cat <<EOF

@@ -43,6 +43,26 @@ jobs:
       - name: test
         run: cargo test --locked
 
+      - name: generate the segment catalogue
+        run: cargo run --locked -- --schema > site/segment-catalog.json
+
+      - name: install node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: check site assets
+        run: |
+          node --check site/app.js
+          node --test site/app.test.cjs
+          node site/every-segment-ron.cjs > "$RUNNER_TEMP/every-segment.ron"
+          target/debug/statusline --check-config "$RUNNER_TEMP/every-segment.ron"
+
+      - name: check shell scripts
+        run: |
+          sh -n install.sh
+          sh -n install-local.sh
+
   build:
     needs: quality
     if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v')
@@ -141,3 +161,11 @@ jobs:
           files: dist/*
           generate_release_notes: true
           fail_on_unmatched_files: true
+
+  pages:
+    needs: release
+    uses: ./.github/workflows/pages.yml
+    permissions:
+      contents: read
+      pages: write
+      id-token: write

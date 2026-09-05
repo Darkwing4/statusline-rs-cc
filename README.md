@@ -69,6 +69,8 @@ Supported targets: Linux x86_64 / aarch64, macOS x86_64 / aarch64, Windows x86_6
 | `STATUSLINE_SETTINGS` | `$HOME/.claude/settings.json` |
 | `STATUSLINE_SKIP_SETTINGS` | unset — set to `1` to skip the JSON patch |
 | `STATUSLINE_REPO` | `Darkwing4/statusline-rs-cc` |
+| `STATUSLINE_INSTALL_CONFIG` | unset — a config code from the [builder](https://darkwing4.github.io/statusline-rs-cc/): decoded, checked with the downloaded binary, written as the runtime config |
+| `STATUSLINE_CONFIG_PATH` | `$HOME/.claude/statusline/config.ron` |
 
 The settings patch is non-destructive: preserves every other key in `settings.json`, writes a `.bak` next to the original, no-ops if already pointed at the binary. If `python3` is missing it skips the patch and prints the snippet to paste manually.
 
@@ -81,6 +83,20 @@ cp target/release/statusline ~/.claude/bin/statusline
 
 </details>
 
+## builder
+
+The [statusline builder](https://darkwing4.github.io/statusline-rs-cc/) is a static page: drag the pieces of the line where you want them, tune the selected one, then copy a single command that installs the latest release together with that exact config. The shelf, the inspector, and the pitch under every piece come from `statusline --schema`, so the page lists exactly the segments the binary has.
+
+The page lives in [`site/`](site/) and [`.github/workflows/pages.yml`](.github/workflows/pages.yml) deploys it after every release (or by hand from the Actions tab). Nothing runs server-side: the browser gzips the RON and encodes it as base64url into `STATUSLINE_INSTALL_CONFIG`, and `install.sh` decodes it, validates it with `--check-config` on the freshly downloaded binary, and writes it to `~/.claude/statusline/config.ron`. Windows has no one-line installer for this yet — download the RON from the page and drop it at `%USERPROFILE%\.claude\statusline\config.ron`.
+
+To work on the page locally:
+
+```sh
+cargo run -- --schema > site/segment-catalog.json
+node --test site/app.test.cjs
+python3 -m http.server --directory site 8000
+```
+
 ## claude code skill
 
 Ships with a project-local skill at [`.claude/skills/statusline-config/`](.claude/skills/statusline-config/SKILL.md). Open Claude Code in the cloned repo and it auto-discovers it — then ask in plain language and Claude edits the RON, rebuilds, and copies the binary into place:
@@ -89,11 +105,11 @@ Ships with a project-local skill at [`.claude/skills/statusline-config/`](.claud
 > make 5h radial
 > drop the 7d segment
 
-The skill defaults to editing `config/local.ron` (gitignored personal override) and runs `./install-local.sh` to reinstall. Say "for the repo" to edit `config/default.ron` instead.
+The skill defaults to editing `config/local.ron` (gitignored personal override) and runs `./install-local.sh`, which rebuilds, validates the chosen file, installs the binary, and copies that file to `~/.claude/statusline/config.ron`. Say "for the repo" to edit `config/default.ron` instead.
 
 ## configuration
 
-The whole config is an external [RON](https://github.com/ron-rs/ron) file at [`config/default.ron`](config/default.ron). `build.rs` embeds it into the binary at compile time; [`src/config.rs`](src/config.rs) parses it into segments at startup. Point `STATUSLINE_CONFIG` at a different file to swap the embedded config without touching the source — `install-local.sh` auto-picks `config/local.ron` if it exists (gitignored personal override).
+The whole config is an external [RON](https://github.com/ron-rs/ron) file at [`config/default.ron`](config/default.ron). `build.rs` embeds it into the binary at compile time as the fallback. At startup [`src/config.rs`](src/config.rs) loads `~/.claude/statusline/config.ron` when that file exists — the builder and `install-local.sh` write it there — and the embedded one otherwise; `--config <path>` names a file explicitly and `--check-config <path>` validates one without rendering. Point `STATUSLINE_CONFIG` at a different file to swap the embedded config at build time — `install-local.sh` auto-picks `config/local.ron` if it exists (gitignored personal override).
 
 ```ron
 (
@@ -290,7 +306,7 @@ Set `statusLine.refreshInterval` to `1` in Claude Code settings for periodic liv
 
 Declare the segment's config fields in `src/config_schema.rs` and add a `SegmentSpec` variant for them, define the logic in `src/segments/*.rs` (re-export the schema struct and `impl Segment` for it), register the module in `src/segments.rs`, map the variant in `src/config.rs`, add the segment to `config/default.ron`, then build.
 
-The config struct carries a single `///` line saying what the segment shows — that line is the segment's entry in the catalogue, so nothing has to be added to this page for a new segment to be documented.
+The config struct carries a single `///` line saying what the segment shows — that line is the segment's entry in the catalogue, so nothing has to be added to this page for a new segment to be documented. `statusline --schema` prints that catalogue as JSON — every segment's name, its pitch, and its fields with their kinds — and the builder page is built from it at deploy time, so a new segment shows up there without touching `site/`.
 
 `UserIdleTime` is the concrete extension example, added in [`fac22e1`](https://github.com/Darkwing4/statusline-rs-cc/commit/fac22e1c1b04822b332c00268305bfc9224547b1). It reads `transcript_path`, ignores tool-result messages, finds the latest real user input timestamp, and renders values like `idle 42s`, `idle 3m12s`, or `idle 1h0m`.
 
@@ -314,8 +330,9 @@ Segments receive the raw `serde_json::Value` so they own which input fields they
 ```
 src/
 ├── main.rs                 entry: build Renderer, write to stdout
-├── config.rs               loads the embedded config, maps SegmentSpec to segments
+├── config.rs               loads the runtime config or the embedded one, maps SegmentSpec to segments
 ├── config_schema.rs        RON schema, shared with build.rs for build-time validation
+├── segment_catalog.rs      reads the pitches and fields out of config_schema.rs for --schema
 ├── statusline_renderer.rs  owns segments, joins them, wraps to terminal width
 ├── statusline_renderer/
 │   ├── segment_wrapping.rs wraps segments to lines by visible (ANSI-stripped) width
