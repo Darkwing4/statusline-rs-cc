@@ -12,8 +12,9 @@ Skill for editing the statusline-rs config in this repo and reinstalling the bin
 Trigger on requests like:
 
 - "change the branch colour", "recolour the bar", "make 5h radial"
-- "add IdleTime", "drop CacheTtl", "reorder the segments"
+- "add UserIdleTime", "drop PromptCacheTtl", "reorder the segments"
 - "show Claude CPU and RSS usage", "show Claude CPU and RAM usage"
+- "add an empty line under the statusline"
 - "change the separator", "use truecolor instead of ansi"
 - "make local config like default but without 7d"
 - "rebuild / reinstall the statusline"
@@ -23,7 +24,8 @@ Trigger on requests like:
 - `config/default.ron` — public config, committed to git, embedded into the prebuilt release binary at build time.
 - `config/local.ron` — personal override, **gitignored**. If present, `install-local.sh` builds with this file instead of `default.ron`.
 - `build.rs` — picks the config path from `STATUSLINE_CONFIG` env var (relative to manifest dir) or falls back to `config/default.ron`, then writes it to `$OUT_DIR/embedded_config.ron`.
-- `src/config.rs` — `RootConfig` + `SegmentSpec` enum (the schema for the RON file).
+- `src/config_schema.rs` — the schema: `RootConfig`, the `SegmentSpec` enum, and one struct per segment.
+- `src/config.rs` — maps each `SegmentSpec` variant to its segment implementation.
 - `install-local.sh` — `cargo build --release` + copy binary to `$HOME/.claude/bin/statusline`. Auto-selects `config/local.ron` if present.
 
 **Default target:** edit `config/local.ron` for personal tweaks (so `default.ron` stays the published baseline). Edit `default.ron` only when the user explicitly says it's "for the repo" / "for everyone" / "to commit".
@@ -42,88 +44,17 @@ Top level:
 )
 ```
 
+### Segments
+
+**Read `src/config_schema.rs` before writing any segment block — it is the only catalogue.** One struct there is one segment: its name is the RON variant, its fields are the options (all required unless the field carries a `#[serde(default)]`), and the single `///` line above it says what the segment shows. Do not keep a copy of that list in this file — it goes stale, and a stale name makes `build.rs` reject the config.
+
+`config/default.ron` is a working example of most segments; `config/local.ron`, when it exists, shows what the user actually runs.
+
 ### Color
 
 - `Named(code)` — ANSI 30–37 (fg) or 90–97 (bright fg). Common: 31 red, 32 green, 33 yellow, 90 bright-black/grey, 91 bright-red.
 - `Rgb(r, g, b)` — truecolor, 0–255 each.
-- `Gradient` — only meaningful on `Context`, `CacheTtl`, and `RateLimit` with `color_mode: Gradient`. On other segments treat as plain (no effect).
-
-### Segments
-
-Every segment is a tagged tuple. All fields are required unless a compatibility default is stated.
-
-```ron
-Context(
-    color: Gradient,
-    prefix: "",
-    prefix_color: Rgb(180, 142, 173),
-    suffix: "",
-    suffix_color: Rgb(180, 142, 173),
-)
-
-CacheTtl(
-    color: Gradient,
-    prefix: "cache ",
-)
-
-ClaudeResourceUsage(
-    color: Named(90),
-    cpu_prefix: "CPU ",
-    memory_prefix: "RSS ",
-)
-
-Cwd(
-    color: Rgb(95, 175, 175),
-)
-
-Effort(
-    color: Named(90),
-    prefix: "",              // reasoning effort level, e.g. "high"
-)
-
-GitBranch(
-    color: Named(32),
-    state_color: Named(91),
-    show_worktree: true,
-    show_ahead_behind: true,
-    show_state: true,
-)
-
-GitDiff(
-    modified_color: Named(33),
-    untracked_color: Named(32),
-    deleted_color: Named(31),
-)
-
-GitError(
-    color: Named(91),
-    text: "no git",
-)
-
-IdleTime(
-    color: Named(90),
-    prefix: "idle ",
-    threshold_seconds: 0,
-)
-
-Model(
-    color: Rgb(180, 142, 173),
-    prefix: "",              // model display name, falls back to model id
-    replacements: [],        // optional literal (search, replace) pairs applied in order
-)
-
-RateLimit(
-    window: FiveHour,        // FiveHour | SevenDay
-    style: Bar,              // Percent | Bar | BarPercent | Radial | RadialPercent
-    fill: Remaining,         // Used | Remaining
-    color_mode: Gradient,    // Steps | Gradient
-    gradient_midpoint_percentage: 50.0, // position of mid_color in Gradient; defaults to 50.0 for existing configs
-    prefix: "5h ",           // a "{t}" token is replaced by time left until reset, in the window's unit (h for FiveHour, d for SevenDay), 1 decimal — e.g. "{t}d " shows 6.9d..0.5d..0.0d; renders "?" if resets_at is missing
-    low_color: Rgb(103, 175, 103),
-    mid_color: Rgb(195, 179, 100),
-    high_color: Rgb(220, 60, 60),
-)
-```
+- `Gradient` — only meaningful on `ContextUsage`, `PromptCacheTtl`, and `RateLimit` with `color_mode: Gradient`. On other segments treat as plain (no effect).
 
 Segment order in the vec controls render order. Empty `segments: []` renders nothing.
 
@@ -131,20 +62,22 @@ Segment order in the vec controls render order. Empty `segments: []` renders not
 
 1. Confirm target file (default `config/local.ron`; switch to `default.ron` only if the user signals "for the repo").
 2. Read the target file; if it doesn't exist and the target is `local.ron`, copy `default.ron` first.
-3. Make the edit. Keep RON formatting consistent with the rest of the file (4-space indent, trailing commas, tagged variants like `Named(32)` / `Rgb(r,g,b)`).
-4. Run `./install-local.sh` from the project root. This rebuilds and copies the binary to `~/.claude/bin/statusline`.
-5. Report what changed in one line.
+3. Read the segment's struct in `src/config_schema.rs` and write every field it declares.
+4. Make the edit. Keep RON formatting consistent with the rest of the file (4-space indent, trailing commas, tagged variants like `Named(32)` / `Rgb(r,g,b)`).
+5. Run `./install-local.sh` from the project root. This rebuilds and copies the binary to `~/.claude/bin/statusline`.
+6. Report what changed in one line.
 
 Do not invoke `cargo build` directly — `install-local.sh` already does the right thing (picks `local.ron` if present, copies binary into place).
 
-If the user only wants to preview / not install yet, skip step 4 and say so.
+If the user only wants to preview / not install yet, skip step 5 and say so.
 
 ## Validation tips
 
 - RON is strict: every required field of a segment variant must be present. Missing field → build panics in `build.rs` with `ron::de::SpannedError`.
+- Don't invent segment names — only the variants declared in `SegmentSpec` exist.
+- `RateLimit.prefix` replaces a `{t}` token with the time left until reset, in the window's unit, 1 decimal — `"{t}d "` renders `6.9d`..`0.0d`, and `?` when `resets_at` is missing.
 - `gradient_midpoint_percentage` defaults to `50.0` when omitted and must be greater than `0` and less than `100`.
-- Don't introduce unknown segment names — only the variants listed above exist in `SegmentSpec`.
-- `Gradient` on `ClaudeResourceUsage` / `Cwd` / `GitBranch` / `GitDiff` / `GitError` / `IdleTime` won't crash but will render as plain text (no colour) — prefer `Named` or `Rgb` there.
+- `Gradient` on a segment that doesn't support it won't crash but renders as plain text — prefer `Named` or `Rgb` there.
 - `ClaudeResourceUsage` is Linux-only and requires a matching live `session_id` entry in Claude Code's local session registry. It emits nothing when the process cannot be resolved or on macOS and Windows. CPU is shown in logical-core equivalents (`1.00c` is one fully used core), RSS is the summed resident set size of the Claude process tree in MiB, and the first CPU sample is `—`.
 - Set `statusLine.refreshInterval` to `1` in Claude Code settings for periodic live resource updates.
 - `RateLimit` only renders after the first response in a Claude.ai session; absent on API plans. Don't expect it to appear immediately in a fresh transcript.
@@ -162,6 +95,8 @@ Cwd(
 then `./install-local.sh`.
 
 **Drop the 7-day rate limit segment:** delete the second `RateLimit(...)` block from `segments: [...]`, install.
+
+**Two empty lines under the status line:** add two `Spacer(standalone: true)` blocks, install.
 
 **Switch 5h to radial with percent:**
 
