@@ -2,14 +2,14 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use serde_json::Value;
 
-pub use crate::config_schema::Notice as NoticeSegment;
+pub use crate::config_schema::SessionNotice;
 use crate::duration_format::format_duration_padded;
 use crate::segments::single_line_text::sanitize;
 use crate::segments::{GitCache, Segment};
 use crate::statusline_input::session_key;
 use crate::statusline_notice_store::{self, Notice};
 
-impl Segment for NoticeSegment {
+impl Segment for SessionNotice {
     fn render(&self, json: &Value, _git: &mut GitCache) -> Option<String> {
         let session = session_key(json)?;
         let notice = statusline_notice_store::load(&session)?;
@@ -28,7 +28,7 @@ impl Segment for NoticeSegment {
     }
 }
 
-impl NoticeSegment {
+impl SessionNotice {
     fn body(&self, notice: &Notice, now: i64) -> Option<String> {
         let text = sanitize(&notice.text, self.max_chars);
 
@@ -57,12 +57,12 @@ fn now_seconds() -> i64 {
 
 #[cfg(test)]
 mod tests {
-    use super::NoticeSegment;
+    use super::SessionNotice;
     use crate::config_schema::Color;
     use crate::statusline_notice_store::Notice;
 
-    fn segment() -> NoticeSegment {
-        NoticeSegment {
+    fn segment() -> SessionNotice {
+        SessionNotice {
             color: Color::Named(93),
             prefix: "📌 ".to_string(),
             max_chars: 60,

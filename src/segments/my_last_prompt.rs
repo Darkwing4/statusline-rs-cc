@@ -4,14 +4,14 @@ use std::ops::ControlFlow;
 
 use serde_json::Value;
 
-pub use crate::config_schema::SessionTask;
+pub use crate::config_schema::MyLastPrompt;
 use crate::segments::single_line_text::sanitize;
 use crate::segments::{GitCache, Overflow, Segment};
 use crate::transcript_record_probe::{has_tool_result, has_type};
 use crate::transcript_spoken_text::{is_conversation_record, spoken_text};
 use crate::transcript_tail_reader::{scan_jsonl_records_from_end, JsonlRecord};
 
-impl Segment for SessionTask {
+impl Segment for MyLastPrompt {
     fn render(&self, json: &Value, _git: &mut GitCache) -> Option<String> {
         let transcript = json.get("transcript_path")?.as_str()?;
         let mut file = File::open(transcript).ok()?;

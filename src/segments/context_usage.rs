@@ -1,7 +1,7 @@
 use serde_json::Value;
 
 use crate::config_schema::Color;
-pub use crate::config_schema::Context;
+pub use crate::config_schema::ContextUsage;
 use crate::gradient::{gradient, Rgb};
 use crate::segments::{GitCache, Segment};
 
@@ -11,7 +11,7 @@ const CONTEXT_GRADIENT: &[(f64, Rgb)] = &[
     (30.0, (220, 60, 60)),
 ];
 
-impl Segment for Context {
+impl Segment for ContextUsage {
     fn render(&self, json: &Value, _git: &mut GitCache) -> Option<String> {
         let p = json
             .get("context_window")?
@@ -48,12 +48,12 @@ impl Segment for Context {
 mod tests {
     use serde_json::json;
 
-    use super::{gradient, Context, CONTEXT_GRADIENT};
+    use super::{gradient, ContextUsage, CONTEXT_GRADIENT};
     use crate::config_schema::Color;
     use crate::segments::{GitCache, Segment};
 
-    fn context(color: Color) -> Context {
-        Context {
+    fn context(color: Color) -> ContextUsage {
+        ContextUsage {
             color,
             prefix: String::new(),
             prefix_color: Color::Named(90),

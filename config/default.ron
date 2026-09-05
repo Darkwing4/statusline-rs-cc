@@ -10,14 +10,14 @@
             color: Named(90),
             prefix: "",
         ),
-        Context(
+        ContextUsage(
             color: Gradient,
             prefix: "",
             prefix_color: Rgb(180, 142, 173),
             suffix: "",
             suffix_color: Rgb(180, 142, 173),
         ),
-        CacheTtl(
+        PromptCacheTtl(
             color: Gradient,
             prefix: "cache ",
         ),
@@ -59,7 +59,7 @@
             max_chars: 80,
             standalone: false,
         ),
-        Notice(
+        SessionNotice(
             color: Named(93),
             prefix: "\u{1F4CC} ",
             max_chars: 120,
@@ -85,7 +85,7 @@
             color: Named(91),
             text: "no git",
         ),
-        SessionTask(
+        MyLastPrompt(
             color: Named(90),
             prefix: "\u{BB} ",
             max_chars: 48,

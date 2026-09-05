@@ -6,8 +6,8 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use serde::Deserialize;
 use serde_json::Value;
 
-pub use crate::config_schema::CacheTtl;
 use crate::config_schema::Color;
+pub use crate::config_schema::PromptCacheTtl;
 use crate::duration_format::format_duration_padded;
 use crate::gradient::{gradient, Rgb};
 use crate::iso8601::parse_iso8601_utc;
@@ -68,7 +68,7 @@ struct UsageRow {
     ttl_hint: Option<i64>,
 }
 
-impl Segment for CacheTtl {
+impl Segment for PromptCacheTtl {
     fn render(&self, json: &Value, _git: &mut GitCache) -> Option<String> {
         let now = SystemTime::now().duration_since(UNIX_EPOCH).ok()?.as_secs() as i64;
         let snapshot = read_cache_snapshot(json);
@@ -202,7 +202,7 @@ mod tests {
     use serde_json::json;
 
     use super::{
-        gradient, parse_iso8601_utc, read_cache_snapshot_from, CacheTtl, COLD_GRADIENT,
+        gradient, parse_iso8601_utc, read_cache_snapshot_from, PromptCacheTtl, COLD_GRADIENT,
         TTL_1H_SECS, TTL_5M_SECS, TTL_GRADIENT,
     };
     use crate::config_schema::Color;
@@ -299,11 +299,11 @@ mod tests {
         });
         let mut git = GitCache::new(String::new());
 
-        let gradient_segment = CacheTtl {
+        let gradient_segment = PromptCacheTtl {
             color: Color::Gradient,
             prefix: "cache ".to_string(),
         };
-        let named_segment = CacheTtl {
+        let named_segment = PromptCacheTtl {
             color: Color::Named(33),
             prefix: "cache ".to_string(),
         };

@@ -143,7 +143,7 @@ fn command_workdir() -> Option<PathBuf> {
 fn background_command(spec: SegmentSpec) -> Option<BackgroundCommand> {
     match spec {
         SegmentSpec::LlmInsight(segment) => Some(segment.background_command()),
-        SegmentSpec::LlmMessage(segment) => Some(segment.background_command()),
+        SegmentSpec::LlmAnswer(segment) => Some(segment.background_command()),
         SegmentSpec::Weather(segment) => Some(segment.background_command()),
         _ => None,
     }

@@ -19,8 +19,9 @@ impl Color {
     }
 }
 
+/// How much of the context window is already filled.
 #[derive(Deserialize)]
-pub struct Context {
+pub struct ContextUsage {
     pub color: Color,
     pub prefix: String,
     pub prefix_color: Color,
@@ -28,12 +29,14 @@ pub struct Context {
     pub suffix_color: Color,
 }
 
+/// How long the prompt cache stays warm before the next request pays to build it again.
 #[derive(Deserialize)]
-pub struct CacheTtl {
+pub struct PromptCacheTtl {
     pub color: Color,
     pub prefix: String,
 }
 
+/// How much CPU and memory the Claude Code process tree is eating right now (Linux only).
 #[derive(Deserialize)]
 pub struct ClaudeResourceUsage {
     pub color: Color,
@@ -41,22 +44,26 @@ pub struct ClaudeResourceUsage {
     pub memory_prefix: String,
 }
 
+/// The directory Claude Code is working in, with your home folder shortened to a tilde.
 #[derive(Deserialize)]
 pub struct Cwd {
     pub color: Color,
 }
 
+/// Nothing at all: a blank line of its own, or a gap between two neighbours.
 #[derive(Deserialize)]
 pub struct Spacer {
     pub standalone: bool,
 }
 
+/// How hard the model is currently set to think.
 #[derive(Deserialize)]
 pub struct Effort {
     pub color: Color,
     pub prefix: String,
 }
 
+/// The model Claude Code is answering with.
 #[derive(Deserialize)]
 pub struct Model {
     pub color: Color,
@@ -80,6 +87,7 @@ where
     Ok(pairs)
 }
 
+/// The branch you are on, what git is in the middle of, and how far you drifted from upstream.
 #[derive(Deserialize)]
 pub struct GitBranch {
     pub color: Color,
@@ -89,6 +97,7 @@ pub struct GitBranch {
     pub show_state: bool,
 }
 
+/// How many files you changed, added, and deleted since the last commit.
 #[derive(Deserialize)]
 pub struct GitDiff {
     pub modified_color: Color,
@@ -96,19 +105,22 @@ pub struct GitDiff {
     pub deleted_color: Color,
 }
 
+/// A short marker for when the current directory is not a git repository at all.
 #[derive(Deserialize)]
 pub struct GitError {
     pub color: Color,
     pub text: String,
 }
 
+/// How long it has been since you last typed something to Claude Code.
 #[derive(Deserialize)]
-pub struct IdleTime {
+pub struct UserIdleTime {
     pub color: Color,
     pub prefix: String,
     pub threshold_seconds: u64,
 }
 
+/// How many subagents are running, how long the oldest one has been at it, and the tokens they burned.
 #[derive(Deserialize)]
 pub struct SubagentStats {
     pub color: Color,
@@ -120,8 +132,9 @@ pub struct SubagentStats {
     pub show_tokens: bool,
 }
 
+/// The last line an external command prints for a fixed prompt, re-asked once its TTL runs out.
 #[derive(Deserialize)]
-pub struct LlmMessage {
+pub struct LlmAnswer {
     pub color: Color,
     pub prefix: String,
     pub command: String,
@@ -131,8 +144,9 @@ pub struct LlmMessage {
     pub max_chars: usize,
 }
 
+/// A message pinned to this session by `statusline --notice` or the failed-command hook, until its TTL expires.
 #[derive(Deserialize)]
-pub struct Notice {
+pub struct SessionNotice {
     pub color: Color,
     pub prefix: String,
     pub max_chars: usize,
@@ -140,14 +154,16 @@ pub struct Notice {
     pub standalone: bool,
 }
 
+/// The last thing you actually typed, so you can see what the model is working on.
 #[derive(Deserialize)]
-pub struct SessionTask {
+pub struct MyLastPrompt {
     pub color: Color,
     pub prefix: String,
     pub max_chars: usize,
     pub standalone: bool,
 }
 
+/// Reminders whose time has come, written earlier by `statusline --remind` and shared by every session.
 #[derive(Deserialize)]
 pub struct Reminder {
     pub color: Color,
@@ -157,6 +173,7 @@ pub struct Reminder {
     pub standalone: bool,
 }
 
+/// What an external model makes of the chat since it last looked, re-asked every few turns.
 #[derive(Deserialize)]
 pub struct LlmInsight {
     pub color: Color,
@@ -172,6 +189,7 @@ pub struct LlmInsight {
     pub standalone: bool,
 }
 
+/// The weather outside, from wttr.in, for the city your system timezone points at.
 #[derive(Deserialize)]
 pub struct Weather {
     pub color: Color,
@@ -209,6 +227,7 @@ pub enum ColorMode {
     Gradient,
 }
 
+/// How much of a usage window you have left before the limit resets.
 #[derive(Deserialize)]
 pub struct RateLimit {
     pub window: Window,
@@ -246,24 +265,24 @@ where
 
 #[derive(Deserialize)]
 pub enum SegmentSpec {
-    Context(Context),
-    CacheTtl(CacheTtl),
     ClaudeResourceUsage(ClaudeResourceUsage),
+    ContextUsage(ContextUsage),
     Cwd(Cwd),
     Effort(Effort),
     GitBranch(GitBranch),
     GitDiff(GitDiff),
     GitError(GitError),
-    IdleTime(IdleTime),
+    LlmAnswer(LlmAnswer),
     LlmInsight(LlmInsight),
-    LlmMessage(LlmMessage),
     Model(Model),
-    Notice(Notice),
+    MyLastPrompt(MyLastPrompt),
+    PromptCacheTtl(PromptCacheTtl),
     RateLimit(RateLimit),
     Reminder(Reminder),
-    SessionTask(SessionTask),
+    SessionNotice(SessionNotice),
     Spacer(Spacer),
     SubagentStats(SubagentStats),
+    UserIdleTime(UserIdleTime),
     Weather(Weather),
 }
 

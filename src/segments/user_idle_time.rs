@@ -6,7 +6,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use serde::Deserialize;
 use serde_json::Value;
 
-pub use crate::config_schema::IdleTime;
+pub use crate::config_schema::UserIdleTime;
 use crate::duration_format::format_duration;
 use crate::iso8601::parse_iso8601_utc;
 use crate::segments::{GitCache, Segment};
@@ -18,7 +18,7 @@ struct RawUserLine {
     timestamp: Option<String>,
 }
 
-impl Segment for IdleTime {
+impl Segment for UserIdleTime {
     fn render(&self, json: &Value, _git: &mut GitCache) -> Option<String> {
         let transcript = json.get("transcript_path")?.as_str()?;
         let mut file = File::open(transcript).ok()?;
