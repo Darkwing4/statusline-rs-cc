@@ -34,6 +34,7 @@ Every segment is tweakable from the RON config, and some ship with multiple styl
 
 - `cache 4m32s` is the Anthropic prompt-cache TTL countdown. Once `cache cold`, the colour ramps by `context_window` % — cheap when context is empty, expensive when full.
 - `5h` / `7d` are Claude.ai rolling usage limits: green <50%, yellow 50–80%, red >80%. Absent on API plans and before the first response.
+- `window: Fable` is the per-model weekly window Claude Code keeps out of the status line payload. It is fetched from `/api/oauth/usage` in the background and only renders while the current model is Fable.
 - `⑂feature` means you're inside a git worktree (resolved by reading `.git`, no `fork()`).
 - git state like `[REBASE 2/5]` only shows during the op (`MERGE`, `CHERRY-PICK`, `REVERT`, `BISECT`, `AM n/m`).
 - diff `~2 +1 -1` = modified tracked / untracked / deleted.
@@ -119,6 +120,42 @@ Every segment is one file under [`src/segments/`](src/segments/) and one struct 
 
 Reorder, drop, or re-colour by editing the list, then rebuild. `Color` variants: `Named(code)` for ANSI 30–37 / 90–97, `Rgb(r, g, b)` for truecolor, `Gradient` (meaningful on `ContextUsage`, `PromptCacheTtl`, and `RateLimit` when `color_mode: Gradient`).
 `RateLimit.gradient_midpoint_percentage` places `mid_color` within the gradient and must be greater than `0` and less than `100`; existing configs without the field use `50.0`.
+
+### The Fable rate limit
+
+`window: FiveHour` and `window: SevenDay` read `rate_limits` straight from the status line
+payload. Claude Code does not put the per-model Fable window there, so `window: Fable` gets it
+itself: it reads the OAuth token from `~/.claude/.credentials.json`, fetches
+`https://api.anthropic.com/api/oauth/usage` with a detached `curl`, and caches the response
+under the statusline cache directory with owner-only permissions. The Fable entry is the one in
+`limits[]` with `kind: "weekly_scoped"` and `scope.model.display_name: "Fable"`.
+
+The segment is skipped entirely unless `model.id` or `model.display_name` mentions Fable, so no
+token is read and no request is made on other models. Missing credentials, an expired token, or
+no network simply hide it. As with every background-refreshed segment, the first render after
+the cache expires still shows the previous value.
+
+Three fields exist for this window and default to being invisible, so `FiveHour` / `SevenDay`
+blocks need no changes:
+
+| field | default | meaning |
+| --- | --- | --- |
+| `usage_ttl_seconds` | `300` | how often `/api/oauth/usage` is refetched |
+| `active_marker` | `""` | appended while the server reports `is_active` — the window currently doing the limiting |
+| `severity_markers` | `[]` | `severity` → marker pairs, e.g. `[("warning", "!")]`; unmatched values render nothing |
+
+```ron
+        RateLimit(
+            window: Fable, style: BarPercent, fill: Used, color_mode: Gradient,
+            prefix: "{t}d ",
+            usage_ttl_seconds: 300,
+            active_marker: "*",
+            severity_markers: [("warning", "!"), ("critical", "!!")],
+            low_color:  Rgb(103, 175, 103),
+            mid_color:  Rgb(195, 179, 100),
+            high_color: Rgb(220,  60,  60),
+        ),
+```
 
 ### Shortening the model name
 

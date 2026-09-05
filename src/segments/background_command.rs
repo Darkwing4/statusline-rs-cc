@@ -217,7 +217,7 @@ fn suffixed(base: &Path, suffix: &str) -> PathBuf {
     PathBuf::from(name)
 }
 
-fn age_seconds(path: &Path) -> Option<u64> {
+pub(crate) fn age_seconds(path: &Path) -> Option<u64> {
     let modified = fs::metadata(path).ok()?.modified().ok()?;
 
     SystemTime::now()
@@ -226,7 +226,7 @@ fn age_seconds(path: &Path) -> Option<u64> {
         .map(|elapsed| elapsed.as_secs())
 }
 
-fn is_expired(age: Option<u64>, ttl_seconds: u64) -> bool {
+pub(crate) fn is_expired(age: Option<u64>, ttl_seconds: u64) -> bool {
     match age {
         Some(age) => age >= ttl_seconds,
         None => true,

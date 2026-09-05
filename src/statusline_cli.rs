@@ -8,6 +8,7 @@ use crate::statusline_notice_store::{self, Notice};
 use crate::statusline_reminder_store::{self, Reminder};
 
 pub const REFRESH_FLAG: &str = "--refresh";
+pub const USAGE_REFRESH_FLAG: &str = "--refresh-usage";
 pub const NOTICE_FLAG: &str = "--notice";
 pub const NOTICE_CLEAR_FLAG: &str = "--notice-clear";
 pub const TTL_FLAG: &str = "--ttl";
@@ -39,6 +40,7 @@ pub enum Command {
         fingerprint: String,
         request_base: Option<PathBuf>,
     },
+    RefreshUsage,
     SetNotice {
         session: Option<String>,
         text: String,
@@ -72,6 +74,7 @@ where
 
     match first.as_str() {
         REFRESH_FLAG => parse_refresh(&args[1..]),
+        USAGE_REFRESH_FLAG => parse_refresh_usage(&args[1..]),
         NOTICE_FLAG => parse_set_notice(&args[1..]),
         NOTICE_CLEAR_FLAG => parse_clear_notice(&args[1..]),
         REMIND_FLAG => parse_add_reminder(&args[1..]),
@@ -164,6 +167,14 @@ fn parse_refresh(rest: &[String]) -> Result<Command, String> {
         fingerprint: fingerprint.clone(),
         request_base,
     })
+}
+
+fn parse_refresh_usage(rest: &[String]) -> Result<Command, String> {
+    if !rest.is_empty() {
+        return Err(format!("{} takes no arguments", USAGE_REFRESH_FLAG));
+    }
+
+    Ok(Command::RefreshUsage)
 }
 
 fn parse_set_notice(rest: &[String]) -> Result<Command, String> {
@@ -345,6 +356,15 @@ mod tests {
         ));
         assert!(parse_args(&["--refresh"]).is_err());
         assert!(parse_args(&["--refresh", "abc123", "extra"]).is_err());
+    }
+
+    #[test]
+    fn parses_a_usage_refresh_request() {
+        assert!(matches!(
+            parse_args(&["--refresh-usage"]),
+            Ok(Command::RefreshUsage)
+        ));
+        assert!(parse_args(&["--refresh-usage", "extra"]).is_err());
     }
 
     #[test]

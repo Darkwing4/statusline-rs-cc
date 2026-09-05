@@ -44,6 +44,10 @@ fn main() -> ExitCode {
             segments::background_command::refresh(&fingerprint, request_base);
             ExitCode::SUCCESS
         }
+        Command::RefreshUsage => {
+            segments::rate_limits::refresh_usage();
+            ExitCode::SUCCESS
+        }
         written => match statusline_cli::apply(written) {
             Ok(()) => ExitCode::SUCCESS,
             Err(message) => {

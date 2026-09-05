@@ -204,6 +204,7 @@ pub struct Weather {
 pub enum Window {
     FiveHour,
     SevenDay,
+    Fable,
 }
 
 #[derive(Clone, Copy, Deserialize)]
@@ -240,6 +241,12 @@ pub struct RateLimit {
     )]
     pub gradient_midpoint_percentage: f64,
     pub prefix: String,
+    #[serde(default = "default_usage_ttl_seconds")]
+    pub usage_ttl_seconds: u64,
+    #[serde(default)]
+    pub active_marker: String,
+    #[serde(default, deserialize_with = "deserialize_severity_markers")]
+    pub severity_markers: Vec<(String, String)>,
     pub low_color: Color,
     pub mid_color: Color,
     pub high_color: Color,
@@ -247,6 +254,25 @@ pub struct RateLimit {
 
 fn default_gradient_midpoint_percentage() -> f64 {
     50.0
+}
+
+fn default_usage_ttl_seconds() -> u64 {
+    300
+}
+
+fn deserialize_severity_markers<'de, D>(deserializer: D) -> Result<Vec<(String, String)>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let pairs = Vec::<(String, String)>::deserialize(deserializer)?;
+
+    if pairs.iter().any(|(severity, _)| severity.is_empty()) {
+        return Err(serde::de::Error::custom(
+            "rate limit severity markers must not match an empty severity",
+        ));
+    }
+
+    Ok(pairs)
 }
 
 fn deserialize_gradient_midpoint_percentage<'de, D>(deserializer: D) -> Result<f64, D::Error>
@@ -389,6 +415,44 @@ mod tests {
         .expect("legacy RateLimit config should parse");
 
         assert_eq!(rate_limit.gradient_midpoint_percentage, 50.0);
+    }
+
+    #[test]
+    fn defaults_the_fable_window_extras_for_existing_configs() {
+        let rate_limit = parse_rate_limit(
+            r#"(
+                window: Fable,
+                style: BarPercent,
+                fill: Used,
+                color_mode: Gradient,
+                prefix: "{t}d ",
+                low_color: Rgb(0, 0, 0),
+                mid_color: Rgb(100, 100, 100),
+                high_color: Rgb(200, 200, 200),
+            )"#,
+        )
+        .expect("a Fable RateLimit without extras should parse");
+
+        assert_eq!(rate_limit.usage_ttl_seconds, 300);
+        assert_eq!(rate_limit.active_marker, "");
+        assert!(rate_limit.severity_markers.is_empty());
+    }
+
+    #[test]
+    fn rejects_a_severity_marker_without_a_severity() {
+        let body = r#"(
+            window: Fable,
+            style: Percent,
+            fill: Used,
+            color_mode: Steps,
+            prefix: "",
+            severity_markers: [("", "!")],
+            low_color: Rgb(0, 0, 0),
+            mid_color: Rgb(100, 100, 100),
+            high_color: Rgb(200, 200, 200),
+        )"#;
+
+        assert!(parse_rate_limit(body).is_err());
     }
 
     #[test]
