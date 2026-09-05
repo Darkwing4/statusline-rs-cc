@@ -22,6 +22,7 @@ impl SegmentSpec {
             SegmentSpec::RateLimit(s) => Box::new(s),
             SegmentSpec::Reminder(s) => Box::new(s),
             SegmentSpec::SessionTask(s) => Box::new(s),
+            SegmentSpec::Spacer(s) => Box::new(s),
             SegmentSpec::SubagentStats(s) => Box::new(s),
             SegmentSpec::Weather(s) => Box::new(s),
         }

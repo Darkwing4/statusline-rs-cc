@@ -346,6 +346,18 @@ statusline --remind-clear --all                 # drop the pending ones too
 
 There is no timer and no daemon: a reminder is a timestamp on disk, and every render compares it to the clock. It therefore appears on the first render after its time — set `statusLine.refreshInterval` in Claude Code settings if you want that to happen without touching the keyboard.
 
+### Spacer
+
+`Spacer` renders nothing but a blank. With `standalone: true` it takes a line of its own, so every one of them is an empty line below the status line — put two in the list and two empty lines separate the status line from the prompt:
+
+```ron
+Spacer(
+    standalone: true,
+),
+```
+
+With `standalone: false` it is an extra gap between two neighbours on the main line. It has no colour and no text, reads no input, and never hides itself.
+
 ### Failed-command hook
 
 The binary can also be a hook. Point Claude Code's `PostToolUse` at it and a failed shell command lands in the status line as a `Notice`:
@@ -441,6 +453,7 @@ src/
     ├── notice.rs           message written by `statusline --notice`, expires by TTL
     ├── reminder.rs         reminders that are due, written by `statusline --remind`
     ├── session_task.rs     latest real user prompt, scanned from the transcript tail
+    ├── spacer.rs           blank gap on the main line, blank line when standalone
     ├── single_line_text.rs ANSI/control stripping + truncation for untrusted text
     ├── duration_format.rs  1h02m / 4m12s / 5s durations
     ├── weather/

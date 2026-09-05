@@ -72,6 +72,7 @@ mod tests {
 
     use super::Renderer;
     use crate::config_schema::Color;
+    use crate::segments::spacer::Spacer;
     use crate::segments::{GitCache, Segment};
 
     struct FixedSegment {
@@ -136,6 +137,29 @@ mod tests {
             renderer.render(&serde_json::json!({})),
             "\nfirst standalone\nsecond standalone"
         );
+    }
+
+    #[test]
+    fn keeps_a_blank_line_for_every_standalone_spacer() {
+        let renderer = Renderer {
+            separator: " ".to_string(),
+            separator_color: Color::Gradient,
+            segments: vec![
+                segment("main", false),
+                Box::new(Spacer { standalone: true }),
+                Box::new(Spacer { standalone: true }),
+                segment("below", true),
+            ],
+        };
+
+        let output = renderer.render(&serde_json::json!({}));
+        let lines: Vec<&str> = output.split('\n').collect();
+
+        assert_eq!(lines.len(), 4);
+        assert_eq!(lines[0], "main");
+        assert!(lines[1].trim().is_empty());
+        assert!(lines[2].trim().is_empty());
+        assert_eq!(lines[3], "below");
     }
 
     #[test]

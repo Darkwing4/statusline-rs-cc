@@ -47,6 +47,11 @@ pub struct Cwd {
 }
 
 #[derive(Deserialize)]
+pub struct Spacer {
+    pub standalone: bool,
+}
+
+#[derive(Deserialize)]
 pub struct Effort {
     pub color: Color,
     pub prefix: String,
@@ -257,6 +262,7 @@ pub enum SegmentSpec {
     RateLimit(RateLimit),
     Reminder(Reminder),
     SessionTask(SessionTask),
+    Spacer(Spacer),
     SubagentStats(SubagentStats),
     Weather(Weather),
 }
