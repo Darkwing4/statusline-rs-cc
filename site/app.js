@@ -1526,7 +1526,6 @@ function initializeElements() {
     "scenarioSelect",
     "terminalWidth",
     "terminalWidthValue",
-    "lineScenario",
     "lineDimensions",
     "lineCanvas",
     "hiddenPieces",
@@ -1672,7 +1671,6 @@ function renderLine() {
 
   elements.terminalWidthValue.textContent = String(state.terminalWidth);
   elements.lineDimensions.textContent = describeLineFill(rendered, state.separator, maxColumns);
-  elements.lineScenario.textContent = activeScenario.label;
 }
 
 function createPieceNode(segment, pieces) {
@@ -1740,7 +1738,7 @@ function describeLineFill(entries, separator, maxColumns) {
   }, 0);
 
   const count = rows.length === 1 ? "1 row" : `${rows.length} rows`;
-  return `${widest} / ${maxColumns} cols · ${count}`;
+  return `${widest} of ${maxColumns} cols, ${count}`;
 }
 
 function renderHiddenPieces(entries) {

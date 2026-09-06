@@ -331,10 +331,10 @@ test("preview width handles terminal graphemes", () => {
 });
 
 test("line fill reports the widest row and the row count", () => {
-  assert.equal(describeLineFill([], " ", 92), "0 / 92 cols · 0 rows");
-  assert.equal(describeLineFill([entry("one"), entry("two")], " | ", 92), "9 / 92 cols · 1 row");
-  assert.equal(describeLineFill([entry("one"), entry("two")], " | ", 8), "3 / 8 cols · 2 rows");
-  assert.equal(describeLineFill([entry("one"), entry("standalone", true)], " ", 92), "10 / 92 cols · 2 rows");
+  assert.equal(describeLineFill([], " ", 92), "0 of 92 cols, 0 rows");
+  assert.equal(describeLineFill([entry("one"), entry("two")], " | ", 92), "9 of 92 cols, 1 row");
+  assert.equal(describeLineFill([entry("one"), entry("two")], " | ", 8), "3 of 8 cols, 2 rows");
+  assert.equal(describeLineFill([entry("one"), entry("standalone", true)], " ", 92), "10 of 92 cols, 2 rows");
 });
 
 test("flag and keycap widths preserve wrapping boundaries", () => {

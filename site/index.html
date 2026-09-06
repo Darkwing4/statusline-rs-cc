@@ -4,47 +4,42 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="dark">
-  <meta name="theme-color" content="#0a0a0b">
+  <meta name="theme-color" content="#1b1d22">
   <title>statusline builder</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
   <div class="stage">
-    <header class="masthead">
-      <div class="masthead-title">
-        <h1>statusline<span class="caret" aria-hidden="true"></span> <span id="catalogVersion" class="masthead-version"></span></h1>
-        <p>Build the line for Claude Code by moving its pieces.</p>
-      </div>
-
-      <div class="masthead-controls">
-        <label class="field">
-          <span>Session</span>
-          <select id="scenarioSelect"></select>
-        </label>
-        <label class="field field-width">
-          <span>Width <output id="terminalWidthValue">120</output></span>
-          <input id="terminalWidth" type="range" min="40" max="200" step="4" value="120">
-        </label>
-      </div>
-
-      <div class="masthead-actions">
-        <button id="resetButton" class="button" type="button">Reset</button>
-        <button id="ronButton" class="button" type="button">View RON</button>
-        <button id="installButton" class="button button-primary" type="button">Install command</button>
-      </div>
-    </header>
-
     <section class="line-stage" aria-labelledby="lineTitle">
-      <h2 id="lineTitle" class="sr-only">Statusline preview</h2>
+      <h1 id="lineTitle" class="sr-only">Statusline builder</h1>
       <div class="line-frame">
-        <div class="line-rail">
-          <span id="lineScenario">Active worktree</span>
-          <span id="lineDimensions">0 / 116 cols · 0 rows</span>
-        </div>
         <div class="line-screen">
           <span class="line-prompt" aria-hidden="true">❯</span>
           <div id="lineCanvas" class="line-canvas" role="group" aria-label="Pieces on the statusline"></div>
         </div>
+        <aside class="line-aside" aria-label="Preview settings">
+          <div class="aside-title">
+            <span class="wordmark">statusline</span>
+            <span id="catalogVersion" class="aside-version"></span>
+          </div>
+          <label class="field">
+            <span>Session</span>
+            <select id="scenarioSelect"></select>
+          </label>
+          <label class="field">
+            <span class="field-row">Width <output id="terminalWidthValue">120</output></span>
+            <input id="terminalWidth" type="range" min="40" max="200" step="4" value="120">
+          </label>
+          <span id="lineDimensions" class="aside-readout">0 of 116 cols, 0 rows</span>
+          <div class="aside-actions">
+            <button id="resetButton" class="button" type="button">Reset</button>
+            <button id="ronButton" class="button" type="button">View RON</button>
+            <button id="installButton" class="button button-primary" type="button">Install command</button>
+          </div>
+        </aside>
       </div>
       <div class="line-footer">
         <p class="line-hint">Drag a piece to reorder it. Drag it down to take it off the line. Standalone pieces get a line of their own.</p>
@@ -52,23 +47,25 @@
       </div>
     </section>
 
-    <div class="lower">
-    <section class="shelf-stage" aria-labelledby="shelfTitle">
-      <h2 id="shelfTitle">Off the line</h2>
-      <div id="shelf" class="shelf" role="group" aria-label="Pieces that are not on the statusline"></div>
-    </section>
+    <div class="workspace">
+      <section class="shelf-stage" aria-labelledby="shelfTitle">
+        <h2 id="shelfTitle">Off the line</h2>
+        <div id="shelf" class="shelf" role="group" aria-label="Pieces that are not on the statusline"></div>
+      </section>
 
-    <section class="inspector" aria-labelledby="inspectorTitle">
-      <div class="inspector-head">
-        <div>
-          <span id="inspectorKind" class="inspector-kind">Separator</span>
-          <h2 id="inspectorTitle">Whole line</h2>
-          <p id="inspectorDescription">What sits between every piece.</p>
+      <section class="inspector" aria-labelledby="inspectorTitle">
+        <div class="inspector-head">
+          <div>
+            <div class="inspector-heading">
+              <h2 id="inspectorTitle">Whole line</h2>
+              <span id="inspectorKind" class="inspector-kind">Separator</span>
+            </div>
+            <p id="inspectorDescription">What sits between every piece.</p>
+          </div>
+          <button id="removeSelectedButton" class="button button-quiet" type="button" hidden>Take off the line</button>
         </div>
-        <button id="removeSelectedButton" class="button button-quiet" type="button" hidden>Take off the line</button>
-      </div>
-      <div id="inspectorControls" class="control-grid"></div>
-    </section>
+        <div id="inspectorControls" class="control-grid"></div>
+      </section>
     </div>
   </div>
 
@@ -100,7 +97,7 @@
       <dl class="sheet-meta">
         <div>
           <dt>Targets</dt>
-          <dd>Linux x86_64 / aarch64 · macOS x86_64 / aarch64</dd>
+          <dd>Linux and macOS, x86_64 and aarch64</dd>
         </div>
         <div>
           <dt>Payload</dt>
