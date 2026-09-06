@@ -25,7 +25,6 @@ body {
 
 body {
   margin: 0;
-  overflow: hidden;
   color: var(--ink);
   background: var(--void);
   font-family: var(--mono);
@@ -252,7 +251,7 @@ input[type="range"]::-moz-range-thumb {
   grid-template-columns: minmax(220px, 282px) minmax(0, 1fr);
   align-items: stretch;
   gap: var(--step);
-  min-height: 0;
+  min-height: 220px;
 }
 
 .line-frame {
@@ -459,6 +458,7 @@ input[type="range"]::-moz-range-thumb {
   grid-template-columns: repeat(auto-fill, minmax(114px, 1fr));
   align-content: start;
   gap: 6px;
+  overflow-y: auto;
   border-radius: var(--radius);
   transition: box-shadow 120ms ease, background 120ms ease;
 }
@@ -543,7 +543,7 @@ input[type="range"]::-moz-range-thumb {
   grid-template-columns: repeat(auto-fill, minmax(178px, 1fr));
   align-content: start;
   gap: 12px 14px;
-  min-height: 0;
+  overflow-y: auto;
 }
 
 .control-label,
@@ -728,10 +728,6 @@ input[type="range"]::-moz-range-thumb {
 }
 
 @media (max-width: 900px) {
-  body {
-    overflow: auto;
-  }
-
   .stage {
     height: auto;
     min-height: 100dvh;
