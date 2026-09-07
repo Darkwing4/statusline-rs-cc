@@ -1528,6 +1528,7 @@ function initializeElements() {
     "terminalWidthValue",
     "lineDimensions",
     "lineCanvas",
+    "lineScreen",
     "hiddenPieces",
     "shelf",
     "inspectorKind",
@@ -1601,13 +1602,14 @@ function bindStaticEvents() {
       selectTarget(LINE_SELECTION);
     }
   });
-  elements.lineCanvas.addEventListener("dragover", handleLineDragOver);
-  elements.lineCanvas.addEventListener("dragleave", (event) => {
-    if (!elements.lineCanvas.contains(event.relatedTarget)) {
+  elements.lineScreen.addEventListener("dragover", handleLineDragOver);
+  elements.lineScreen.addEventListener("dragleave", (event) => {
+    if (!elements.lineScreen.contains(event.relatedTarget)) {
       clearDropIndicators();
     }
   });
-  elements.lineCanvas.addEventListener("drop", handleLineDrop);
+  elements.lineScreen.addEventListener("drop", handleLineDrop);
+  document.addEventListener("keydown", handleSelectionKey);
 
   elements.shelf.addEventListener("dragover", handleShelfDragOver);
   elements.shelf.addEventListener("dragleave", (event) => {
@@ -1696,18 +1698,6 @@ function createPieceNode(segment, pieces) {
   });
 
   node.addEventListener("click", () => selectTarget(segment.id));
-  node.addEventListener("keydown", (event) => {
-    if (event.altKey && (event.key === "ArrowLeft" || event.key === "ArrowUp")) {
-      event.preventDefault();
-      moveSegment(segment.id, -1);
-    } else if (event.altKey && (event.key === "ArrowRight" || event.key === "ArrowDown")) {
-      event.preventDefault();
-      moveSegment(segment.id, 1);
-    } else if (event.key === "Delete" || event.key === "Backspace") {
-      event.preventDefault();
-      removeSegment(segment.id);
-    }
-  });
   node.addEventListener("dragstart", (event) => {
     dragPayload = { kind: "line", id: segment.id };
     node.classList.add("is-dragging");
@@ -1872,6 +1862,34 @@ function moveSegment(id, delta) {
   focusPiece(id);
 }
 
+function moveSegmentAlongLine(id, direction) {
+  const visibleIds = [...elements.lineCanvas.querySelectorAll(".piece")].map(
+    (node) => node.dataset.segmentId
+  );
+  const position = visibleIds.indexOf(id);
+  if (position < 0) {
+    moveSegment(id, direction);
+    return;
+  }
+  if (position + direction < 0 || position + direction >= visibleIds.length) {
+    return;
+  }
+  const others = visibleIds.filter((visibleId) => visibleId !== id);
+  const leftPosition = direction > 0 ? position : position - 2;
+  const segment = state.segments.find((candidate) => candidate.id === id);
+  moveSegmentToIndex(id, indexAfterNeighbour(state.segments, others, leftPosition, isStandalone(segment)));
+}
+
+function indexAfterNeighbour(segments, visibleIds, leftPosition, standalone) {
+  for (let position = leftPosition; position >= 0; position -= 1) {
+    const neighbour = segments.find((segment) => segment.id === visibleIds[position]);
+    if (neighbour && isStandalone(neighbour) === standalone) {
+      return segments.indexOf(neighbour) + 1;
+    }
+  }
+  return 0;
+}
+
 function moveSegmentToIndex(id, requestedIndex) {
   const from = state.segments.findIndex((segment) => segment.id === id);
   if (from < 0) {
@@ -1967,6 +1985,31 @@ function renderInspector() {
   });
 }
 
+function handleSelectionKey(event) {
+  if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey) {
+    return;
+  }
+  const target = event.target instanceof Element ? event.target : null;
+  if (!target || target.closest("input, textarea, select, dialog, [contenteditable]")) {
+    return;
+  }
+  const segment = selectedSegment();
+  if (!segment) {
+    return;
+  }
+
+  if (event.key === "ArrowLeft") {
+    event.preventDefault();
+    moveSegmentAlongLine(segment.id, -1);
+  } else if (event.key === "ArrowRight") {
+    event.preventDefault();
+    moveSegmentAlongLine(segment.id, 1);
+  } else if (event.key === "Delete" || event.key === "Backspace") {
+    event.preventDefault();
+    removeSegment(segment.id);
+  }
+}
+
 function handleLineDragOver(event) {
   if (!dragPayload) {
     return;
@@ -1975,22 +2018,56 @@ function handleLineDragOver(event) {
   event.dataTransfer.dropEffect = dragPayload.kind === "shelf" ? "copy" : "move";
   clearDropIndicators();
   elements.lineCanvas.classList.add("is-dropzone");
-  const node = event.target.closest(".piece");
-  if (!node) {
+  const slot = lineDropSlot(event);
+  if (!slot) {
     return;
   }
-  const bounds = node.getBoundingClientRect();
-  node.classList.add(event.clientX < bounds.left + bounds.width / 2 ? "drop-before" : "drop-after");
+  slot.node.classList.add(slot.before ? "drop-before" : "drop-after");
 }
 
-function lineDropIndex(event) {
-  const node = event.target.closest(".piece");
-  if (!node) {
+function visiblePieceNodes() {
+  const draggedId = dragPayload && dragPayload.kind === "line" ? dragPayload.id : null;
+  return [...elements.lineCanvas.querySelectorAll(".piece")].filter(
+    (node) => node.dataset.segmentId !== draggedId
+  );
+}
+
+function lineDropSlot(event) {
+  const boxes = visiblePieceNodes().map((node) => ({ node, rect: node.getBoundingClientRect() }));
+  return nearestDropSlot(boxes, event.clientX, event.clientY);
+}
+
+function nearestDropSlot(boxes, x, y) {
+  if (boxes.length === 0) {
+    return null;
+  }
+  const rowDistance = (box) => {
+    if (y < box.rect.top) {
+      return box.rect.top - y;
+    }
+    if (y > box.rect.bottom) {
+      return y - box.rect.bottom;
+    }
+    return 0;
+  };
+  const closestRow = Math.min(...boxes.map(rowDistance));
+  const row = boxes.filter((box) => rowDistance(box) === closestRow);
+  const centre = (box) => box.rect.left + (box.rect.right - box.rect.left) / 2;
+  const nearest = row.reduce((best, box) =>
+    Math.abs(centre(box) - x) < Math.abs(centre(best) - x) ? box : best
+  );
+  return { node: nearest.node, before: x < centre(nearest) };
+}
+
+function lineDropIndex(event, standalone) {
+  const slot = lineDropSlot(event);
+  if (!slot) {
     return state.segments.length;
   }
-  const index = state.segments.findIndex((segment) => segment.id === node.dataset.segmentId);
-  const bounds = node.getBoundingClientRect();
-  return event.clientX < bounds.left + bounds.width / 2 ? index : index + 1;
+  const visibleIds = visiblePieceNodes().map((node) => node.dataset.segmentId);
+  const slotPosition = visibleIds.indexOf(slot.node.dataset.segmentId);
+  const leftPosition = slot.before ? slotPosition - 1 : slotPosition;
+  return indexAfterNeighbour(state.segments, visibleIds, leftPosition, standalone);
 }
 
 function handleLineDrop(event) {
@@ -1998,8 +2075,12 @@ function handleLineDrop(event) {
     return;
   }
   event.preventDefault();
-  const index = lineDropIndex(event);
   const payload = dragPayload;
+  const dropped =
+    payload.kind === "shelf"
+      ? createSegment(payload.moduleId)
+      : state.segments.find((segment) => segment.id === payload.id);
+  const index = lineDropIndex(event, isStandalone(dropped));
   dragPayload = null;
   clearDropIndicators();
 
@@ -2145,10 +2226,12 @@ if (typeof module !== "undefined" && module.exports) {
     displayWidth,
     generateRon,
     gradientRgb,
+    indexAfterNeighbour,
     installCatalog,
     interpolateColorStops,
     isStandalone,
     layoutRows,
+    nearestDropSlot,
     presets,
     previewGitBranch,
     previewSegment,

@@ -19,10 +19,12 @@ const {
   displayWidth,
   generateRon,
   gradientRgb,
+  indexAfterNeighbour,
   installCatalog,
   interpolateColorStops,
   isStandalone,
   layoutRows,
+  nearestDropSlot,
   presets,
   previewGitBranch,
   previewSegment,
@@ -342,4 +344,27 @@ test("flag and keycap widths preserve wrapping boundaries", () => {
   assert.equal(wrapPreviewSegments([pieces("a"), pieces("🇺🇸")], " ", 3).length, 2);
   assert.equal(wrapPreviewSegments([pieces("a"), pieces("1️⃣")], " ", 4).length, 1);
   assert.equal(wrapPreviewSegments([pieces("a"), pieces("1️⃣")], " ", 3).length, 2);
+});
+
+test("a drop lands on the nearest slot of the row under the cursor", () => {
+  const box = (id, left, right, top, bottom) => ({ node: id, rect: { left, right, top, bottom } });
+  const boxes = [box("a", 0, 40, 0, 20), box("b", 50, 90, 0, 20), box("c", 0, 40, 30, 50)];
+
+  assert.deepEqual(nearestDropSlot(boxes, 48, 10), { node: "b", before: true });
+  assert.deepEqual(nearestDropSlot(boxes, 45, 27), { node: "c", before: false });
+  assert.deepEqual(nearestDropSlot(boxes, 200, 10), { node: "b", before: false });
+  assert.deepEqual(nearestDropSlot(boxes, 200, 200), { node: "c", before: false });
+  assert.equal(nearestDropSlot([], 10, 10), null);
+});
+
+test("a piece lands after its nearest visual neighbour of the same kind", () => {
+  const seg = (id, standalone = false) => ({ id, type: "Cwd", config: { standalone } });
+  const segments = [seg("a"), seg("notice", true), seg("b"), seg("c")];
+  const visible = ["a", "b", "c", "notice"];
+
+  assert.equal(indexAfterNeighbour(segments, visible, 3, false), 4);
+  assert.equal(indexAfterNeighbour(segments, visible, 0, false), 1);
+  assert.equal(indexAfterNeighbour(segments, visible, -1, false), 0);
+  assert.equal(indexAfterNeighbour(segments, visible, 2, true), 0);
+  assert.equal(indexAfterNeighbour(segments, visible, 3, true), 2);
 });
