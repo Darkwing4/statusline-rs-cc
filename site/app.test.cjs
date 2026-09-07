@@ -81,7 +81,19 @@ test("every rate limit window gets its own shelf piece", () => {
 });
 
 test("the default line only uses pieces the catalogue knows", () => {
-  defaultLine.forEach((id) => assert.ok(modules.some((module) => module.id === id), id));
+  defaultLine.forEach((entry) => {
+    const id = typeof entry === "string" ? entry : entry.module;
+    assert.ok(modules.some((module) => module.id === id), id);
+    if (typeof entry !== "string") {
+      const fields = new Set(modules.find((module) => module.id === id).fields.map((field) => field.name));
+      Object.keys(entry.config).forEach((name) => assert.ok(fields.has(name), `${id}.${name}`));
+    }
+  });
+  resetState();
+  const insights = state.segments.filter((segment) => segment.type === "LlmInsight");
+  assert.equal(insights.length, 2);
+  assert.notEqual(insights[0].config.prompt, insights[1].config.prompt);
+  assert.ok(insights.every((segment) => segment.config.standalone));
 });
 
 test("presets only name fields the catalogue declares", () => {

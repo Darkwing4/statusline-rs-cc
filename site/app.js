@@ -50,7 +50,7 @@ const windowOverrides = {
 const acronyms = { Ttl: "TTL", Llm: "LLM" };
 const gradientFields = new Set(["ContextUsage.color", "PromptCacheTtl.color"]);
 const alwaysStandalone = new Set(["LlmAnswer"]);
-const repeatableSegments = new Set(["Spacer"]);
+const repeatableSegments = new Set(["Spacer", "LlmInsight"]);
 
 const presets = {
   Model: { color: rgbColor(180, 142, 173) },
@@ -119,10 +119,11 @@ const presets = {
     prefix: "🎯 ",
     command: "codex",
     args: ["exec", "--skip-git-repo-check", "-s", "read-only", "-c", "approval_policy=never"],
-    prompt: "One sentence: the user's goal and what is being done for it.",
+    prompt: "In one sentence: what the user's goal is and what is being done for it right now. Only the sentence, no quotes or explanations.",
     every_turns: 2,
+    scan_whole_session: true,
     initial_scan_bytes: 262144,
-    context_chars: 4000,
+    context_chars: 12000,
     max_chars: 128,
     standalone: true
   },
@@ -144,7 +145,14 @@ const defaultLine = [
   "MyLastPrompt",
   "GitError",
   "LlmInsight",
-  "LlmAnswer"
+  {
+    module: "LlmInsight",
+    config: {
+      color: rgbColor(170, 160, 120),
+      prefix: "💡 ",
+      prompt: "In one sentence: what should be added to the user's last prompt to make the task more precise. Do not suggest what is already done. Only the suggestion, no quotes or explanations."
+    }
+  }
 ];
 
 const scenarios = [
@@ -455,7 +463,14 @@ function createSegment(moduleId) {
 }
 
 function buildDefaultSegments() {
-  return defaultLine.map(createSegment);
+  return defaultLine.map((entry) => {
+    if (typeof entry === "string") {
+      return createSegment(entry);
+    }
+    const segment = createSegment(entry.module);
+    Object.assign(segment.config, structuredClone(entry.config));
+    return segment;
+  });
 }
 
 function resetState() {
