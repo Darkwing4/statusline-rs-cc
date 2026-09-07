@@ -135,12 +135,12 @@ const defaultLine = [
   "RateLimit:SevenDay",
   "SubagentStats",
   "Reminder",
-  "SessionNotice",
   "Cwd",
   "GitBranch",
   "GitDiff",
   "GitError",
-  "MyLastPrompt"
+  "MyLastPrompt",
+  "SessionNotice"
 ];
 
 const scenarios = [
@@ -816,26 +816,45 @@ function wrapPreviewSegments(segments, separator, maxColumns) {
 }
 
 function layoutRows(entries, separator, maxColumns) {
-  const main = entries.filter((entry) => !entry.standalone);
-  const tail = entries.filter((entry) => entry.standalone);
-  let cursor = 0;
-  const rows = wrapPreviewSegments(main.map((entry) => entry.pieces), separator, maxColumns)
-    .map((line) => ({
-      standalone: false,
-      cells: line.map((cell) => {
-        const entry = main[cursor];
-        cursor += 1;
-        return { entry, separator: cell.separator };
-      })
-    }));
-
-  if (rows.length === 0 && tail.length > 0) {
-    rows.push({ standalone: false, cells: [] });
+  if (entries.length === 0) {
+    return [];
   }
+  const rows = [];
+  let block = [];
 
-  tail.forEach((entry) => {
+  const flushBlock = () => {
+    const lines = wrapPreviewSegments(block.map((entry) => entry.pieces), separator, maxColumns);
+    let cursor = 0;
+    lines.forEach((line) => {
+      rows.push({
+        standalone: false,
+        cells: line.map((cell) => {
+          const entry = block[cursor];
+          cursor += 1;
+          return { entry, separator: cell.separator };
+        })
+      });
+    });
+    if (lines.length === 0) {
+      rows.push({ standalone: false, cells: [] });
+    }
+    block = [];
+  };
+
+  entries.forEach((entry) => {
+    if (!entry.standalone) {
+      block.push(entry);
+      return;
+    }
+    if (rows.length === 0 || block.length > 0) {
+      flushBlock();
+    }
     rows.push({ standalone: true, cells: [{ entry, separator: false }] });
   });
+
+  if (rows.length === 0 || block.length > 0) {
+    flushBlock();
+  }
 
   return rows;
 }
@@ -1862,33 +1881,15 @@ function moveSegmentAlongLine(id, direction) {
     moveSegment(id, direction);
     return;
   }
-  const segment = state.segments.find((candidate) => candidate.id === id);
-  const neighbour = state.segments.find(
-    (candidate) => candidate.id === visibleIds[position + direction]
-  );
-  if (!neighbour || isStandalone(neighbour) !== isStandalone(segment)) {
+  const neighbourIndex = stateIndexOf(visibleIds[position + direction]);
+  if (neighbourIndex < 0) {
     return;
   }
-  const others = visibleIds.filter((visibleId) => visibleId !== id);
-  const leftPosition = direction > 0 ? position : position - 2;
-  moveSegmentToIndex(id, indexAfterNeighbour(state.segments, others, leftPosition, isStandalone(segment)));
+  moveSegmentToIndex(id, direction > 0 ? neighbourIndex + 1 : neighbourIndex);
 }
 
-function indexAfterNeighbour(segments, visibleIds, leftPosition, standalone) {
-  const at = (position) => segments.find((segment) => segment.id === visibleIds[position]);
-  const sameKind = (segment) => segment && isStandalone(segment) === standalone;
-  for (let position = leftPosition; position >= 0; position -= 1) {
-    if (sameKind(at(position))) {
-      return segments.indexOf(at(position)) + 1;
-    }
-  }
-  for (let position = leftPosition + 1; position < visibleIds.length; position += 1) {
-    if (sameKind(at(position))) {
-      return segments.indexOf(at(position));
-    }
-  }
-  const leftNeighbour = leftPosition >= 0 ? at(leftPosition) : null;
-  return leftNeighbour ? segments.indexOf(leftNeighbour) + 1 : 0;
+function stateIndexOf(id) {
+  return state.segments.findIndex((segment) => segment.id === id);
 }
 
 function moveSegmentToIndex(id, requestedIndex) {
@@ -2060,15 +2061,17 @@ function nearestDropSlot(boxes, x, y) {
   return { node: nearest.node, before: x < centre(nearest) };
 }
 
-function lineDropIndex(event, standalone) {
+function lineDropIndex(event) {
   const slot = lineDropSlot(event);
   if (!slot) {
     return state.segments.length;
   }
-  const visibleIds = visiblePieceNodes().map((node) => node.dataset.segmentId);
-  const slotPosition = visibleIds.indexOf(slot.node.dataset.segmentId);
-  const leftPosition = slot.before ? slotPosition - 1 : slotPosition;
-  return indexAfterNeighbour(state.segments, visibleIds, leftPosition, standalone);
+  const visible = visiblePieceNodes();
+  const leftNeighbour = slot.before ? visible[visible.indexOf(slot.node) - 1] : slot.node;
+  if (!leftNeighbour) {
+    return 0;
+  }
+  return stateIndexOf(leftNeighbour.dataset.segmentId) + 1;
 }
 
 function handleLineDrop(event) {
@@ -2077,11 +2080,7 @@ function handleLineDrop(event) {
   }
   event.preventDefault();
   const payload = dragPayload;
-  const dropped =
-    payload.kind === "shelf"
-      ? createSegment(payload.moduleId)
-      : state.segments.find((segment) => segment.id === payload.id);
-  const index = lineDropIndex(event, isStandalone(dropped));
+  const index = lineDropIndex(event);
   dragPayload = null;
   clearDropIndicators();
 
@@ -2206,7 +2205,6 @@ if (typeof module !== "undefined" && module.exports) {
     displayWidth,
     generateRon,
     gradientRgb,
-    indexAfterNeighbour,
     installCatalog,
     interpolateColorStops,
     isStandalone,

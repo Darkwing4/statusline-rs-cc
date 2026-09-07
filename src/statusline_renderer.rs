@@ -23,8 +23,13 @@ impl Renderer {
         let cwd = statusline_input::cwd(json).unwrap_or("").to_string();
         let mut git = GitCache::new(cwd);
 
+        let sep = self.separator_color.paint(&self.separator);
+        let width = terminal_width()
+            .map(|cols| cols.saturating_sub(4))
+            .filter(|max| *max > 0);
+
+        let mut lines: Vec<String> = Vec::new();
         let mut main_parts: Vec<String> = Vec::new();
-        let mut tail_lines: Vec<(String, Overflow)> = Vec::new();
 
         for segment in &self.segments {
             let Some(rendered) = segment.render(json, &mut git) else {
@@ -35,34 +40,35 @@ impl Renderer {
                 continue;
             }
 
-            if segment.standalone() {
-                tail_lines.push((rendered, segment.overflow()));
-            } else {
+            if !segment.standalone() {
                 main_parts.push(rendered);
+                continue;
             }
-        }
 
-        let sep = self.separator_color.paint(&self.separator);
-        let width = terminal_width()
-            .map(|cols| cols.saturating_sub(4))
-            .filter(|max| *max > 0);
+            if lines.is_empty() || !main_parts.is_empty() {
+                lines.push(main_block(&main_parts, &sep, width));
+                main_parts.clear();
+            }
 
-        let main_block = match width {
-            Some(max) => wrap_segments(&main_parts, &sep, max),
-            None => main_parts.join(&sep),
-        };
-
-        let mut lines = vec![main_block];
-
-        for (line, overflow) in tail_lines {
-            lines.push(match (width, overflow) {
-                (Some(max), Overflow::Wrap) => wrap_words(&line, max),
-                (Some(max), Overflow::Truncate) => truncate_line(&line, max),
-                (None, _) => line,
+            lines.push(match (width, segment.overflow()) {
+                (Some(max), Overflow::Wrap) => wrap_words(&rendered, max),
+                (Some(max), Overflow::Truncate) => truncate_line(&rendered, max),
+                (None, _) => rendered,
             });
         }
 
+        if lines.is_empty() || !main_parts.is_empty() {
+            lines.push(main_block(&main_parts, &sep, width));
+        }
+
         lines.join("\n")
+    }
+}
+
+fn main_block(parts: &[String], sep: &str, width: Option<usize>) -> String {
+    match width {
+        Some(max) => wrap_segments(parts, sep, max),
+        None => parts.join(sep),
     }
 }
 
@@ -106,20 +112,39 @@ mod tests {
     }
 
     #[test]
-    fn renders_standalone_segments_on_separate_lines_after_main_line() {
+    fn renders_standalone_segments_on_their_own_lines_in_config_order() {
         let renderer = Renderer {
             separator: " ".to_string(),
             separator_color: Color::Gradient,
             segments: vec![
+                segment("first", false),
                 segment("first standalone", true),
-                segment("main", false),
+                segment("second", false),
+                segment("third", false),
                 segment("second standalone", true),
             ],
         };
 
         assert_eq!(
             renderer.render(&serde_json::json!({})),
-            "main\nfirst standalone\nsecond standalone"
+            "first\nfirst standalone\nsecond third\nsecond standalone"
+        );
+    }
+
+    #[test]
+    fn keeps_the_first_line_for_the_main_block_even_when_a_standalone_leads() {
+        let renderer = Renderer {
+            separator: " ".to_string(),
+            separator_color: Color::Gradient,
+            segments: vec![
+                segment("first standalone", true),
+                segment("main", false),
+            ],
+        };
+
+        assert_eq!(
+            renderer.render(&serde_json::json!({})),
+            "\nfirst standalone\nmain"
         );
     }
 

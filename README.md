@@ -17,7 +17,7 @@ When the line is wider than the terminal, the renderer wraps it across multiple 
 
 <p><img src="docs/screenshots/wrap.png" alt="multi-line wrap when statusline exceeds terminal width"/></p>
 
-Segments on their own line (`standalone: true`, `LlmAnswer`) are folded by words to the same width, with the colour reopened on every wrapped line, so an answer wider than a split-screen terminal is wrapped instead of cut off. `MyLastPrompt` is the one exception: it stays a single line and is cut at the terminal width with `…`, so `max_chars: 0` lets the prompt run as wide as the window.
+A segment on its own line (`standalone: true`, `LlmAnswer`) breaks the line where it sits in the config, so the segments after it start a new line below. Such a line is folded by words to the same width, with the colour reopened on every wrapped line, so an answer wider than a split-screen terminal is wrapped instead of cut off. `MyLastPrompt` is the one exception: it stays a single line and is cut at the terminal width with `…`, so `max_chars: 0` lets the prompt run as wide as the window.
 
 Every segment is tweakable from the RON config, and some ship with multiple styles. For example, `RateLimit` has radial dial, bar, and plain percent (plus `BarPercent` / `RadialPercent` which combine a graphic with the number):
 
@@ -202,7 +202,7 @@ Both scans are incremental — a cache under `$XDG_CACHE_HOME/statusline` (or `~
 
 ### LLM answer
 
-`LlmAnswer` runs any command that prints text and renders its last non-empty output line on its own line below the main one.
+`LlmAnswer` runs any command that prints text and renders its last non-empty output line on a line of its own.
 
 The worker runs the command in an empty `workdir` under the cache directory, never in the project, and its stdout is the only thing taken from it. An agent CLI still has to be told to stay a text model — for `codex` that is `-s read-only -c approval_policy=never` — because whatever it reads on stdin is a prompt-injection path into everything it is allowed to touch. Files the worker writes are created readable by the owner only.
 
@@ -322,7 +322,7 @@ UserIdleTime(
 )
 ```
 
-Segments receive the raw `serde_json::Value` so they own which input fields they read — only the config fields go through `config_schema.rs`, which `build.rs` uses to reject an invalid config at build time. For git-aware segments take `git: &mut GitCache` and call `git.dir()` / `git.status()` — `git status` is forked at most once per render, shared. For segments that render on their own line below the main one (multi-line debug output), override `fn standalone(&self) -> bool { true }`; such a line is wrapped by words unless the segment also overrides `fn overflow(&self) -> Overflow { Overflow::Truncate }`.
+Segments receive the raw `serde_json::Value` so they own which input fields they read — only the config fields go through `config_schema.rs`, which `build.rs` uses to reject an invalid config at build time. For git-aware segments take `git: &mut GitCache` and call `git.dir()` / `git.status()` — `git status` is forked at most once per render, shared. For segments that render on a line of their own (multi-line debug output), override `fn standalone(&self) -> bool { true }`; such a line is wrapped by words unless the segment also overrides `fn overflow(&self) -> Overflow { Overflow::Truncate }`.
 
 <details>
 <summary>source layout</summary>

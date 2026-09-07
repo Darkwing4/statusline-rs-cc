@@ -19,7 +19,6 @@ const {
   displayWidth,
   generateRon,
   gradientRgb,
-  indexAfterNeighbour,
   installCatalog,
   interpolateColorStops,
   isStandalone,
@@ -207,17 +206,19 @@ test("a spacer takes no columns", () => {
   assert.equal(displayWidth(part.text), 0);
 });
 
-test("standalone pieces get rows of their own after the main block", () => {
+test("standalone pieces break the line where they sit", () => {
   const rows = layoutRows(
-    [entry("one"), entry("below", true), entry("two"), entry("also below", true)],
+    [entry("one"), entry("below", true), entry("two"), entry("three"), entry("also below", true)],
     " ",
     80
   );
-  assert.equal(rows.length, 3);
-  assert.deepEqual(rows.map((row) => row.standalone), [false, true, true]);
-  assert.deepEqual(rows[0].cells.map((cell) => cell.entry.pieces[0].text), ["one", "two"]);
+  assert.deepEqual(rows.map((row) => row.standalone), [false, true, false, true]);
+  assert.deepEqual(rows[0].cells.map((cell) => cell.entry.pieces[0].text), ["one"]);
   assert.equal(rows[1].cells[0].entry.pieces[0].text, "below");
+  assert.deepEqual(rows[2].cells.map((cell) => cell.entry.pieces[0].text), ["two", "three"]);
   assert.equal(layoutRows([entry("below", true)], " ", 80)[0].cells.length, 0);
+  assert.equal(layoutRows([entry("below", true), entry("after", false)], " ", 80).length, 3);
+  assert.equal(layoutRows([entry("one"), entry("below", true), entry("also", true)], " ", 80).length, 3);
 });
 
 test("context gradient matches the runtime stops and truncation", () => {
@@ -355,20 +356,4 @@ test("a drop lands on the nearest slot of the row under the cursor", () => {
   assert.deepEqual(nearestDropSlot(boxes, 200, 10), { node: "b", before: false });
   assert.deepEqual(nearestDropSlot(boxes, 200, 200), { node: "c", before: false });
   assert.equal(nearestDropSlot([], 10, 10), null);
-});
-
-test("a piece lands after its nearest visual neighbour of the same kind", () => {
-  const seg = (id, standalone = false) => ({ id, type: "Cwd", config: { standalone } });
-  const segments = [seg("a"), seg("notice", true), seg("b"), seg("c")];
-  const visible = ["a", "b", "c", "notice"];
-
-  assert.equal(indexAfterNeighbour(segments, visible, 3, false), 4);
-  assert.equal(indexAfterNeighbour(segments, visible, 0, false), 1);
-  assert.equal(indexAfterNeighbour(segments, visible, -1, false), 0);
-  assert.equal(indexAfterNeighbour(segments, visible, 2, true), 1);
-  assert.equal(indexAfterNeighbour(segments, visible, 3, true), 2);
-  assert.equal(indexAfterNeighbour([seg("a"), seg("only", true)], ["a", "only"], 0, true), 1);
-  assert.equal(indexAfterNeighbour([seg("a"), seg("only", true)], ["a", "only"], 1, true), 2);
-  assert.equal(indexAfterNeighbour([seg("n", true), seg("a")], ["a", "n"], -1, false), 1);
-  assert.equal(indexAfterNeighbour([seg("n", true), seg("a")], ["a", "n"], 1, false), 2);
 });

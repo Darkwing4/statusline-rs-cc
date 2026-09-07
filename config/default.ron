@@ -59,13 +59,6 @@
             max_chars: 80,
             standalone: false,
         ),
-        SessionNotice(
-            color: Named(93),
-            prefix: "\u{1F4CC} ",
-            max_chars: 120,
-            show_remaining: true,
-            standalone: true,
-        ),
         Cwd(
             color: Rgb(95, 175, 175),
         ),
@@ -90,6 +83,13 @@
             prefix: "\u{BB} ",
             max_chars: 48,
             standalone: false,
+        ),
+        SessionNotice(
+            color: Named(93),
+            prefix: "\u{1F4CC} ",
+            max_chars: 120,
+            show_remaining: true,
+            standalone: true,
         ),
     ],
 )
