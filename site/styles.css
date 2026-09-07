@@ -395,10 +395,6 @@ pre {
   transition: box-shadow 120ms ease, background 120ms ease;
 }
 
-.shelf.is-dropzone {
-  background: rgba(180, 142, 173, 0.08);
-  box-shadow: 0 0 0 1px var(--accent);
-}
 
 .shelf-piece {
   display: grid;

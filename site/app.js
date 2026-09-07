@@ -1528,7 +1528,6 @@ function initializeElements() {
     "terminalWidthValue",
     "lineDimensions",
     "lineCanvas",
-    "lineScreen",
     "hiddenPieces",
     "shelf",
     "inspectorKind",
@@ -1602,22 +1601,14 @@ function bindStaticEvents() {
       selectTarget(LINE_SELECTION);
     }
   });
-  elements.lineScreen.addEventListener("dragover", handleLineDragOver);
-  elements.lineScreen.addEventListener("dragleave", (event) => {
-    if (!elements.lineScreen.contains(event.relatedTarget)) {
+  document.addEventListener("dragover", handleLineDragOver);
+  document.addEventListener("dragleave", (event) => {
+    if (event.relatedTarget === null) {
       clearDropIndicators();
     }
   });
-  elements.lineScreen.addEventListener("drop", handleLineDrop);
+  document.addEventListener("drop", handleLineDrop);
   document.addEventListener("keydown", handleSelectionKey);
-
-  elements.shelf.addEventListener("dragover", handleShelfDragOver);
-  elements.shelf.addEventListener("dragleave", (event) => {
-    if (!elements.shelf.contains(event.relatedTarget)) {
-      elements.shelf.classList.remove("is-dropzone");
-    }
-  });
-  elements.shelf.addEventListener("drop", handleShelfDrop);
 }
 
 function renderAll() {
@@ -1871,23 +1862,28 @@ function moveSegmentAlongLine(id, direction) {
     moveSegment(id, direction);
     return;
   }
-  if (position + direction < 0 || position + direction >= visibleIds.length) {
+  const segment = state.segments.find((candidate) => candidate.id === id);
+  const neighbour = state.segments.find(
+    (candidate) => candidate.id === visibleIds[position + direction]
+  );
+  if (!neighbour || isStandalone(neighbour) !== isStandalone(segment)) {
     return;
   }
   const others = visibleIds.filter((visibleId) => visibleId !== id);
   const leftPosition = direction > 0 ? position : position - 2;
-  const segment = state.segments.find((candidate) => candidate.id === id);
   moveSegmentToIndex(id, indexAfterNeighbour(state.segments, others, leftPosition, isStandalone(segment)));
 }
 
 function indexAfterNeighbour(segments, visibleIds, leftPosition, standalone) {
+  const at = (position) => segments.find((segment) => segment.id === visibleIds[position]);
   for (let position = leftPosition; position >= 0; position -= 1) {
-    const neighbour = segments.find((segment) => segment.id === visibleIds[position]);
+    const neighbour = at(position);
     if (neighbour && isStandalone(neighbour) === standalone) {
       return segments.indexOf(neighbour) + 1;
     }
   }
-  return 0;
+  const leftNeighbour = leftPosition >= 0 ? at(leftPosition) : null;
+  return leftNeighbour ? segments.indexOf(leftNeighbour) + 1 : 0;
 }
 
 function moveSegmentToIndex(id, requestedIndex) {
@@ -2091,29 +2087,8 @@ function handleLineDrop(event) {
   }
 }
 
-function handleShelfDragOver(event) {
-  if (!dragPayload || dragPayload.kind !== "line") {
-    return;
-  }
-  event.preventDefault();
-  event.dataTransfer.dropEffect = "move";
-  elements.shelf.classList.add("is-dropzone");
-}
-
-function handleShelfDrop(event) {
-  if (!dragPayload || dragPayload.kind !== "line") {
-    return;
-  }
-  event.preventDefault();
-  const payload = dragPayload;
-  dragPayload = null;
-  clearDropIndicators();
-  removeSegment(payload.id);
-}
-
 function clearDropIndicators() {
   elements.lineCanvas.classList.remove("is-dropzone");
-  elements.shelf.classList.remove("is-dropzone");
   elements.lineCanvas.querySelectorAll(".drop-before, .drop-after").forEach((node) => {
     node.classList.remove("drop-before", "drop-after");
   });

@@ -365,6 +365,6 @@ test("a piece lands after its nearest visual neighbour of the same kind", () => 
   assert.equal(indexAfterNeighbour(segments, visible, 3, false), 4);
   assert.equal(indexAfterNeighbour(segments, visible, 0, false), 1);
   assert.equal(indexAfterNeighbour(segments, visible, -1, false), 0);
-  assert.equal(indexAfterNeighbour(segments, visible, 2, true), 0);
+  assert.equal(indexAfterNeighbour(segments, visible, 2, true), 4);
   assert.equal(indexAfterNeighbour(segments, visible, 3, true), 2);
 });
