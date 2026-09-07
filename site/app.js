@@ -43,7 +43,10 @@ const cacheColdGradientStops = [
 ];
 
 const windowLabels = { FiveHour: "5h", SevenDay: "7d" };
-const windowPrefixes = { FiveHour: "{t}h " };
+const windowOverrides = {
+  FiveHour: { prefix: "{t}h " },
+  Fable: { prefix: "- {t}d ", active_marker: " |" }
+};
 const acronyms = { Ttl: "TTL", Llm: "LLM" };
 const gradientFields = new Set(["ContextUsage.color", "PromptCacheTtl.color"]);
 const alwaysStandalone = new Set(["LlmAnswer"]);
@@ -59,7 +62,7 @@ const presets = {
   },
   PromptCacheTtl: { color: gradientColor(), prefix: "cache " },
   RateLimit: {
-    style: "Bar",
+    style: "Percent",
     fill: "Remaining",
     color_mode: "Gradient",
     gradient_midpoint_percentage: 50,
@@ -72,7 +75,7 @@ const presets = {
     color: rgbColor(120, 125, 140),
     active_color: rgbColor(150, 200, 100),
     stall_color: rgbColor(220, 60, 60),
-    prefix: "agents ",
+    prefix: "Sub-agents:",
     stall_marker: "!",
     stall_seconds: 120,
     show_tokens: true
@@ -99,7 +102,7 @@ const presets = {
     deleted_color: namedColor(31)
   },
   GitError: { color: namedColor(91), text: "no git" },
-  MyLastPrompt: { color: rgbColor(120, 125, 140), prefix: "» ", max_chars: 48 },
+  MyLastPrompt: { color: rgbColor(120, 125, 140), prefix: "» ", max_chars: 48, standalone: true },
   ClaudeResourceUsage: { color: rgbColor(120, 125, 140), cpu_prefix: "CPU ", memory_prefix: "RSS " },
   UserIdleTime: { color: rgbColor(120, 125, 140), prefix: "idle " },
   Spacer: { standalone: true },
@@ -128,19 +131,20 @@ const presets = {
 
 const defaultLine = [
   "Model",
-  "Effort",
+  "RateLimit:Fable",
   "ContextUsage",
+  "Effort",
   "PromptCacheTtl",
   "RateLimit:FiveHour",
   "RateLimit:SevenDay",
   "SubagentStats",
-  "Reminder",
   "Cwd",
   "GitBranch",
   "GitDiff",
-  "GitError",
   "MyLastPrompt",
-  "SessionNotice"
+  "GitError",
+  "LlmInsight",
+  "LlmAnswer"
 ];
 
 const scenarios = [
@@ -389,7 +393,7 @@ function buildModules(catalog) {
         ...base,
         id: `RateLimit:${variant}`,
         label: `Rate limit ${windowLabels[variant] || variant}`,
-        overrides: { window: variant, prefix: windowPrefixes[variant] || "{t}d " },
+        overrides: { window: variant, prefix: "{t}d ", ...(windowOverrides[variant] || {}) },
         repeatable: false
       }));
     }

@@ -161,7 +161,7 @@ test("model replacements are applied in order in the preview", () => {
 
 test("the fable window shows its markers only in a fable session", () => {
   const fable = createSegment("RateLimit:Fable");
-  fable.config.style = "Percent";
+  fable.config.prefix = "{t}d ";
   fable.config.active_marker = "*";
   fable.config.severity_markers = [["warning", "!"]];
   assert.equal(previewSegment(fable, scenarios[0]), null);
@@ -171,9 +171,9 @@ test("the fable window shows its markers only in a fable session", () => {
 
 test("subagent stats follow the runtime format", () => {
   const stats = createSegment("SubagentStats");
-  assert.equal(previewSegment(stats, scenarios.find((s) => s.id === "active"))[0].text, "agents 2/7 4m12s 1.2M");
-  assert.equal(previewSegment(stats, scenarios.find((s) => s.id === "clean"))[0].text, "agents 7 42k");
-  assert.equal(previewSegment(stats, scenarios.find((s) => s.id === "pressure"))[0].text, "agents 1/3! 1h02m");
+  assert.equal(previewSegment(stats, scenarios.find((s) => s.id === "active"))[0].text, "Sub-agents:2/7 4m12s 1.2M");
+  assert.equal(previewSegment(stats, scenarios.find((s) => s.id === "clean"))[0].text, "Sub-agents:7 42k");
+  assert.equal(previewSegment(stats, scenarios.find((s) => s.id === "pressure"))[0].text, "Sub-agents:1/3! 1h02m");
   assert.equal(previewSegment(stats, scenarios.find((s) => s.id === "outside")), null);
 });
 
