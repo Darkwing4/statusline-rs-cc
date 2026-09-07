@@ -1876,10 +1876,15 @@ function moveSegmentAlongLine(id, direction) {
 
 function indexAfterNeighbour(segments, visibleIds, leftPosition, standalone) {
   const at = (position) => segments.find((segment) => segment.id === visibleIds[position]);
+  const sameKind = (segment) => segment && isStandalone(segment) === standalone;
   for (let position = leftPosition; position >= 0; position -= 1) {
-    const neighbour = at(position);
-    if (neighbour && isStandalone(neighbour) === standalone) {
-      return segments.indexOf(neighbour) + 1;
+    if (sameKind(at(position))) {
+      return segments.indexOf(at(position)) + 1;
+    }
+  }
+  for (let position = leftPosition + 1; position < visibleIds.length; position += 1) {
+    if (sameKind(at(position))) {
+      return segments.indexOf(at(position));
     }
   }
   const leftNeighbour = leftPosition >= 0 ? at(leftPosition) : null;
