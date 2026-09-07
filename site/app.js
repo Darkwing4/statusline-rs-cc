@@ -51,7 +51,7 @@ const repeatableSegments = new Set(["Spacer"]);
 
 const presets = {
   Model: { color: rgbColor(180, 142, 173) },
-  Effort: { color: namedColor(90) },
+  Effort: { color: rgbColor(120, 125, 140) },
   ContextUsage: {
     color: gradientColor(),
     prefix_color: rgbColor(180, 142, 173),
@@ -69,7 +69,7 @@ const presets = {
     high_color: rgbColor(220, 60, 60)
   },
   SubagentStats: {
-    color: namedColor(90),
+    color: rgbColor(120, 125, 140),
     active_color: rgbColor(150, 200, 100),
     stall_color: rgbColor(220, 60, 60),
     prefix: "agents ",
@@ -99,12 +99,12 @@ const presets = {
     deleted_color: namedColor(31)
   },
   GitError: { color: namedColor(91), text: "no git" },
-  MyLastPrompt: { color: namedColor(90), prefix: "» ", max_chars: 48 },
-  ClaudeResourceUsage: { color: namedColor(90), cpu_prefix: "CPU ", memory_prefix: "RSS " },
-  UserIdleTime: { color: namedColor(90), prefix: "idle " },
+  MyLastPrompt: { color: rgbColor(120, 125, 140), prefix: "» ", max_chars: 48 },
+  ClaudeResourceUsage: { color: rgbColor(120, 125, 140), cpu_prefix: "CPU ", memory_prefix: "RSS " },
+  UserIdleTime: { color: rgbColor(120, 125, 140), prefix: "idle " },
   Spacer: { standalone: true },
   LlmAnswer: {
-    color: namedColor(90),
+    color: rgbColor(120, 125, 140),
     command: "codex",
     args: ["exec", "-s", "read-only", "-c", "approval_policy=never"],
     prompt: "One short tip for working with Claude Code.",
@@ -123,7 +123,7 @@ const presets = {
     max_chars: 128,
     standalone: true
   },
-  Weather: { color: namedColor(90), format: "%c+%t", ttl_seconds: 1800, max_chars: 32 }
+  Weather: { color: rgbColor(120, 125, 140), format: "%c+%t", ttl_seconds: 1800, max_chars: 32 }
 };
 
 const defaultLine = [
@@ -312,7 +312,7 @@ let catalogVersion = "";
 
 const state = {
   separator: " ",
-  separatorColor: namedColor(90),
+  separatorColor: rgbColor(120, 125, 140),
   terminalWidth: 120,
   scenarioId: "active",
   segments: [],
@@ -412,7 +412,7 @@ function installCatalog(catalog) {
 function fieldDefault(field) {
   switch (field.kind) {
     case "color":
-      return namedColor(90);
+      return rgbColor(120, 125, 140);
     case "text":
       return "";
     case "bool":
@@ -456,7 +456,7 @@ function buildDefaultSegments() {
 
 function resetState() {
   state.separator = " ";
-  state.separatorColor = namedColor(90);
+  state.separatorColor = rgbColor(120, 125, 140);
   state.terminalWidth = 120;
   state.scenarioId = "active";
   state.segments = buildDefaultSegments();
@@ -718,7 +718,7 @@ function createColorControl(labelText, value, onChange, allowGradient) {
   kindSelect.addEventListener("change", () => {
     let next;
     if (kindSelect.value === "Named") {
-      next = namedColor(90);
+      next = rgbColor(120, 125, 140);
     } else if (kindSelect.value === "Rgb") {
       const [r, g, b] = colorToRgb(value, [183, 165, 255]);
       next = rgbColor(r, g, b);

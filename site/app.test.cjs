@@ -137,7 +137,7 @@ test("a pair without a left side is reported instead of silently dropped", () =>
 test("the default line renders the default config shape", () => {
   resetState();
   const ron = generateRon();
-  assert.ok(ron.startsWith("(\n    separator: \" \",\n    separator_color: Named(90),\n    segments: [\n"));
+  assert.ok(ron.startsWith("(\n    separator: \" \",\n    separator_color: Rgb(120, 125, 140),\n    segments: [\n"));
   assert.ok(ron.includes("        Model(\n            color: Rgb(180, 142, 173),\n            prefix: \"\",\n            replacements: [],\n        ),"));
   assert.ok(ron.includes("            window: FiveHour,"));
   assert.ok(ron.includes("            window: SevenDay,"));

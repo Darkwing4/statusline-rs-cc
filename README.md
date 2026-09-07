@@ -114,7 +114,7 @@ The whole config is an external [RON](https://github.com/ron-rs/ron) file at [`c
 ```ron
 (
     separator: " ",
-    separator_color: Named(90),
+    separator_color: Rgb(120, 125, 140),
     segments: [
         Model(color: Rgb(180, 142, 173), prefix: "", replacements: []),
         ContextUsage(
@@ -316,7 +316,7 @@ Register it with `pub mod user_idle_time;` in `src/segments.rs`, then add it to 
 
 ```ron
 UserIdleTime(
-    color: Named(90),
+    color: Rgb(120, 125, 140),
     prefix: "idle ",
     threshold_seconds: 0,
 )
