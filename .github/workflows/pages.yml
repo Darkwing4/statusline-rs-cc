@@ -38,9 +38,9 @@ jobs:
 
       - name: check site assets
         run: |
-          node --check site/app.js
-          node --test site/app.test.cjs
-          node site/every-segment-ron.cjs > "$RUNNER_TEMP/every-segment.ron"
+          for file in site/*.js; do node --check "$file"; done
+          node --test site/*.test.js
+          node site/every-segment-ron.js > "$RUNNER_TEMP/every-segment.ron"
           target/debug/statusline --check-config "$RUNNER_TEMP/every-segment.ron"
 
       - uses: actions/configure-pages@v5

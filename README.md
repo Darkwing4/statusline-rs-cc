@@ -93,7 +93,7 @@ To work on the page locally:
 
 ```sh
 cargo run -- --schema > site/segment-catalog.json
-node --test site/app.test.cjs
+node --test site/*.test.js
 python3 -m http.server --directory site 8000
 ```
 
