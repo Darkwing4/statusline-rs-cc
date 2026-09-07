@@ -97,6 +97,16 @@ node --test site/*.test.js
 python3 -m http.server --directory site 8000
 ```
 
+The same editor is also written in ClojureScript in [`site-cljs/`](site-cljs/) as a side-by-side experiment, deployed at `/cljs/`. The pure core (catalogue, segment model, layout, preview, RON) lives in `.cljc` files, so `bb test` and `bb ron` in `site-cljs/` run it in [babashka](https://babashka.org/) without a JVM; the browser bundle needs JDK 21+ for [shadow-cljs](https://shadow-cljs.github.io/docs/UsersGuide.html):
+
+```sh
+cd site-cljs
+npm ci && npm run assets
+npx shadow-cljs watch app
+```
+
+CI compiles the release bundle, runs the ClojureScript tests in node, and checks that the RON both editors emit for every segment is byte-identical.
+
 ## claude code skill
 
 Ships with a project-local skill at [`.claude/skills/statusline-config/`](.claude/skills/statusline-config/SKILL.md). Open Claude Code in the cloned repo and it auto-discovers it — then ask in plain language and Claude edits the RON, rebuilds, and copies the binary into place:

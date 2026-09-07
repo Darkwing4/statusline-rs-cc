@@ -1,0 +1,64 @@
+(ns statusline-builder.layout-test
+  (:require [clojure.test :refer [deftest is]]
+            [statusline-builder.layout :as layout]
+            [statusline-builder.width :as width]))
+
+(defn- pieces [text]
+  [{:text text :colour "#ffffff"}])
+
+(defn- entry
+  ([text] (entry text false))
+  ([text standalone] {:pieces (pieces text) :standalone standalone}))
+
+(defn- texts [row]
+  (map #(:text (first (:pieces (:entry %)))) (:cells row)))
+
+(deftest standalone-pieces-break-the-line-where-they-sit
+  (let [rows (layout/layout-rows [(entry "one") (entry "below" true) (entry "two") (entry "three") (entry "also below" true)] " " 80)]
+    (is (= [false true false true] (map :standalone rows)))
+    (is (= ["one"] (texts (nth rows 0))))
+    (is (= ["below"] (texts (nth rows 1))))
+    (is (= ["two" "three"] (texts (nth rows 2))))
+    (is (= 0 (count (:cells (first (layout/layout-rows [(entry "below" true)] " " 80))))))
+    (is (= 3 (count (layout/layout-rows [(entry "below" true) (entry "after")] " " 80))))
+    (is (= 3 (count (layout/layout-rows [(entry "one") (entry "below" true) (entry "also" true)] " " 80))))))
+
+(deftest preview-wrapping-uses-cols-minus-four-and-never-leads-with-a-separator
+  (let [separators (fn [columns] (map #(map :separator %) (layout/wrap-preview-segments [(pieces "one") (pieces "two")] " | " (layout/runtime-preview-columns columns))))]
+    (is (= 8 (layout/runtime-preview-columns 12)))
+    (is (= [[false] [false]] (separators 12)))
+    (is (= [[false true]] (separators 13)))))
+
+(deftest line-fill-reports-the-widest-row-and-the-row-count
+  (is (= "0 of 92 cols, 0 rows" (layout/describe-line-fill [] " " 92)))
+  (is (= "9 of 92 cols, 1 row" (layout/describe-line-fill [(entry "one") (entry "two")] " | " 92)))
+  (is (= "3 of 8 cols, 2 rows" (layout/describe-line-fill [(entry "one") (entry "two")] " | " 8)))
+  (is (= "10 of 92 cols, 2 rows" (layout/describe-line-fill [(entry "one") (entry "standalone" true)] " " 92))))
+
+(deftest a-drop-lands-on-the-nearest-slot-of-the-row-under-the-cursor
+  (let [box (fn [id left right top bottom] {:node id :rect {:left left :right right :top top :bottom bottom}})
+        boxes [(box "a" 0 40 0 20) (box "b" 50 90 0 20) (box "c" 0 40 30 50)]]
+    (is (= {:node "b" :before true} (layout/nearest-drop-slot boxes 48 10)))
+    (is (= {:node "c" :before false} (layout/nearest-drop-slot boxes 45 27)))
+    (is (= {:node "b" :before false} (layout/nearest-drop-slot boxes 200 10)))
+    (is (= {:node "c" :before false} (layout/nearest-drop-slot boxes 200 200)))
+    (is (nil? (layout/nearest-drop-slot [] 10 10)))))
+
+(deftest ascii-and-wide-code-points-count-terminal-columns
+  (is (= 5 (width/display-width "a界bc")))
+  (is (= 0 (width/display-width "\u2060")))
+  (is (= 1 (width/display-width "é"))))
+
+#?(:cljs
+   (deftest preview-width-handles-terminal-graphemes
+     (is (= 5 (width/display-width "a界🙂")))
+     (is (= 2 (width/display-width "👩‍💻")))
+     (is (= 2 (width/display-width "🇺🇸")))
+     (is (= 2 (width/display-width "1️⃣")))))
+
+#?(:cljs
+   (deftest flag-and-keycap-widths-preserve-wrapping-boundaries
+     (is (= 1 (count (layout/wrap-preview-segments [(pieces "a") (pieces "🇺🇸")] " " 4))))
+     (is (= 2 (count (layout/wrap-preview-segments [(pieces "a") (pieces "🇺🇸")] " " 3))))
+     (is (= 1 (count (layout/wrap-preview-segments [(pieces "a") (pieces "1️⃣")] " " 4))))
+     (is (= 2 (count (layout/wrap-preview-segments [(pieces "a") (pieces "1️⃣")] " " 3))))))

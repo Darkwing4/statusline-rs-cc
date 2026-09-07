@@ -1,0 +1,16 @@
+{:paths ["src" "test"]
+ :tasks
+ {test {:doc "Run the pure core tests in babashka"
+        :requires ([clojure.test :as t])
+        :task (do (require 'statusline-builder.catalogue-test
+                           'statusline-builder.colour-test
+                           'statusline-builder.editor-state-test
+                           'statusline-builder.layout-test
+                           'statusline-builder.preview-test
+                           'statusline-builder.ron-test)
+                  (let [{:keys [fail error]} (t/run-all-tests (re-pattern "statusline-builder\\..*-test"))]
+                    (when (pos? (+ fail error))
+                      (System/exit 1))))}
+  ron {:doc "Print a RON config with every segment on the line"
+       :task (do (require 'statusline-builder.every-segment-ron)
+                 ((resolve 'statusline-builder.every-segment-ron/-main)))}}}

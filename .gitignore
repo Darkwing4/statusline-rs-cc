@@ -5,3 +5,4 @@
 *.tar.gz.sha256
 /config/local.ron
 /site/segment-catalog.json
+/site/cljs

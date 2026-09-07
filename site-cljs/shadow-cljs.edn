@@ -1,0 +1,14 @@
+{:source-paths ["src" "test"]
+ :dependencies []
+ :dev-http {8080 "public"}
+ :builds
+ {:app {:target :browser
+        :output-dir "public/js"
+        :asset-path "js"
+        :modules {:app {:init-fn statusline-builder.boot/init}}}
+  :test {:target :node-test
+         :output-to "out/test.js"
+         :ns-regexp "-test$"}
+  :every-segment-ron {:target :node-script
+                      :main statusline-builder.every-segment-ron/-main
+                      :output-to "out/every-segment-ron.js"}}}
