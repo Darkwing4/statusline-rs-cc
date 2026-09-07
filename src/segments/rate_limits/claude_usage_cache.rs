@@ -4,14 +4,13 @@ use std::process::{Command, Stdio};
 
 use serde_json::Value;
 
+use crate::claude_config_dir::claude_config_key;
 use crate::private_file;
 use crate::segments::background_command::{age_seconds, is_expired};
 use crate::statusline_cache_dir::cache_dir;
 use crate::statusline_cli::USAGE_REFRESH_FLAG;
 
-const RESULT_FILE: &str = "claude-usage.json";
-const ATTEMPT_FILE: &str = "claude-usage.attempt";
-const PENDING_FILE: &str = "claude-usage.pending";
+const FILE_STEM: &str = "claude-usage";
 
 pub(super) fn snapshot(ttl_seconds: u64) -> Option<Value> {
     let paths = CachePaths::resolve()?;
@@ -52,11 +51,12 @@ struct CachePaths {
 impl CachePaths {
     fn resolve() -> Option<Self> {
         let dir = cache_dir()?;
+        let stem = format!("{FILE_STEM}-{}", claude_config_key()?);
 
         Some(CachePaths {
-            result: dir.join(RESULT_FILE),
-            attempt: dir.join(ATTEMPT_FILE),
-            pending: dir.join(PENDING_FILE),
+            result: dir.join(format!("{stem}.json")),
+            attempt: dir.join(format!("{stem}.attempt")),
+            pending: dir.join(format!("{stem}.pending")),
         })
     }
 

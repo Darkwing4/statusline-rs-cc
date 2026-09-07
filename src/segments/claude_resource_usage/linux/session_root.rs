@@ -5,6 +5,7 @@ use std::path::{Path, PathBuf};
 
 use serde_json::Value;
 
+use crate::claude_config_dir::claude_config_dir;
 use crate::process_stat::{self, ProcessStat};
 
 const MAX_REGISTRY_BYTES: u64 = 64 * 1024;
@@ -31,12 +32,7 @@ pub(super) fn resolve(session_id: &str) -> Option<ResolvedRoot> {
 }
 
 fn session_directory() -> Option<PathBuf> {
-    if let Some(path) = std::env::var_os("CLAUDE_CONFIG_DIR").filter(|value| !value.is_empty()) {
-        return Some(PathBuf::from(path).join("sessions"));
-    }
-
-    let home = std::env::var_os("HOME").filter(|value| !value.is_empty())?;
-    Some(PathBuf::from(home).join(".claude").join("sessions"))
+    Some(claude_config_dir()?.join("sessions"))
 }
 
 fn resolve_from_ancestry<ReadStat, ReadRecord>(

@@ -1,4 +1,5 @@
 mod ansi;
+mod claude_config_dir;
 mod config;
 mod config_schema;
 mod duration_format;

@@ -1,4 +1,3 @@
-use std::env;
 use std::fs;
 use std::io::Write;
 use std::path::PathBuf;
@@ -7,6 +6,7 @@ use std::process::{Command, Stdio};
 use serde_json::Value;
 
 use super::claude_usage_cache;
+use crate::claude_config_dir::claude_config_dir;
 
 const CURL: &str = "curl";
 const REQUEST_TIMEOUT_SECONDS: &str = "10";
@@ -36,9 +36,7 @@ fn access_token() -> Option<String> {
 }
 
 fn credentials_path() -> Option<PathBuf> {
-    let home = env::var_os("HOME").filter(|value| !value.is_empty())?;
-
-    Some(PathBuf::from(home).join(".claude").join(CREDENTIALS_FILE))
+    Some(claude_config_dir()?.join(CREDENTIALS_FILE))
 }
 
 fn is_safe_header_value(token: &str) -> bool {

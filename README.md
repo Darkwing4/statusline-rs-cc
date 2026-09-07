@@ -141,9 +141,11 @@ Reorder, drop, or re-colour by editing the list, then rebuild. `Color` variants:
 
 `window: FiveHour` and `window: SevenDay` read `rate_limits` straight from the status line
 payload. Claude Code does not put the per-model Fable window there, so `window: Fable` gets it
-itself: it reads the OAuth token from `~/.claude/.credentials.json`, fetches
-`https://api.anthropic.com/api/oauth/usage` with a detached `curl`, and caches the response
-under the statusline cache directory with owner-only permissions. The Fable entry is the one in
+itself: it reads the OAuth token from `.credentials.json` in the Claude config directory
+(`CLAUDE_CONFIG_DIR`, or `~/.claude`), fetches `https://api.anthropic.com/api/oauth/usage` with
+a detached `curl`, and caches the response under the statusline cache directory with owner-only
+permissions, one file per config directory so parallel accounts never read each other's
+numbers. The Fable entry is the one in
 `limits[]` with `kind: "weekly_scoped"` and `scope.model.display_name: "Fable"`.
 
 The segment is skipped entirely unless `model.id` or `model.display_name` mentions Fable, so no
