@@ -11,8 +11,8 @@
    :catalogue-version ""
    :separator " "
    :separator-color (colour/grey)
-   :terminal-width 200
-   :font-px 16
+   :terminal-width 148
+   :font-px 12
    :scenario-id "active"
    :segments []
    :selected-id line-selection})

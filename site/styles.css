@@ -125,7 +125,7 @@ pre {
   min-height: 200px;
   padding: 22px 24px 26px;
   font-family: var(--mono);
-  font-size: calc(var(--screen-font-px, 16) * 1px);
+  font-size: calc(var(--screen-font-px, 12) * 1px);
   font-variant-ligatures: none;
   line-height: 1.8;
 }
@@ -139,13 +139,13 @@ pre {
   position: absolute;
   top: 0;
   bottom: 0;
-  left: calc(24px + var(--terminal-columns, 200) * 1ch);
+  left: calc(24px + var(--terminal-columns, 148) * 1ch);
   border-left: 1px dashed var(--ink-faint);
   pointer-events: none;
 }
 
 .line-canvas {
-  width: calc(var(--terminal-columns, 200) * 1ch - 2ch);
+  width: calc(var(--terminal-columns, 148) * 1ch - 2ch);
 }
 
 .line-row {
