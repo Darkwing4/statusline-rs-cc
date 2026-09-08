@@ -34,6 +34,8 @@
 (defn- bind-events! []
   (on! "scenarioSelect" "change" #(actions/set-scenario! (.-value ($ "scenarioSelect"))))
   (on! "terminalWidth" "input" #(actions/set-terminal-width! (js/Number (.-value ($ "terminalWidth")))))
+  (on! "fontSmallerButton" "click" #(actions/nudge-font-size! -1))
+  (on! "fontLargerButton" "click" #(actions/nudge-font-size! 1))
   (on! "resetButton" "click" reset-line!)
   (on! "ronButton" "click" sheets/open-ron!)
   (on! "copyRonButton" "click" sheets/copy-ron!)

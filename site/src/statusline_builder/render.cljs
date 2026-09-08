@@ -160,9 +160,14 @@
                       #js [#js {:transform (str "translate(" dx "px, " dy "px)")} #js {:transform "none"}]
                       #js {:duration 260 :easing "cubic-bezier(0.2, 0.85, 0.25, 1)"})))))))
 
+(defn font-size! [state]
+  (.setProperty (.-style ($ "lineScreen")) "--screen-font-px" (str (:font-px state)))
+  (dom/set-text! "fontSizeValue" (str (:font-px state) "px")))
+
 (defn all! [state]
   (let [positions (capture-positions)]
     (shelf! state)
+    (font-size! state)
     (line! state)
     (inspector! state)
     (play-flip! positions)))
@@ -175,5 +180,7 @@
     (when positions
       (shelf! new)
       (play-flip! positions))
+    (when (not= (:font-px old) (:font-px new))
+      (font-size! new))
     (when (not= (es/inspector-key old) (es/inspector-key new))
       (inspector! new))))

@@ -51,3 +51,6 @@
 
 (defn set-terminal-width! [columns]
   (swap! es/state assoc :terminal-width columns))
+
+(defn nudge-font-size! [delta]
+  (swap! es/state update :font-px #(max 10 (min 24 (+ % delta)))))

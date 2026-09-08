@@ -125,7 +125,7 @@ pre {
   min-height: 220px;
   padding: 26px 24px 30px;
   font-family: var(--mono);
-  font-size: clamp(14px, 1.15vw, 16px);
+  font-size: calc(var(--screen-font-px, 16) * 1px);
   font-variant-ligatures: none;
   line-height: 1.8;
 }
@@ -309,6 +309,12 @@ pre {
   color: var(--ink);
   font-family: var(--mono);
   font-variant-numeric: tabular-nums;
+}
+
+.stepper {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
 }
 
 .aside-readout {

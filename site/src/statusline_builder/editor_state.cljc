@@ -12,6 +12,7 @@
    :separator " "
    :separator-color (colour/grey)
    :terminal-width 200
+   :font-px 16
    :scenario-id "active"
    :segments []
    :selected-id line-selection})
@@ -59,7 +60,7 @@
 
 (defn reset [state]
   (merge state
-         (dissoc initial :modules :catalogue-version)
+         (dissoc initial :modules :catalogue-version :font-px)
          {:segments (default-segments state)}))
 
 (defn- insert-at [items index item]
