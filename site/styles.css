@@ -105,6 +105,7 @@ pre {
 
 .line-frame {
   display: grid;
+  grid-template-rows: auto 1fr auto;
   overflow: hidden;
   border: 1px solid var(--edge-strong);
   border-radius: var(--radius-panel);
@@ -362,6 +363,28 @@ pre {
   min-width: 4ch;
   font-size: 12px;
   text-align: center;
+}
+
+.line-frame:fullscreen {
+  border: 0;
+  border-radius: 0;
+}
+
+.icon-button {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--ink-dim);
+}
+
+.icon-button:hover {
+  border-color: var(--edge-strong);
+  color: var(--ink);
 }
 
 .screen-readout {

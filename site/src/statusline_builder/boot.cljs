@@ -4,6 +4,7 @@
             [statusline-builder.dom :as dom :refer [$ el]]
             [statusline-builder.drag-drop :as drag-drop]
             [statusline-builder.editor-state :as es]
+            [statusline-builder.fullscreen :as fullscreen]
             [statusline-builder.keyboard :as keyboard]
             [statusline-builder.render :as render]
             [statusline-builder.scenarios :as scenarios]
@@ -45,6 +46,7 @@
   (on! "removeSelectedButton" "click" #(when-let [selected (es/selected-segment @es/state)] (actions/remove! (:id selected))))
   (on! "lineCanvas" "click" #(when-not (.closest (.-target %) ".piece, .sep") (actions/select! es/line-selection)))
   (drag-drop/bind!)
+  (fullscreen/bind!)
   (keyboard/bind!))
 
 (defn- watch-state! []
