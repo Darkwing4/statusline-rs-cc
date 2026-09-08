@@ -40,3 +40,9 @@
     (is (= (ids 0) (:selected-id moved)))
     (is (identical? state (es/move-segment-to state (ids 2) 2)))
     (is (identical? state (es/add-segment state "Model" 0)))))
+
+(deftest reordering-the-line-leaves-the-shelf-untouched
+  (let [state (fixture/fresh)
+        ids (mapv :id (:segments state))]
+    (is (= (es/shelf-key state) (es/shelf-key (es/move-segment-to state (ids 0) 3))))
+    (is (not= (es/shelf-key state) (es/shelf-key (es/remove-segment state (ids 0)))))))

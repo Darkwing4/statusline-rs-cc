@@ -36,14 +36,7 @@ jobs:
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: site-cljs/package-lock.json
-
-      - name: check site assets
-        run: |
-          for file in site/*.js; do node --check "$file"; done
-          node --test site/*.test.js
-          node site/every-segment-ron.js > "$RUNNER_TEMP/every-segment.ron"
-          target/debug/statusline --check-config "$RUNNER_TEMP/every-segment.ron"
+          cache-dependency-path: site/package-lock.json
 
       - name: install java for shadow-cljs
         uses: actions/setup-java@v4
@@ -54,10 +47,10 @@ jobs:
       - uses: actions/cache@v4
         with:
           path: ~/.m2
-          key: m2-${{ hashFiles('site-cljs/shadow-cljs.edn', 'site-cljs/package-lock.json') }}
+          key: m2-${{ hashFiles('site/shadow-cljs.edn', 'site/package-lock.json') }}
 
-      - name: build and check the clojurescript site
-        working-directory: site-cljs
+      - name: build and check the site
+        working-directory: site
         run: |
           npm ci
           npm run assets
@@ -65,17 +58,14 @@ jobs:
           npx shadow-cljs compile test
           node out/test.js
           npx shadow-cljs compile every-segment-ron
-          node out/every-segment-ron.js > "$RUNNER_TEMP/every-segment-cljs.ron"
-          diff "$RUNNER_TEMP/every-segment.ron" "$RUNNER_TEMP/every-segment-cljs.ron"
-          ../target/debug/statusline --check-config "$RUNNER_TEMP/every-segment-cljs.ron"
-          rm -rf ../site/cljs
-          cp -r public ../site/cljs
+          node out/every-segment-ron.js > "$RUNNER_TEMP/every-segment.ron"
+          ../target/debug/statusline --check-config "$RUNNER_TEMP/every-segment.ron"
 
       - uses: actions/configure-pages@v5
 
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: site
+          path: site/public
 
       - name: deploy
         id: deploy

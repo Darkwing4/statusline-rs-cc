@@ -118,7 +118,7 @@
   (select-keys state [:separator :separator-color :segments :terminal-width :scenario-id]))
 
 (defn shelf-key [state]
-  (map :module-id (:segments state)))
+  (used-module-ids state))
 
 (defn inspector-key [state]
   (if-let [selected (selected-segment state)]

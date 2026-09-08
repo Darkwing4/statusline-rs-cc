@@ -1,1 +1,14 @@
-{ "type": "module" }
+{
+  "name": "statusline-builder",
+  "private": true,
+  "scripts": {
+    "assets": "mkdir -p public && cp index.html styles.css segment-catalog.json public/",
+    "watch": "shadow-cljs watch app",
+    "build": "shadow-cljs release app",
+    "test": "shadow-cljs compile test && node out/test.js",
+    "ron": "shadow-cljs compile every-segment-ron && node out/every-segment-ron.js"
+  },
+  "devDependencies": {
+    "shadow-cljs": "3.4.12"
+  }
+}

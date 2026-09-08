@@ -89,23 +89,16 @@ The [statusline builder](https://darkwing4.github.io/statusline-rs-cc/) is a sta
 
 The page lives in [`site/`](site/) and [`.github/workflows/pages.yml`](.github/workflows/pages.yml) deploys it after every release (or by hand from the Actions tab). Nothing runs server-side: the browser gzips the RON and encodes it as base64url into `STATUSLINE_INSTALL_CONFIG`, and `install.sh` decodes it, validates it with `--check-config` on the freshly downloaded binary, and writes it to `~/.claude/statusline/config.ron`. Windows has no one-line installer for this yet — download the RON from the page and drop it at `%USERPROFILE%\.claude\statusline\config.ron`.
 
-To work on the page locally:
+The page is written in ClojureScript. The pure core (catalogue, segment model, layout, preview, RON) lives in `.cljc` files, so `bb test` and `bb ron` in `site/` run it in [babashka](https://babashka.org/) without a JVM; the browser bundle needs JDK 21+ for [shadow-cljs](https://shadow-cljs.github.io/docs/UsersGuide.html). To work on the page locally:
 
 ```sh
 cargo run -- --schema > site/segment-catalog.json
-node --test site/*.test.js
-python3 -m http.server --directory site 8000
-```
-
-The same editor is also written in ClojureScript in [`site-cljs/`](site-cljs/) as a side-by-side experiment, deployed at `/cljs/`. The pure core (catalogue, segment model, layout, preview, RON) lives in `.cljc` files, so `bb test` and `bb ron` in `site-cljs/` run it in [babashka](https://babashka.org/) without a JVM; the browser bundle needs JDK 21+ for [shadow-cljs](https://shadow-cljs.github.io/docs/UsersGuide.html):
-
-```sh
-cd site-cljs
+cd site
 npm ci && npm run assets
 npx shadow-cljs watch app
 ```
 
-CI compiles the release bundle, runs the ClojureScript tests in node, and checks that the RON both editors emit for every segment is byte-identical.
+`watch` serves `site/public` at http://localhost:8080 and recompiles on save. CI builds the release bundle, runs the tests in node, and validates the RON the page emits for every segment with `--check-config`.
 
 ## claude code skill
 

@@ -50,13 +50,29 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: npm
+          cache-dependency-path: site/package-lock.json
 
-      - name: check site assets
+      - name: install java for shadow-cljs
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: actions/cache@v4
+        with:
+          path: ~/.m2
+          key: m2-${{ hashFiles('site/shadow-cljs.edn', 'site/package-lock.json') }}
+
+      - name: check the site
+        working-directory: site
         run: |
-          for file in site/*.js; do node --check "$file"; done
-          node --test site/*.test.js
-          node site/every-segment-ron.js > "$RUNNER_TEMP/every-segment.ron"
-          target/debug/statusline --check-config "$RUNNER_TEMP/every-segment.ron"
+          npm ci
+          npx shadow-cljs compile test
+          node out/test.js
+          npx shadow-cljs compile every-segment-ron
+          node out/every-segment-ron.js > "$RUNNER_TEMP/every-segment.ron"
+          ../target/debug/statusline --check-config "$RUNNER_TEMP/every-segment.ron"
 
       - name: check shell scripts
         run: |
