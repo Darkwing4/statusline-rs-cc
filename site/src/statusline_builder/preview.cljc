@@ -163,7 +163,7 @@
        "Reminder" (text-piece config (width/cut (str/join (config "separator") (:reminders session)) (config "max_chars")))
        "SessionNotice" (session-notice config session)
        "MyLastPrompt" (text-piece config (width/cut (:last-prompt session) (config "max_chars")))
-       "LlmAnswer" (text-piece config (width/cut (:llm-answer session) (config "max_chars")))
+       "CommandOutput" (text-piece config (width/cut (:command-output session) (config "max_chars")))
        "LlmInsight" (text-piece config (width/cut (:llm-insight session) (config "max_chars")))
        "Weather" (text-piece config (width/cut (:weather session) (config "max_chars")))
        "Spacer" [(piece "\u2060" "transparent")]

@@ -65,7 +65,7 @@ impl SegmentSpec {
             SegmentSpec::GitBranch(s) => Box::new(s),
             SegmentSpec::GitDiff(s) => Box::new(s),
             SegmentSpec::GitError(s) => Box::new(s),
-            SegmentSpec::LlmAnswer(s) => Box::new(s),
+            SegmentSpec::CommandOutput(s) => Box::new(s),
             SegmentSpec::LlmInsight(s) => Box::new(s),
             SegmentSpec::Model(s) => Box::new(s),
             SegmentSpec::MyLastPrompt(s) => Box::new(s),

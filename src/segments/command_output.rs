@@ -1,10 +1,10 @@
 use serde_json::Value;
 
-pub use crate::config_schema::LlmAnswer;
+pub use crate::config_schema::CommandOutput;
 use crate::segments::background_command::BackgroundCommand;
 use crate::segments::{GitCache, Segment};
 
-impl Segment for LlmAnswer {
+impl Segment for CommandOutput {
     fn render(&self, _json: &Value, _git: &mut GitCache) -> Option<String> {
         let text = self.background_command().cached_line()?;
 
@@ -16,7 +16,7 @@ impl Segment for LlmAnswer {
     }
 }
 
-impl LlmAnswer {
+impl CommandOutput {
     pub(super) fn background_command(&self) -> BackgroundCommand {
         BackgroundCommand {
             command: self.command.clone(),

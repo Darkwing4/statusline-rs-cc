@@ -1,10 +1,11 @@
 pub mod background_command;
 pub mod claude_resource_usage;
+pub mod command_output;
 pub mod context_usage;
 pub mod cwd;
 pub mod effort;
 pub mod git;
-pub mod llm_answer;
+
 pub mod llm_insight;
 pub mod model;
 pub mod my_last_prompt;

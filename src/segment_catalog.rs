@@ -420,14 +420,14 @@ mod tests {
         );
         assert!(!field(&rate_limit.fields, "low_color").optional);
 
-        let llm_answer = catalog
+        let command_output = catalog
             .segments
             .iter()
-            .find(|segment| segment.name == "LlmAnswer")
+            .find(|segment| segment.name == "CommandOutput")
             .unwrap();
-        assert_eq!(field(&llm_answer.fields, "args").kind, FieldKind::List);
+        assert_eq!(field(&command_output.fields, "args").kind, FieldKind::List);
         assert_eq!(
-            field(&llm_answer.fields, "ttl_seconds").kind,
+            field(&command_output.fields, "ttl_seconds").kind,
             FieldKind::Integer
         );
     }

@@ -43,12 +43,13 @@
    "ClaudeResourceUsage" {"color" (colour/grey) "cpu_prefix" "CPU " "memory_prefix" "RSS "}
    "UserIdleTime" {"color" (colour/grey) "prefix" "idle "}
    "Spacer" {"shape" "LineBreak"}
-   "LlmAnswer" {"color" (colour/grey)
-                "command" "codex"
-                "args" ["exec" "-s" "read-only" "-c" "approval_policy=never"]
-                "prompt" "One short tip for working with Claude Code."
-                "ttl_seconds" 3600
-                "max_chars" 120}
+   "CommandOutput" {"color" (colour/grey)
+                    "prefix" "ping "
+                    "command" "ping"
+                    "args" ["-c" "1" "8.8.8.8"]
+                    "prompt" ""
+                    "ttl_seconds" 60
+                    "max_chars" 80}
    "LlmInsight" {"color" (colour/rgb 150 190 150)
                  "prefix" "🎯 "
                  "command" "codex"
@@ -82,7 +83,7 @@
              "prefix" "💡 "
              "prompt" "In one sentence: what should be added to the user's last prompt to make the task more precise. Do not suggest what is already done. Only the suggestion, no quotes or explanations."}}])
 
-(def ^:private always-standalone #{"LlmAnswer"})
+(def ^:private always-standalone #{"CommandOutput"})
 
 (def ^:private truncating #{"MyLastPrompt"})
 

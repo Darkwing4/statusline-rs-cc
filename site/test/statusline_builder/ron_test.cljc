@@ -13,7 +13,7 @@
 
 (deftest lists-and-pairs-serialise-as-ron-arrays
   (let [model (fixture/with-field (fixture/create "Model") "replacements" [["Opus 5 (1M context)" "Opus"] ["Sonnet 5" "Sonnet"]])
-        answer (fixture/with-field (fixture/create "LlmAnswer") "args" ["exec" "-s" "read-only"])]
+        answer (fixture/with-field (fixture/create "CommandOutput") "args" ["exec" "-s" "read-only"])]
     (is (some #{"            replacements: [(\"Opus 5 (1M context)\", \"Opus\"), (\"Sonnet 5\", \"Sonnet\")],"} (ron/segment->ron fixture/installed model)))
     (is (some #{"            args: [\"exec\", \"-s\", \"read-only\"],"} (ron/segment->ron fixture/installed answer)))))
 
@@ -33,7 +33,7 @@
     (is (str/ends-with? (str/trimr text) "    ],\n)"))))
 
 (deftest strings-and-floats-follow-the-ron-grammar
-  (let [answer (-> (fixture/create "LlmAnswer") (fixture/with-field "prompt" "say \"hi\"\n\\done"))
+  (let [answer (-> (fixture/create "CommandOutput") (fixture/with-field "prompt" "say \"hi\"\n\\done"))
         limit (-> (fixture/create "RateLimit:FiveHour") (fixture/with-field "gradient_midpoint_percentage" 42.5))]
     (is (some #{"            prompt: \"say \\\"hi\\\"\\n\\\\done\","} (ron/segment->ron fixture/installed answer)))
     (is (some #{"            gradient_midpoint_percentage: 42.5,"} (ron/segment->ron fixture/installed limit)))))

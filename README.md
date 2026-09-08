@@ -17,7 +17,7 @@ When the line is wider than the terminal, the renderer wraps it across multiple 
 
 <p><img src="docs/screenshots/wrap.png" alt="multi-line wrap when statusline exceeds terminal width"/></p>
 
-A segment on its own line (`standalone: true`, `LlmAnswer`) breaks the line where it sits in the config, so the segments after it start a new line below. `Spacer(shape: LineBreak)` ends the current line without taking one of its own, and `Spacer(shape: BlankLine)` leaves an empty line. Such a line is folded by words to the same width, with the colour reopened on every wrapped line, so an answer wider than a split-screen terminal is wrapped instead of cut off. `MyLastPrompt` is the one exception: it stays a single line and is cut at the terminal width with `…`, so `max_chars: 0` lets the prompt run as wide as the window.
+A segment on its own line (`standalone: true`, `CommandOutput`) breaks the line where it sits in the config, so the segments after it start a new line below. `Spacer(shape: LineBreak)` ends the current line without taking one of its own, and `Spacer(shape: BlankLine)` leaves an empty line. Such a line is folded by words to the same width, with the colour reopened on every wrapped line, so an answer wider than a split-screen terminal is wrapped instead of cut off. `MyLastPrompt` is the one exception: it stays a single line and is cut at the terminal width with `…`, so `max_chars: 0` lets the prompt run as wide as the window.
 
 Every segment is tweakable from the RON config, and some ship with multiple styles. For example, `RateLimit` has radial dial, bar, and plain percent (plus `BarPercent` / `RadialPercent` which combine a graphic with the number):
 
@@ -205,9 +205,9 @@ A launch is a `tool_use` block named `Agent` in the main thread; it finishes on 
 
 Both scans are incremental — a cache under `$XDG_CACHE_HOME/statusline` (or `~/.cache/statusline`) keeps the byte offset reached in every transcript, so each render only parses what was appended since the previous one. A truncated or rewritten transcript resets its offset. On a 4 MB transcript with 4 MB of subagent transcripts the first render costs ~31 ms and later ones ~11 ms.
 
-### LLM answer
+### Command output
 
-`LlmAnswer` runs any command that prints text and renders its last non-empty output line on a line of its own.
+`CommandOutput` runs any command that prints text and renders its last non-empty output line on a line of its own.
 
 The worker runs the command in an empty `workdir` under the cache directory, never in the project, and its stdout is the only thing taken from it. An agent CLI still has to be told to stay a text model — for `codex` that is `-s read-only -c approval_policy=never` — because whatever it reads on stdin is a prompt-injection path into everything it is allowed to touch. Files the worker writes are created readable by the owner only.
 
@@ -231,7 +231,7 @@ A run is skipped while a previous worker is still starting (30 s guard) and when
 
 ### Weather
 
-`Weather` renders a [wttr.in](https://wttr.in) one-liner such as `🌦️ +27°C` through the same background refresh as `LlmAnswer`.
+`Weather` renders a [wttr.in](https://wttr.in) one-liner such as `🌦️ +27°C` through the same background refresh as `CommandOutput`.
 
 `location` is a fallback: the city is taken from the system timezone first — `TZ`, then `/etc/timezone`, then the `/etc/localtime` symlink — so `Asia/Bangkok` becomes `Bangkok`. Timezones that name no city (`UTC`) and systems without either file fall back to the configured `location`; leave both empty and wttr.in resolves the location by IP. `format` is passed to wttr.in as-is (`%c` condition, `%t` temperature, `%l` location, `%w` wind).
 

@@ -25,7 +25,7 @@
     :reminders ["standup 11:00"]
     :notice {:text "✗ cargo test (exit 101)" :remaining-seconds 595}
     :last-prompt "rebase the builder branch onto develop and check every segment"
-    :llm-answer "Keep the prompt short and let the model ask for what it needs."
+    :command-output "rtt min/avg/max/mdev = 11.842/11.842/11.842/0.000 ms"
     :llm-insight "goal: ship the builder site with the next release; the catalogue is generated"
     :weather "⛅ +21°C"}
    {:id "fable"
@@ -53,7 +53,7 @@
     :reminders []
     :notice nil
     :last-prompt "make the 5h window radial"
-    :llm-answer "Name the segment after what it shows, not after where it reads."
+    :command-output "rtt min/avg/max/mdev = 23.517/23.517/23.517/0.000 ms"
     :llm-insight "goal: recolour the line; the 5h window is being switched to radial"
     :weather "🌦 +18°C"}
    {:id "pressure"
@@ -80,7 +80,7 @@
     :reminders ["stand up" "drink water"]
     :notice {:text "do not push before the review" :remaining-seconds nil}
     :last-prompt "continue the rebase and fix the conflicts in the input buffer"
-    :llm-answer "Resolve the smallest conflict first."
+    :command-output "rtt min/avg/max/mdev = 9.306/9.306/9.306/0.000 ms"
     :llm-insight "goal: finish the rebase; conflicts in the input buffer are being resolved"
     :weather "🌧 +12°C"}
    {:id "clean"
@@ -107,7 +107,7 @@
     :reminders []
     :notice nil
     :last-prompt "summarise the lecture notes"
-    :llm-answer "Ask for an outline before the full text."
+    :command-output "rtt min/avg/max/mdev = 41.078/41.078/41.078/0.000 ms"
     :llm-insight "goal: summarise the notes; an outline was just produced"
     :weather "☀️ +25°C"}
    {:id "outside"
@@ -134,6 +134,6 @@
     :reminders ["take the coffee"]
     :notice nil
     :last-prompt "rename the downloaded files by date"
-    :llm-answer "Sort by modification time, then rename."
+    :command-output "rtt min/avg/max/mdev = 15.229/15.229/15.229/0.000 ms"
     :llm-insight "goal: tidy the downloads; files are being renamed by date"
     :weather "🌫 +9°C"}])

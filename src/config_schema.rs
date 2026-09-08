@@ -176,22 +176,22 @@ pub struct SubagentStats {
     pub show_tokens: bool,
 }
 
-/// The last line an external command prints for a fixed prompt, re-asked once its TTL runs out.
+/// The last line any command prints, run again once its TTL runs out.
 #[derive(Deserialize)]
-pub struct LlmAnswer {
-    /// Colour of the answer.
+pub struct CommandOutput {
+    /// Colour of the output line.
     pub color: Color,
-    /// Text before the answer.
+    /// Text before the output line.
     pub prefix: String,
-    /// The program to run and its arguments, such as codex exec; the prompt goes to its stdin.
+    /// The program to run and its arguments, such as ping -c 1 8.8.8.8; only its last non-empty line is shown.
     pub command: String,
     /// Arguments the command is started with.
     pub args: Vec<String>,
-    /// What to ask; the last line the command prints is what gets shown.
+    /// Text written to the command's stdin, such as a prompt for an LLM CLI; leave it empty for commands that do not read stdin.
     pub prompt: String,
-    /// How many seconds the answer is kept before the command is run again.
+    /// How many seconds the output is kept before the command is run again.
     pub ttl_seconds: u64,
-    /// Cut the answer after this many characters.
+    /// Cut the output line after this many characters.
     pub max_chars: usize,
 }
 
@@ -386,13 +386,13 @@ where
 #[derive(Deserialize)]
 pub enum SegmentSpec {
     ClaudeResourceUsage(ClaudeResourceUsage),
+    CommandOutput(CommandOutput),
     ContextUsage(ContextUsage),
     Cwd(Cwd),
     Effort(Effort),
     GitBranch(GitBranch),
     GitDiff(GitDiff),
     GitError(GitError),
-    LlmAnswer(LlmAnswer),
     LlmInsight(LlmInsight),
     Model(Model),
     MyLastPrompt(MyLastPrompt),

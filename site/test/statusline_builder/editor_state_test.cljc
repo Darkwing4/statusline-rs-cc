@@ -27,7 +27,7 @@
     (is (every? #(get-in % [:config "standalone"]) insights))))
 
 (deftest standalone-pieces-come-from-the-config-or-from-the-segment-itself
-  (is (segment/standalone? (fixture/create "LlmAnswer")))
+  (is (segment/standalone? (fixture/create "CommandOutput")))
   (is (segment/standalone? (fixture/create "SessionNotice")))
   (is (not (segment/standalone? (fixture/create "Reminder"))))
   (is (segment/standalone? (assoc-in (fixture/create "Spacer") [:config "shape"] "BlankLine")))
