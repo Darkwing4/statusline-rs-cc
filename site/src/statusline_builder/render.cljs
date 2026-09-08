@@ -73,14 +73,15 @@
   (let [session (es/scenario state)
         drawn (map (fn [entry] {:segment entry
                                 :pieces (preview/pieces entry session (:separator-color state))
-                                :standalone (segment/standalone? entry)})
+                                :standalone (segment/standalone? entry)
+                                :overflow (segment/overflow entry)})
                    (:segments state))
         rendered (filter #(seq (:pieces %)) drawn)
         max-columns (layout/runtime-preview-columns (:terminal-width state))
         canvas ($ "lineCanvas")]
     (hidden-pieces! state (remove #(seq (:pieces %)) drawn))
     (.replaceChildren canvas)
-    (set! (.. canvas -style -maxWidth) (str max-columns "ch"))
+    (.setProperty (.-style ($ "lineScreen")) "--terminal-columns" (str (:terminal-width state)))
     (if (empty? rendered)
       (.append canvas (el "span" "line-empty" "Nothing on the line yet — drag a piece up from below."))
       (let [rows (mapv #(row-node state %) (layout/layout-rows rendered (:separator state) max-columns))]

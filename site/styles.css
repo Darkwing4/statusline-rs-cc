@@ -114,7 +114,10 @@ pre {
 }
 
 .line-screen {
+  position: relative;
   display: grid;
+  overflow-x: auto;
+  scrollbar-width: thin;
   grid-template-columns: auto minmax(0, 1fr);
   align-content: center;
   align-items: start;
@@ -131,14 +134,28 @@ pre {
   color: var(--ink-faint);
 }
 
+.line-screen::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(24px + var(--terminal-columns, 200) * 1ch);
+  border-left: 1px dashed var(--ink-faint);
+  pointer-events: none;
+}
+
 .line-canvas {
-  min-width: 0;
+  width: calc(var(--terminal-columns, 200) * 1ch - 2ch);
 }
 
 .line-row {
   display: block;
-  white-space: pre-wrap;
-  word-break: break-word;
+  white-space: pre;
+}
+
+.line-row .piece {
+  white-space: pre;
+  text-align: left;
 }
 
 .line-row.is-standalone {

@@ -84,9 +84,14 @@
 
 (def ^:private always-standalone #{"LlmAnswer"})
 
+(def ^:private truncating #{"MyLastPrompt"})
+
 (defn standalone? [segment]
   (or (contains? always-standalone (:type segment))
       (true? (get-in segment [:config "standalone"]))))
+
+(defn overflow [segment]
+  (if (contains? truncating (:type segment)) :truncate :wrap))
 
 (defn- field-default [{:keys [kind variants]}]
   (case kind

@@ -11,7 +11,7 @@
    :catalogue-version ""
    :separator " "
    :separator-color (colour/grey)
-   :terminal-width 120
+   :terminal-width 200
    :scenario-id "active"
    :segments []
    :selected-id line-selection})

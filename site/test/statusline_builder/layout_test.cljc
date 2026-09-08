@@ -62,3 +62,16 @@
      (is (= 2 (count (layout/wrap-preview-segments [(pieces "a") (pieces "🇺🇸")] " " 3))))
      (is (= 1 (count (layout/wrap-preview-segments [(pieces "a") (pieces "1️⃣")] " " 4))))
      (is (= 2 (count (layout/wrap-preview-segments [(pieces "a") (pieces "1️⃣")] " " 3))))))
+
+(deftest standalone-rows-follow-the-terminal-width
+  (let [long (entry "one two three" true)
+        first-text (fn [rows] (first (texts (second rows))))]
+    (is (= "one two three" (first-text (layout/layout-rows [long] " " 13))))
+    (is (= "one two\nthree" (first-text (layout/layout-rows [long] " " 7))))
+    (is (= "one tw…" (first-text (layout/layout-rows [(assoc long :overflow :truncate)] " " 7))))
+    (is (= "7 of 7 cols, 2 rows" (layout/describe-line-fill [long] " " 7)))))
+
+(deftest wrapping-and-truncating-keep-the-piece-colours
+  (let [pieces [{:text "💡 goal:" :colour "a"} {:text " ship it now" :colour "b"}]]
+    (is (= [{:text "💡 goal:\n" :colour "a"} {:text "ship it now" :colour "b"}] (layout/wrap-pieces pieces 12)))
+    (is (= [{:text "💡 goal:" :colour "a"} {:text " shi…" :colour "b"}] (layout/truncate-pieces pieces 13)))))

@@ -16,7 +16,7 @@
     <section class="line-stage" aria-labelledby="lineTitle">
       <h1 id="lineTitle" class="sr-only">Statusline builder</h1>
       <div class="line-frame">
-        <div class="line-screen">
+        <div id="lineScreen" class="line-screen">
           <span class="line-prompt" aria-hidden="true">❯</span>
           <div id="lineCanvas" class="line-canvas" role="group" aria-label="Pieces on the statusline"></div>
         </div>
@@ -30,10 +30,10 @@
             <select id="scenarioSelect"></select>
           </label>
           <label class="field">
-            <span class="field-row">Width <output id="terminalWidthValue">120</output></span>
-            <input id="terminalWidth" type="range" min="40" max="200" step="4" value="120">
+            <span class="field-row">Width <output id="terminalWidthValue">200</output></span>
+            <input id="terminalWidth" type="range" min="40" max="320" step="4" value="200">
           </label>
-          <span id="lineDimensions" class="aside-readout">0 of 116 cols, 0 rows</span>
+          <span id="lineDimensions" class="aside-readout">0 of 196 cols, 0 rows</span>
           <div class="aside-actions">
             <button id="resetButton" class="button" type="button">Reset</button>
             <button id="ronButton" class="button" type="button">View RON</button>
