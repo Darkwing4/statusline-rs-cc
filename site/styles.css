@@ -105,7 +105,6 @@ pre {
 
 .line-frame {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 236px;
   overflow: hidden;
   border: 1px solid var(--edge-strong);
   border-radius: var(--radius-panel);
@@ -122,8 +121,8 @@ pre {
   align-content: center;
   align-items: start;
   gap: 1ch;
-  min-height: 220px;
-  padding: 26px 24px 30px;
+  min-height: 200px;
+  padding: 22px 24px 26px;
   font-family: var(--mono);
   font-size: calc(var(--screen-font-px, 16) * 1px);
   font-variant-ligatures: none;
@@ -257,22 +256,31 @@ pre {
   box-shadow: 0 0 0 1px var(--accent);
 }
 
-/* preview settings beside the screen */
+/* terminal chrome around the screen */
 
-.line-aside {
+.screen-bar {
   display: flex;
-  flex-direction: column;
-  gap: 16px;
-  padding: 18px 16px 16px;
-  border-left: 1px solid var(--edge);
-  background: var(--panel);
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px 24px;
+  padding: 10px 16px;
+  background: var(--well);
 }
 
-.aside-title {
+.screen-bar:first-child {
+  border-bottom: 1px solid var(--edge);
+}
+
+.screen-bar:last-child {
+  border-top: 1px solid var(--edge);
+}
+
+.screen-title {
   display: flex;
   align-items: baseline;
   gap: 8px;
-  margin-bottom: 4px;
+  padding-left: 4px;
 }
 
 .wordmark {
@@ -282,58 +290,91 @@ pre {
   letter-spacing: -0.02em;
 }
 
-.aside-version {
+.screen-version {
   color: var(--ink-faint);
   font-family: var(--mono);
   font-size: 12px;
 }
 
-.field {
-  display: grid;
-  gap: 6px;
+.screen-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 20px;
 }
 
-.field > span {
+.tool {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tool > span {
   color: var(--ink-dim);
   font-size: 12px;
   font-weight: 500;
 }
 
-.field-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-}
-
-.field-row output {
+.tool output {
+  min-width: 3ch;
   color: var(--ink);
   font-family: var(--mono);
+  font-size: 13px;
   font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.tool select {
+  width: auto;
+  background-color: var(--screen);
+}
+
+.tool-width input[type="range"] {
+  width: clamp(120px, 14vw, 200px);
 }
 
 .stepper {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  border: 1px solid var(--edge);
+  border-radius: 4px;
+  background: var(--screen);
 }
 
-.aside-readout {
+.stepper button {
+  width: 22px;
+  height: 100%;
+  padding: 0;
+  background: transparent;
+  color: var(--ink-dim);
+  font-family: var(--mono);
+  font-size: 13px;
+  line-height: 1;
+}
+
+.stepper button:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--ink);
+}
+
+.stepper output {
+  min-width: 4ch;
+  font-size: 12px;
+  text-align: center;
+}
+
+.screen-readout {
   color: var(--ink-faint);
   font-family: var(--mono);
   font-size: 12px;
   font-variant-numeric: tabular-nums;
 }
 
-.aside-actions {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+.screen-actions {
+  display: flex;
+  flex-wrap: wrap;
   gap: 8px;
-  margin-top: auto;
-  padding-top: 8px;
-}
-
-.aside-actions .button-primary {
-  grid-column: 1 / -1;
 }
 
 .line-footer {
@@ -952,13 +993,12 @@ input[type="range"]::-moz-range-thumb {
 }
 
 @media (max-width: 900px) {
-  .line-frame {
-    grid-template-columns: 1fr;
+  .screen-actions {
+    width: 100%;
   }
 
-  .line-aside {
-    border-top: 1px solid var(--edge);
-    border-left: 0;
+  .screen-actions .button {
+    flex: 1;
   }
 
   .workspace {

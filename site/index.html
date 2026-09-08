@@ -16,37 +16,43 @@
     <section class="line-stage" aria-labelledby="lineTitle">
       <h1 id="lineTitle" class="sr-only">Statusline builder</h1>
       <div class="line-frame">
+        <div class="screen-bar">
+          <div class="screen-title">
+            <span class="wordmark">statusline</span>
+            <span id="catalogVersion" class="screen-version"></span>
+          </div>
+          <div class="screen-tools">
+            <label class="tool">
+              <span>Session</span>
+              <select id="scenarioSelect"></select>
+            </label>
+            <label class="tool tool-width">
+              <span>Width</span>
+              <input id="terminalWidth" type="range" min="40" max="320" step="4" value="200">
+              <output id="terminalWidthValue">200</output>
+            </label>
+            <div class="tool" role="group" aria-label="Font size">
+              <span>Font</span>
+              <div class="stepper">
+                <button id="fontSmallerButton" type="button" aria-label="Smaller font">−</button>
+                <output id="fontSizeValue">16px</output>
+                <button id="fontLargerButton" type="button" aria-label="Larger font">+</button>
+              </div>
+            </div>
+          </div>
+        </div>
         <div id="lineScreen" class="line-screen">
           <span class="line-prompt" aria-hidden="true">❯</span>
           <div id="lineCanvas" class="line-canvas" role="group" aria-label="Pieces on the statusline"></div>
         </div>
-        <aside class="line-aside" aria-label="Preview settings">
-          <div class="aside-title">
-            <span class="wordmark">statusline</span>
-            <span id="catalogVersion" class="aside-version"></span>
-          </div>
-          <label class="field">
-            <span>Session</span>
-            <select id="scenarioSelect"></select>
-          </label>
-          <label class="field">
-            <span class="field-row">Width <output id="terminalWidthValue">200</output></span>
-            <input id="terminalWidth" type="range" min="40" max="320" step="4" value="200">
-          </label>
-          <span id="lineDimensions" class="aside-readout">0 of 196 cols, 0 rows</span>
-          <div class="field">
-            <span class="field-row">Font <output id="fontSizeValue">16px</output></span>
-            <div class="stepper">
-              <button id="fontSmallerButton" class="button" type="button" aria-label="Smaller font">−</button>
-              <button id="fontLargerButton" class="button" type="button" aria-label="Larger font">+</button>
-            </div>
-          </div>
-          <div class="aside-actions">
+        <div class="screen-bar">
+          <span id="lineDimensions" class="screen-readout">0 of 196 cols, 0 rows</span>
+          <div class="screen-actions">
             <button id="resetButton" class="button" type="button">Reset</button>
             <button id="ronButton" class="button" type="button">View RON</button>
             <button id="installButton" class="button button-primary" type="button">Install command</button>
           </div>
-        </aside>
+        </div>
       </div>
       <div class="line-footer">
         <p class="line-hint">Drag a piece anywhere to drop it into the nearest gap, or select it and use ← → and Delete. Standalone pieces get a line of their own.</p>
