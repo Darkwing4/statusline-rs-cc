@@ -95,10 +95,16 @@
                   (if (or (empty? rows) (seq block))
                     (into rows (block-rows block separator max-columns))
                     rows))
+          break-cell {:separator false}
+          end-line (fn [rows block entry]
+                     (let [flushed (flush rows block)
+                           last-row (dec (count flushed))]
+                       (update-in flushed [last-row :cells] conj (assoc break-cell :entry entry))))
           [rows block] (reduce (fn [[rows block] entry]
-                                 (if (:standalone entry)
-                                   [(conj (flush rows block) {:standalone true :cells [{:entry (fit-standalone entry max-columns) :separator false}]}) []]
-                                   [rows (conj block entry)]))
+                                 (cond
+                                   (:standalone entry) [(conj (flush rows block) {:standalone true :cells [{:entry (fit-standalone entry max-columns) :separator false}]}) []]
+                                   (and (:line-break entry) (seq block)) [(end-line rows block entry) []]
+                                   :else [rows (conj block entry)]))
                                [[] []]
                                entries)]
       (flush rows block))))

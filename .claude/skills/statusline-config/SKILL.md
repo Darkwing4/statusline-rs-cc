@@ -96,7 +96,9 @@ then `./install-local.sh`.
 
 **Drop the 7-day rate limit segment:** delete the second `RateLimit(...)` block from `segments: [...]`, install.
 
-**Two empty lines under the status line:** add two `Spacer(standalone: true)` blocks, install.
+**Two empty lines under the status line:** add two `Spacer(shape: BlankLine)` blocks, install.
+
+**Start the next segments on a new line without an empty one:** add `Spacer(shape: LineBreak)` where the line should end, install.
 
 **Switch 5h to radial with percent:**
 

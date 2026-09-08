@@ -69,6 +69,14 @@
      (is (= 1 (count (layout/wrap-preview-segments [(pieces "a") (pieces "1️⃣")] " " 4))))
      (is (= 2 (count (layout/wrap-preview-segments [(pieces "a") (pieces "1️⃣")] " " 3))))))
 
+(deftest a-line-break-ends-the-row-and-stays-visible-at-its-end
+  (let [break {:pieces (pieces "\u2060") :standalone false :line-break true}
+        rows (layout/layout-rows [break (entry "one") break break (entry "two") (entry "three")] " " 80)]
+    (is (= [false false] (map :standalone rows)))
+    (is (= ["\u2060" "one" "\u2060"] (texts (nth rows 0))))
+    (is (= ["\u2060" "two" "three"] (texts (nth rows 1))))
+    (is (= "9 of 80 cols, 2 rows" (layout/describe-line-fill [(entry "one") break (entry "two") (entry "three")] " " 80)))))
+
 (deftest standalone-rows-follow-the-terminal-width
   (let [long (entry "one two three" true)
         first-text (fn [rows] (first (texts (second rows))))]

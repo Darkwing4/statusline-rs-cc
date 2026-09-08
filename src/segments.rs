@@ -41,6 +41,10 @@ pub trait Segment {
         false
     }
 
+    fn breaks_line(&self) -> bool {
+        false
+    }
+
     fn overflow(&self) -> Overflow {
         Overflow::Wrap
     }

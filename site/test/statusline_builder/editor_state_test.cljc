@@ -30,7 +30,10 @@
   (is (segment/standalone? (fixture/create "LlmAnswer")))
   (is (segment/standalone? (fixture/create "SessionNotice")))
   (is (not (segment/standalone? (fixture/create "Reminder"))))
-  (is (segment/standalone? (fixture/create "Spacer"))))
+  (is (segment/standalone? (assoc-in (fixture/create "Spacer") [:config "shape"] "BlankLine")))
+  (is (not (segment/standalone? (fixture/create "Spacer"))))
+  (is (segment/line-break? (fixture/create "Spacer")))
+  (is (not (segment/line-break? (assoc-in (fixture/create "Spacer") [:config "shape"] "Gap")))))
 
 (deftest moving-a-piece-lands-it-before-the-requested-index
   (let [state (fixture/fresh)

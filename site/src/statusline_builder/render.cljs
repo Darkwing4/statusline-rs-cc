@@ -28,8 +28,9 @@
         node (piece-button "piece" segment module)]
     (set! (.-title node) (:label module))
     (.setAttribute node "aria-label" (str (:label module) " on the line"))
-    (when (every? #(zero? (width/display-width (:text %))) pieces)
-      (.add (.-classList node) "is-blank"))
+    (cond
+      (segment/line-break? segment) (.add (.-classList node) "is-break")
+      (every? #(zero? (width/display-width (:text %))) pieces) (.add (.-classList node) "is-blank"))
     (doseq [{:keys [text colour]} pieces]
       (let [span (el "span" "" text)]
         (set! (.. span -style -color) colour)
@@ -74,6 +75,7 @@
         drawn (map (fn [entry] {:segment entry
                                 :pieces (preview/pieces entry session (:separator-color state))
                                 :standalone (segment/standalone? entry)
+                                :line-break (segment/line-break? entry)
                                 :overflow (segment/overflow entry)})
                    (:segments state))
         rendered (filter #(seq (:pieces %)) drawn)

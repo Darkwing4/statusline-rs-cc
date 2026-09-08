@@ -210,6 +210,11 @@ pre {
   opacity: 0.35;
 }
 
+.piece.is-break::before {
+  content: "↵";
+  color: var(--ink-faint);
+}
+
 .piece.is-blank {
   display: inline-block;
   min-width: 1ch;

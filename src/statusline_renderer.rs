@@ -32,6 +32,15 @@ impl Renderer {
         let mut main_parts: Vec<String> = Vec::new();
 
         for segment in &self.segments {
+            if segment.breaks_line() {
+                if !main_parts.is_empty() {
+                    lines.push(main_block(&main_parts, &sep, width));
+                    main_parts.clear();
+                }
+
+                continue;
+            }
+
             let Some(rendered) = segment.render(json, &mut git) else {
                 continue;
             };
@@ -79,7 +88,7 @@ mod tests {
     use super::Renderer;
     use crate::ansi::visible_width;
     use crate::config_schema::Color;
-    use crate::segments::spacer::Spacer;
+    use crate::segments::spacer::{Spacer, SpacerShape};
     use crate::segments::{GitCache, Segment};
 
     struct FixedSegment {
@@ -166,14 +175,45 @@ mod tests {
     }
 
     #[test]
+    fn starts_a_new_line_after_a_line_break_without_leaving_a_blank_one() {
+        let renderer = Renderer {
+            separator: " ".to_string(),
+            separator_color: Color::Gradient,
+            segments: vec![
+                Box::new(Spacer {
+                    shape: SpacerShape::LineBreak,
+                }),
+                segment("first", false),
+                Box::new(Spacer {
+                    shape: SpacerShape::LineBreak,
+                }),
+                Box::new(Spacer {
+                    shape: SpacerShape::LineBreak,
+                }),
+                segment("second", false),
+                segment("third", false),
+            ],
+        };
+
+        assert_eq!(
+            renderer.render(&serde_json::json!({})),
+            "first\nsecond third"
+        );
+    }
+
+    #[test]
     fn keeps_a_blank_line_for_every_standalone_spacer() {
         let renderer = Renderer {
             separator: " ".to_string(),
             separator_color: Color::Gradient,
             segments: vec![
                 segment("main", false),
-                Box::new(Spacer { standalone: true }),
-                Box::new(Spacer { standalone: true }),
+                Box::new(Spacer {
+                    shape: SpacerShape::BlankLine,
+                }),
+                Box::new(Spacer {
+                    shape: SpacerShape::BlankLine,
+                }),
                 segment("below", true),
             ],
         };

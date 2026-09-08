@@ -17,7 +17,7 @@ When the line is wider than the terminal, the renderer wraps it across multiple 
 
 <p><img src="docs/screenshots/wrap.png" alt="multi-line wrap when statusline exceeds terminal width"/></p>
 
-A segment on its own line (`standalone: true`, `LlmAnswer`) breaks the line where it sits in the config, so the segments after it start a new line below. Such a line is folded by words to the same width, with the colour reopened on every wrapped line, so an answer wider than a split-screen terminal is wrapped instead of cut off. `MyLastPrompt` is the one exception: it stays a single line and is cut at the terminal width with `…`, so `max_chars: 0` lets the prompt run as wide as the window.
+A segment on its own line (`standalone: true`, `LlmAnswer`) breaks the line where it sits in the config, so the segments after it start a new line below. `Spacer(shape: LineBreak)` ends the current line without taking one of its own, and `Spacer(shape: BlankLine)` leaves an empty line. Such a line is folded by words to the same width, with the colour reopened on every wrapped line, so an answer wider than a split-screen terminal is wrapped instead of cut off. `MyLastPrompt` is the one exception: it stays a single line and is cut at the terminal width with `…`, so `max_chars: 0` lets the prompt run as wide as the window.
 
 Every segment is tweakable from the RON config, and some ship with multiple styles. For example, `RateLimit` has radial dial, bar, and plain percent (plus `BarPercent` / `RadialPercent` which combine a graphic with the number):
 
@@ -125,7 +125,7 @@ The whole config is an external [RON](https://github.com/ron-rs/ron) file at [`c
             prefix: "", prefix_color: Rgb(180, 142, 173),
             suffix: "", suffix_color: Rgb(180, 142, 173),
         ),
-        Spacer(standalone: false),
+        Spacer(shape: Gap),
         Cwd(color: Rgb(95, 175, 175)),
         GitBranch(
             color: Named(32), state_color: Named(91),

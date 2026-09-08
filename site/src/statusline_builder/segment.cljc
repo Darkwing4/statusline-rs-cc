@@ -42,7 +42,7 @@
    "MyLastPrompt" {"color" (colour/grey) "prefix" "» " "max_chars" 48 "standalone" true}
    "ClaudeResourceUsage" {"color" (colour/grey) "cpu_prefix" "CPU " "memory_prefix" "RSS "}
    "UserIdleTime" {"color" (colour/grey) "prefix" "idle "}
-   "Spacer" {"standalone" true}
+   "Spacer" {"shape" "LineBreak"}
    "LlmAnswer" {"color" (colour/grey)
                 "command" "codex"
                 "args" ["exec" "-s" "read-only" "-c" "approval_policy=never"]
@@ -88,7 +88,11 @@
 
 (defn standalone? [segment]
   (or (contains? always-standalone (:type segment))
-      (true? (get-in segment [:config "standalone"]))))
+      (true? (get-in segment [:config "standalone"]))
+      (= "BlankLine" (get-in segment [:config "shape"]))))
+
+(defn line-break? [segment]
+  (= "LineBreak" (get-in segment [:config "shape"])))
 
 (defn overflow [segment]
   (if (contains? truncating (:type segment)) :truncate :wrap))

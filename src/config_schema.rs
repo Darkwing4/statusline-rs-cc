@@ -50,10 +50,17 @@ pub struct Cwd {
     pub color: Color,
 }
 
-/// Nothing at all: a blank line of its own, or a gap between two neighbours.
+/// Nothing at all: a gap between two neighbours, a line break, or a blank line of its own.
 #[derive(Deserialize)]
 pub struct Spacer {
-    pub standalone: bool,
+    pub shape: SpacerShape,
+}
+
+#[derive(Clone, Copy, Deserialize, PartialEq)]
+pub enum SpacerShape {
+    Gap,
+    LineBreak,
+    BlankLine,
 }
 
 /// How hard the model is currently set to think.

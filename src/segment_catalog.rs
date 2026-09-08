@@ -367,7 +367,9 @@ mod tests {
             .iter()
             .find(|segment| segment.name == "Spacer")
             .unwrap();
-        assert_eq!(field(&spacer.fields, "standalone").kind, FieldKind::Bool);
+        let shape = field(&spacer.fields, "shape");
+        assert_eq!(shape.kind, FieldKind::Enum);
+        assert_eq!(shape.variants, ["Gap", "LineBreak", "BlankLine"]);
 
         let rate_limit = catalog
             .segments

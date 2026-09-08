@@ -1,6 +1,6 @@
 use serde_json::Value;
 
-pub use crate::config_schema::Spacer;
+pub use crate::config_schema::{Spacer, SpacerShape};
 use crate::segments::{GitCache, Segment};
 
 const BLANK: &str = "\u{2060}";
@@ -11,7 +11,11 @@ impl Segment for Spacer {
     }
 
     fn standalone(&self) -> bool {
-        self.standalone
+        self.shape == SpacerShape::BlankLine
+    }
+
+    fn breaks_line(&self) -> bool {
+        self.shape == SpacerShape::LineBreak
     }
 }
 
@@ -19,20 +23,24 @@ impl Segment for Spacer {
 mod tests {
     use serde_json::json;
 
-    use super::{Spacer, BLANK};
+    use super::{Spacer, SpacerShape, BLANK};
     use crate::ansi::visible_width;
     use crate::segments::{GitCache, Segment};
 
-    fn render(standalone: bool) -> (Option<String>, bool) {
-        let segment = Spacer { standalone };
+    fn render(shape: SpacerShape) -> (Option<String>, bool, bool) {
+        let segment = Spacer { shape };
         let mut git = GitCache::new(String::new());
 
-        (segment.render(&json!({}), &mut git), segment.standalone())
+        (
+            segment.render(&json!({}), &mut git),
+            segment.standalone(),
+            segment.breaks_line(),
+        )
     }
 
     #[test]
     fn renders_text_that_takes_no_space_and_survives_trimming() {
-        let (rendered, _) = render(false);
+        let (rendered, _, _) = render(SpacerShape::Gap);
 
         assert_eq!(rendered.as_deref(), Some(BLANK));
         assert_eq!(visible_width(BLANK), 0);
@@ -41,8 +49,9 @@ mod tests {
     }
 
     #[test]
-    fn follows_the_configured_standalone_flag() {
-        assert!(!render(false).1);
-        assert!(render(true).1);
+    fn follows_the_configured_shape() {
+        assert_eq!((render(SpacerShape::Gap).1, render(SpacerShape::Gap).2), (false, false));
+        assert_eq!((render(SpacerShape::LineBreak).1, render(SpacerShape::LineBreak).2), (false, true));
+        assert_eq!((render(SpacerShape::BlankLine).1, render(SpacerShape::BlankLine).2), (true, false));
     }
 }
