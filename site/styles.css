@@ -200,8 +200,7 @@ pre {
 }
 
 .piece.is-selected {
-  background: var(--accent-soft);
-  box-shadow: 0 0 0 2px var(--accent-soft);
+  box-shadow: 0 0 0 1px var(--accent);
 }
 
 .piece.is-dragging {
