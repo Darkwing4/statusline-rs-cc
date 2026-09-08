@@ -89,6 +89,7 @@
           (.append canvas row))
         (.append (peek rows) (el "span" "line-cursor"))))
     (dom/set-text! "terminalWidthValue" (str (:terminal-width state)))
+    (set! (.-value ($ "terminalWidth")) (str (:terminal-width state)))
     (dom/set-text! "lineDimensions" (layout/describe-line-fill rendered (:separator state) max-columns))))
 
 (defn selection! [state]

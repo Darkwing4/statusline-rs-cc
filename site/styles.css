@@ -134,14 +134,34 @@ pre {
   color: var(--ink-faint);
 }
 
-.line-screen::after {
-  content: "";
+.width-guide {
   position: absolute;
   top: 0;
   bottom: 0;
   left: calc(24px + var(--terminal-columns, 148) * 1ch);
+  width: 14px;
+  margin-left: -7px;
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.width-guide::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 6px;
   border-left: 1px dashed var(--ink-faint);
-  pointer-events: none;
+  transition: border-color 120ms ease;
+}
+
+.width-guide:hover::before,
+.width-guide.is-dragging::before {
+  border-left: 2px solid var(--accent);
+}
+
+.width-guide.is-dragging {
+  background: var(--accent-soft);
 }
 
 .line-canvas {

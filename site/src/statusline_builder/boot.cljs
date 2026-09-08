@@ -8,7 +8,8 @@
             [statusline-builder.keyboard :as keyboard]
             [statusline-builder.render :as render]
             [statusline-builder.scenarios :as scenarios]
-            [statusline-builder.sheets :as sheets]))
+            [statusline-builder.sheets :as sheets]
+            [statusline-builder.width-guide :as width-guide]))
 
 (def ^:private catalogue-url "segment-catalog.json")
 
@@ -47,6 +48,7 @@
   (on! "lineCanvas" "click" #(when-not (.closest (.-target %) ".piece, .sep") (actions/select! es/line-selection)))
   (drag-drop/bind!)
   (fullscreen/bind!)
+  (width-guide/bind!)
   (keyboard/bind!))
 
 (defn- watch-state! []

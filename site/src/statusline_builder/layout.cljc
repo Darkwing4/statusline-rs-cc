@@ -3,8 +3,18 @@
             [statusline-builder.number :as number]
             [statusline-builder.width :as width]))
 
+(def min-columns 40)
+(def max-columns 320)
+(def column-step 4)
+
 (defn runtime-preview-columns [columns]
   (max 0 (- (number/floor columns) 4)))
+
+(defn snap-columns [columns]
+  (-> (number/round (/ columns column-step))
+      (* column-step)
+      (max min-columns)
+      (min max-columns)))
 
 (defn- pieces-width [pieces]
   (reduce + 0 (map #(width/display-width (:text %)) pieces)))

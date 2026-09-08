@@ -23,6 +23,12 @@
     (is (= 3 (count (layout/layout-rows [(entry "below" true) (entry "after")] " " 80))))
     (is (= 3 (count (layout/layout-rows [(entry "one") (entry "below" true) (entry "also" true)] " " 80))))))
 
+(deftest dragged-columns-snap-to-the-slider-steps
+  (is (= 148 (layout/snap-columns 147.2)))
+  (is (= 152 (layout/snap-columns 150)))
+  (is (= 40 (layout/snap-columns -30)))
+  (is (= 320 (layout/snap-columns 900))))
+
 (deftest preview-wrapping-uses-cols-minus-four-and-never-leads-with-a-separator
   (let [separators (fn [columns] (map #(map :separator %) (layout/wrap-preview-segments [(pieces "one") (pieces "two")] " | " (layout/runtime-preview-columns columns))))]
     (is (= 8 (layout/runtime-preview-columns 12)))
