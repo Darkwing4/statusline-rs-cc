@@ -56,7 +56,7 @@
                  "prompt" "In one sentence: what the user's goal is and what is being done for it right now. Only the sentence, no quotes or explanations."
                  "every_turns" 2
                  "scan_whole_session" true
-                 "initial_scan_bytes" 262144
+                 "initial_scan_kib" 256
                  "context_chars" 12000
                  "max_chars" 128
                  "standalone" true}

@@ -798,20 +798,40 @@ input[type="range"]::-moz-range-thumb {
 }
 
 .toggle-control {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  align-self: start;
+  gap: 6px 10px;
+  cursor: pointer;
+}
+
+.toggle-control > span:first-child {
+  grid-row: 2;
   display: flex;
   align-items: center;
-  align-self: end;
-  gap: 10px;
   height: var(--control-height);
   padding: 0 10px;
   border: 1px solid var(--edge);
   border-radius: var(--radius);
   background: var(--well);
-  cursor: pointer;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 400;
 }
 
-.toggle-control > span {
-  flex: 1;
+.toggle-control input {
+  grid-row: 2;
+  justify-self: end;
+  margin-right: 10px;
+}
+
+.control-hint {
+  grid-column: 1 / -1;
+  color: var(--ink-faint);
+  font-size: 11.5px;
+  font-weight: 400;
+  line-height: 1.4;
 }
 
 .toggle-control input {

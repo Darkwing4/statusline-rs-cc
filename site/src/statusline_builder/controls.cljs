@@ -56,12 +56,13 @@
     (.addEventListener input "input" #(on-change (.-value input)))
     (labelled "control-label control-wide" label-text input)))
 
-(defn command-line-control [command args on-change]
-  (text-control "Command" (shell-words/join (into [command] args))
-                (fn [line]
-                  (let [[command & args] (shell-words/split line)]
-                    (on-change (or command "") (vec args))))
-                2000 true))
+(defn command-line-control [command args hint on-change]
+  (doto (text-control "Command" (shell-words/join (into [command] args))
+                      (fn [line]
+                        (let [[command & args] (shell-words/split line)]
+                          (on-change (or command "") (vec args))))
+                      2000 true)
+    (.append (el "span" "control-hint" hint))))
 
 (defn- number-control [label-text {:keys [min max step] :as range} value on-change]
   (let [input (el "input" "control-input")]
@@ -183,15 +184,17 @@
     wrapper))
 
 (defn control [field type value on-change]
-  (let [label-text (catalogue/field-label (:name field))]
-    (case (:kind field)
-      "color" (colour-control label-text value on-change (contains? gradient-fields (str type "." (:name field))))
-      "bool" (boolean-control label-text value on-change)
-      "enum" (select-control label-text (:variants field) value on-change)
-      "integer" (number-control label-text integer-range value on-change)
-      "float" (number-control label-text (float-range (:name field)) value on-change)
-      "list" (list-control label-text value on-change)
-      "pairs" (pairs-control label-text value on-change)
-      (if (= "prompt" (:name field))
-        (text-area-control label-text value on-change 2000)
-        (text-control label-text value on-change 256)))))
+  (let [label-text (catalogue/field-label (:name field))
+        node (case (:kind field)
+               "color" (colour-control label-text value on-change (contains? gradient-fields (str type "." (:name field))))
+               "bool" (boolean-control label-text value on-change)
+               "enum" (select-control label-text (:variants field) value on-change)
+               "integer" (number-control label-text integer-range value on-change)
+               "float" (number-control label-text (float-range (:name field)) value on-change)
+               "list" (list-control label-text value on-change)
+               "pairs" (pairs-control label-text value on-change)
+               (if (= "prompt" (:name field))
+                 (text-area-control label-text value on-change 2000)
+                 (text-control label-text value on-change 256)))]
+    (.append node (el "span" "control-hint" (:hint field)))
+    node))

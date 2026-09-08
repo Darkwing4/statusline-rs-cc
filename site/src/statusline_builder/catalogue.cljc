@@ -16,8 +16,10 @@
        (map-indexed (fn [index word] (or (acronyms word) (if (zero? index) word (str/lower-case word)))))
        (str/join " ")))
 
+(def ^:private unit-words {"ttl" "TTL" "kib" "KiB" "cpu" "CPU"})
+
 (defn field-label [name]
-  (let [text (str/replace name "_" " ")]
+  (let [text (str/join " " (map #(get unit-words % %) (str/split name #"_")))]
     (str (str/upper-case (subs text 0 1)) (subs text 1))))
 
 (defn- fail [message]
@@ -32,8 +34,8 @@
     (when-not (and (string? name) (string? pitch) (vector? fields))
       (fail "A catalogue entry is missing its name, pitch, or fields."))
     (doseq [field fields]
-      (when-not (and (string? (:name field)) (string? (:kind field)))
-        (fail (str name " has a field without a name or a kind.")))
+      (when-not (and (string? (:name field)) (string? (:kind field)) (string? (:hint field)))
+        (fail (str name " has a field without a name, a kind, or a hint.")))
       (when (and (= "enum" (:kind field)) (empty? (:variants field)))
         (fail (str name "." (:name field) " is an enum without variants.")))))
   catalogue)

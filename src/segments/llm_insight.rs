@@ -112,7 +112,7 @@ impl LlmInsight {
             return 0;
         }
 
-        length.saturating_sub(self.initial_scan_bytes)
+        length.saturating_sub(self.initial_scan_kib * 1024)
     }
 
     fn is_due(&self, state: &InsightState) -> bool {
@@ -206,7 +206,7 @@ mod tests {
             prompt: "One sentence: the user's goal and what is being done for it.".to_string(),
             every_turns,
             scan_whole_session: false,
-            initial_scan_bytes: 256 * 1024,
+            initial_scan_kib: 256,
             context_chars: 4_000,
             max_chars: 128,
             standalone: true,

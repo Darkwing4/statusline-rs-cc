@@ -143,6 +143,7 @@
               (and command-line? (= "command" (:name field)))
               (.append container (controls/command-line-control (get-in selected [:config "command"])
                                                                 (get-in selected [:config "args"])
+                                                                (:hint field)
                                                                 #(actions/set-command-line! (:id selected) %1 %2)))
               :else
               (.append container (controls/control field (:type module) (get-in selected [:config (:name field)])

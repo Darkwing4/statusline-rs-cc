@@ -20,6 +20,7 @@ pub struct SegmentDoc {
 #[derive(Debug, Serialize)]
 pub struct FieldDoc {
     pub name: String,
+    pub hint: String,
     pub kind: FieldKind,
     pub optional: bool,
     #[serde(skip_serializing_if = "Vec::is_empty")]
@@ -57,6 +58,7 @@ pub fn parse(source: &str) -> Result<Catalog, String> {
 
 struct RawField {
     name: String,
+    hint: Option<String>,
     type_name: String,
     optional: bool,
 }
@@ -82,6 +84,7 @@ struct Parser {
     pitch: Option<String>,
     open_attribute: Option<String>,
     next_field_optional: bool,
+    next_field_hint: Option<String>,
     block: Option<Block>,
     structs: Vec<RawStruct>,
     enums: Vec<RawEnum>,
@@ -112,20 +115,7 @@ impl Parser {
         }
 
         if let Some(doc) = line.strip_prefix("///") {
-            if self.block.is_some() {
-                return Err(format!(
-                    "line {number}: only the segment struct itself carries a /// pitch"
-                ));
-            }
-
-            if self.pitch.is_some() {
-                return Err(format!(
-                    "line {number}: a segment pitch must be a single /// line"
-                ));
-            }
-
-            self.pitch = Some(doc.trim().to_string());
-            return Ok(());
+            return self.feed_doc_line(number, doc.trim());
         }
 
         match self.block.take() {
@@ -133,6 +123,34 @@ impl Parser {
             Some(Block::Enum(item)) => self.feed_enum_line(number, line, item),
             None => self.feed_top_line(line),
         }
+    }
+
+    fn feed_doc_line(&mut self, number: usize, doc: &str) -> Result<(), String> {
+        match &self.block {
+            Some(Block::Struct(_)) => {
+                if self.next_field_hint.is_some() {
+                    return Err(format!(
+                        "line {number}: a field hint must be a single /// line"
+                    ));
+                }
+
+                self.next_field_hint = Some(doc.to_string());
+            }
+            Some(Block::Enum(_)) => {
+                return Err(format!("line {number}: enum variants carry no /// lines"));
+            }
+            None => {
+                if self.pitch.is_some() {
+                    return Err(format!(
+                        "line {number}: a segment pitch must be a single /// line"
+                    ));
+                }
+
+                self.pitch = Some(doc.to_string());
+            }
+        }
+
+        Ok(())
     }
 
     fn finish_attribute(&mut self, attribute: &str) {
@@ -170,6 +188,7 @@ impl Parser {
         if line == "}" {
             self.structs.push(item);
             self.next_field_optional = false;
+            self.next_field_hint = None;
             return Ok(());
         }
 
@@ -183,6 +202,7 @@ impl Parser {
 
             item.fields.push(RawField {
                 name: name.trim().to_string(),
+                hint: self.next_field_hint.take(),
                 type_name: type_name.trim().trim_end_matches(',').to_string(),
                 optional: std::mem::take(&mut self.next_field_optional),
             });
@@ -304,8 +324,20 @@ impl Parser {
             }
         };
 
+        let hint = field
+            .hint
+            .as_deref()
+            .filter(|hint| !hint.is_empty())
+            .ok_or_else(|| {
+                format!(
+                    "segment {segment} field {} has no /// hint above it",
+                    field.name
+                )
+            })?;
+
         Ok(FieldDoc {
             name: field.name.clone(),
+            hint: hint.to_string(),
             kind,
             optional: field.optional,
             variants,
@@ -415,12 +447,18 @@ mod tests {
             "/// What foo shows.\n",
             "#[derive(Deserialize)]\n",
             "pub struct Foo {\n",
+            "    /// Colour of foo.\n",
             "    pub color: Color,\n",
+            "    /// Text before foo.\n",
             "    #[serde(default)]\n",
             "    pub prefix: String,\n",
+            "    /// Whether foo is on.\n",
             "    pub enabled: bool,\n",
+            "    /// How many seconds foo waits.\n",
             "    pub seconds: u64,\n",
+            "    /// Arguments foo is started with.\n",
             "    pub args: Vec<String>,\n",
+            "    /// Pairs foo replaces.\n",
             "    pub pairs: Vec<(String, String)>,\n",
             "}\n"
         ));
@@ -431,6 +469,8 @@ mod tests {
         assert_eq!(segment.name, "Foo");
         assert_eq!(segment.pitch, "What foo shows.");
         assert_eq!(field(&segment.fields, "color").kind, FieldKind::Color);
+        assert_eq!(field(&segment.fields, "color").hint, "Colour of foo.");
+        assert_eq!(field(&segment.fields, "prefix").hint, "Text before foo.");
         assert!(!field(&segment.fields, "color").optional);
         assert_eq!(field(&segment.fields, "prefix").kind, FieldKind::Text);
         assert!(field(&segment.fields, "prefix").optional);
@@ -446,11 +486,13 @@ mod tests {
             "/// Foo.\n",
             "#[derive(Deserialize)]\n",
             "pub struct Foo {\n",
+            "    /// Ratio of foo.\n",
             "    #[serde(\n",
             "        default = \"default_ratio\",\n",
             "        deserialize_with = \"deserialize_ratio\"\n",
             "    )]\n",
             "    pub ratio: f64,\n",
+            "    /// Colour of foo.\n",
             "    pub color: Color,\n",
             "}\n"
         ));
@@ -459,6 +501,15 @@ mod tests {
 
         assert!(field(&segment.fields, "ratio").optional);
         assert!(!field(&segment.fields, "color").optional);
+    }
+
+    #[test]
+    fn rejects_a_field_without_a_hint() {
+        let source = schema("/// Foo.\n#[derive(Deserialize)]\npub struct Foo {\n    pub color: Color,\n}\n");
+
+        let error = parse(&source).unwrap_err();
+
+        assert!(error.contains("field color has no /// hint"), "{error}");
     }
 
     #[test]

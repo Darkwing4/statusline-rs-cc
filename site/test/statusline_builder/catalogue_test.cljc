@@ -27,3 +27,8 @@
   (is (= "LLM insight" (catalogue/segment-label "LlmInsight")))
   (is (= "My last prompt" (catalogue/segment-label "MyLastPrompt")))
   (is (= "Cwd" (catalogue/segment-label "Cwd"))))
+
+(deftest field-names-keep-their-units-readable
+  (is (= "Initial scan KiB" (catalogue/field-label "initial_scan_kib")))
+  (is (= "TTL seconds" (catalogue/field-label "ttl_seconds")))
+  (is (= "Max chars" (catalogue/field-label "max_chars"))))
