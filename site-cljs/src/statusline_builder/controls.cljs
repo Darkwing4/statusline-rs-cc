@@ -1,7 +1,8 @@
 (ns statusline-builder.controls
   (:require [statusline-builder.catalogue :as catalogue]
             [statusline-builder.colour :as colour]
-            [statusline-builder.dom :refer [el]]))
+            [statusline-builder.dom :refer [el]]
+            [statusline-builder.shell-words :as shell-words]))
 
 (def ^:private gradient-fields #{"ContextUsage.color" "PromptCacheTtl.color"})
 
@@ -38,10 +39,29 @@
     (set! (.-value node) value)
     node))
 
-(defn text-control [label-text value on-change max-length]
-  (let [input (text-input value max-length)]
+(defn text-control
+  ([label-text value on-change max-length]
+   (text-control label-text value on-change max-length false))
+  ([label-text value on-change max-length wide?]
+   (let [input (text-input value max-length)]
+     (.addEventListener input "input" #(on-change (.-value input)))
+     (labelled (if wide? "control-label control-wide" "control-label") label-text input))))
+
+(defn- text-area-control [label-text value on-change max-length]
+  (let [input (el "textarea" "control-input control-textarea")]
+    (set! (.-value input) value)
+    (set! (.-maxLength input) max-length)
+    (set! (.-rows input) 3)
+    (set! (.-spellcheck input) false)
     (.addEventListener input "input" #(on-change (.-value input)))
-    (labelled "control-label" label-text input)))
+    (labelled "control-label control-wide" label-text input)))
+
+(defn command-line-control [command args on-change]
+  (text-control "Command" (shell-words/join (into [command] args))
+                (fn [line]
+                  (let [[command & args] (shell-words/split line)]
+                    (on-change (or command "") (vec args))))
+                2000 true))
 
 (defn- number-control [label-text {:keys [min max step] :as range} value on-change]
   (let [input (el "input" "control-input")]
@@ -172,4 +192,6 @@
       "float" (number-control label-text (float-range (:name field)) value on-change)
       "list" (list-control label-text value on-change)
       "pairs" (pairs-control label-text value on-change)
-      (text-control label-text value on-change (if (= "prompt" (:name field)) 2000 256)))))
+      (if (= "prompt" (:name field))
+        (text-area-control label-text value on-change 2000)
+        (text-control label-text value on-change 256)))))

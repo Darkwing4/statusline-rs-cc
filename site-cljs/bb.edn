@@ -7,7 +7,8 @@
                            'statusline-builder.editor-state-test
                            'statusline-builder.layout-test
                            'statusline-builder.preview-test
-                           'statusline-builder.ron-test)
+                           'statusline-builder.ron-test
+                           'statusline-builder.shell-words-test)
                   (let [{:keys [fail error]} (t/run-all-tests (re-pattern "statusline-builder\\..*-test"))]
                     (when (pos? (+ fail error))
                       (System/exit 1))))}

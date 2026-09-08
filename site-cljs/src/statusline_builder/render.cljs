@@ -131,9 +131,18 @@
         (dom/set-text! "inspectorTitle" (:label module))
         (dom/set-text! "inspectorDescription" (:description module))
         (dom/set-hidden! "removeSelectedButton" false)
-        (doseq [field (:fields module)]
-          (.append container (controls/control field (:type module) (get-in selected [:config (:name field)])
-                                               #(actions/set-field! (:id selected) (:name field) %))))))))
+        (let [field-names (set (map :name (:fields module)))
+              command-line? (and (contains? field-names "command") (contains? field-names "args"))]
+          (doseq [field (:fields module)]
+            (cond
+              (and command-line? (= "args" (:name field))) nil
+              (and command-line? (= "command" (:name field)))
+              (.append container (controls/command-line-control (get-in selected [:config "command"])
+                                                                (get-in selected [:config "args"])
+                                                                #(actions/set-command-line! (:id selected) %1 %2)))
+              :else
+              (.append container (controls/control field (:type module) (get-in selected [:config (:name field)])
+                                                   #(actions/set-field! (:id selected) (:name field) %))))))))))
 
 (defn capture-positions []
   (into {} (map (fn [node] [(.getAttribute node "data-module-id") (.getBoundingClientRect node)]) (dom/nodes animated-pieces))))

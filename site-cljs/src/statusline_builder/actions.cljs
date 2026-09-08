@@ -37,6 +37,9 @@
 (defn set-field! [id field value]
   (swap! es/state es/set-field id field value))
 
+(defn set-command-line! [id command args]
+  (swap! es/state #(-> % (es/set-field id "command" command) (es/set-field id "args" args))))
+
 (defn set-separator! [value]
   (swap! es/state assoc :separator value))
 

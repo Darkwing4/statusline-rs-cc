@@ -20,7 +20,7 @@
         (.append select option)))
     (set! (.-value select) (:scenario-id @es/state))))
 
-(defn- reset! []
+(defn- reset-line! []
   (swap! es/state es/reset)
   (let [state @es/state]
     (set! (.-value ($ "scenarioSelect")) (:scenario-id state))
@@ -34,7 +34,7 @@
 (defn- bind-events! []
   (on! "scenarioSelect" "change" #(actions/set-scenario! (.-value ($ "scenarioSelect"))))
   (on! "terminalWidth" "input" #(actions/set-terminal-width! (js/Number (.-value ($ "terminalWidth")))))
-  (on! "resetButton" "click" reset!)
+  (on! "resetButton" "click" reset-line!)
   (on! "ronButton" "click" sheets/open-ron!)
   (on! "downloadButton" "click" sheets/download!)
   (on! "installButton" "click" sheets/open-install!)
