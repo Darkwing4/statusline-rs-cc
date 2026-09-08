@@ -36,6 +36,7 @@
   (on! "terminalWidth" "input" #(actions/set-terminal-width! (js/Number (.-value ($ "terminalWidth")))))
   (on! "resetButton" "click" reset-line!)
   (on! "ronButton" "click" sheets/open-ron!)
+  (on! "copyRonButton" "click" sheets/copy-ron!)
   (on! "downloadButton" "click" sheets/download!)
   (on! "installButton" "click" sheets/open-install!)
   (on! "copyCommandButton" "click" sheets/copy-command!)

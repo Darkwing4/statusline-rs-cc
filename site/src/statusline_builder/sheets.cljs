@@ -6,6 +6,9 @@
             [statusline-builder.ron :as ron]))
 
 (defonce ^:private last-download-url (atom ""))
+(defonce ^:private copied-timers (atom {}))
+
+(def ^:private copied-label-ms 2000)
 
 (defn invalidate-session! []
   (dom/set-hidden! "sessionResult" true)
@@ -13,13 +16,63 @@
   (dom/set-text! "sessionError" "")
   (set! (.-value ($ "commandOutput")) ""))
 
+(defn- show-copied! [button-id message]
+  (let [button ($ button-id)]
+    (js/clearTimeout (get @copied-timers button-id))
+    (.add (.-classList button) "is-copied")
+    (set! (.-textContent button) "Copied to clipboard")
+    (dom/announce! message)
+    (swap! copied-timers assoc button-id
+           (js/setTimeout (fn []
+                            (.remove (.-classList button) "is-copied")
+                            (set! (.-textContent button) "Copy"))
+                          copied-label-ms))))
+
+(defn- copy-with-selection! [select!]
+  (js/Promise. (fn [resolve reject]
+                 (select!)
+
+                 (if (.execCommand js/document "copy")
+                   (resolve)
+                   (reject (js/Error. "The browser refused to copy."))))))
+
+(defn- copy-text! [text select!]
+  (if (and (.-clipboard js/navigator) js/globalThis.isSecureContext)
+    (.catch (.writeText (.-clipboard js/navigator) text)
+            (fn [error]
+              (js/console.error "Clipboard API failed." error)
+              (copy-with-selection! select!)))
+    (copy-with-selection! select!)))
+
+(defn- select-ron! []
+  (.selectAllChildren (js/getSelection) ($ "ronOutput")))
+
+(defn- select-command! []
+  (let [output ($ "commandOutput")]
+    (.focus output)
+    (.select output)))
+
+(defn copy-ron! []
+  (-> (copy-text! (.-textContent ($ "ronOutput")) select-ron!)
+      (.then #(show-copied! "copyRonButton" "config.ron copied."))
+      (.catch #(js/console.error "Could not copy config.ron." %))))
+
+(defn copy-command! []
+  (let [command (.-value ($ "commandOutput"))]
+
+    (when (seq command)
+      (-> (copy-text! command select-command!)
+          (.then #(show-copied! "copyCommandButton" "Install command copied."))
+          (.catch #(js/console.error "Could not copy the install command." %))))))
+
 (defn open-ron! []
   (let [state @es/state
         problems (ron/config-problems state)]
     (dom/set-hidden! "ronProblems" (empty? problems))
     (dom/set-text! "ronProblems" (str/join " " problems))
     (dom/set-text! "ronOutput" (ron/generate state))
-    (.showModal ($ "ronDialog"))))
+    (.showModal ($ "ronDialog"))
+    (copy-ron!)))
 
 (defn download! []
   (when (seq @last-download-url)
@@ -58,9 +111,11 @@
           (not (install-command/supported?)) (js/Promise.reject (js/Error. "This browser cannot compress the config. Download the RON instead."))
           :else (install-command/encode ron))
         (.then (fn [code]
+
                  (if (= ron (ron/generate @es/state))
                    (show-command! ron code)
                    (throw (js/Error. "The configuration changed while the command was being built. Build it again.")))))
+        (.then copy-command!)
         (.catch (fn [error]
                   (js/console.error "Could not build the install command." error)
                   (show-error! (if (instance? js/Error error) (.-message error) "Could not build the install command."))))
@@ -69,27 +124,3 @@
 (defn open-install! []
   (.showModal ($ "installDialog"))
   (build-command!))
-
-(defn- copied! []
-  (let [button ($ "copyCommandButton")]
-    (set! (.-textContent button) "Copied")
-    (dom/announce! "Install command copied.")
-    (.addEventListener button "blur" #(set! (.-textContent button) "Copy") #js {:once true})))
-
-(defn- copy-fallback! []
-  (let [output ($ "commandOutput")]
-    (.focus output)
-    (.select output)
-    (.execCommand js/document "copy")
-    (copied!)))
-
-(defn copy-command! []
-  (let [command (.-value ($ "commandOutput"))]
-    (when (seq command)
-      (if (and (.-clipboard js/navigator) js/globalThis.isSecureContext)
-        (-> (.writeText (.-clipboard js/navigator) command)
-            (.then copied!)
-            (.catch (fn [error]
-                      (js/console.error "Clipboard API failed." error)
-                      (copy-fallback!))))
-        (copy-fallback!)))))

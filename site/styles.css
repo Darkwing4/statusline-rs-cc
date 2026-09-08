@@ -13,6 +13,7 @@
   --accent-ink: #d3bfd0;
   --accent-soft: rgba(180, 142, 173, 0.22);
   --danger: #e5737f;
+  --ok: #a3be8c;
   --sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
   --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
   --radius-panel: 12px;
@@ -27,6 +28,11 @@
 html {
   scrollbar-color: var(--edge-strong) transparent;
   scrollbar-width: thin;
+  scrollbar-gutter: stable;
+}
+
+html:has(dialog[open]) {
+  overflow: hidden;
 }
 
 body {
@@ -768,7 +774,7 @@ input[type="range"]::-moz-range-thumb {
 /* sheets */
 
 .sheet {
-  width: min(760px, calc(100vw - 32px));
+  width: min(960px, calc(100vw - 32px));
   padding: 20px;
   border: 1px solid var(--edge-strong);
   border-radius: var(--radius-panel);
@@ -798,6 +804,15 @@ input[type="range"]::-moz-range-thumb {
 .sheet-head-actions {
   display: flex;
   gap: 8px;
+}
+
+.button-copy {
+  min-width: 160px;
+}
+
+.button-copy.is-copied {
+  border-color: var(--ok);
+  background: var(--ok);
 }
 
 .sheet-note {
