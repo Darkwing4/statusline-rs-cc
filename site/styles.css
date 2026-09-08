@@ -127,7 +127,7 @@ pre {
   font-family: var(--mono);
   font-size: calc(var(--screen-font-px, 12) * 1px);
   font-variant-ligatures: none;
-  line-height: 1.8;
+  line-height: 1.4;
 }
 
 .line-prompt {
@@ -180,7 +180,6 @@ pre {
 
 .line-row.is-standalone {
   display: block;
-  margin-top: 0.15em;
 }
 
 .piece {
@@ -197,13 +196,12 @@ pre {
 }
 
 .piece:hover {
-  background: rgba(255, 255, 255, 0.07);
-  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.07);
+  box-shadow: 0 0 0 1px var(--edge-strong);
 }
 
 .piece.is-selected {
   background: var(--accent-soft);
-  box-shadow: 0 0 0 4px var(--accent-soft);
+  box-shadow: 0 0 0 2px var(--accent-soft);
 }
 
 .piece.is-dragging {
