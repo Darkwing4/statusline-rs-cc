@@ -32,12 +32,18 @@
 (defn- on! [id event handler]
   (.addEventListener ($ id) event handler))
 
+(defn- confirm-reset! []
+  (let [dialog ($ "resetDialog")]
+    (set! (.-returnValue dialog) "")
+    (.showModal dialog)))
+
 (defn- bind-events! []
   (on! "scenarioSelect" "change" #(actions/set-scenario! (.-value ($ "scenarioSelect"))))
   (on! "terminalWidth" "input" #(actions/set-terminal-width! (js/Number (.-value ($ "terminalWidth")))))
   (on! "fontSmallerButton" "click" #(actions/nudge-font-size! -1))
   (on! "fontLargerButton" "click" #(actions/nudge-font-size! 1))
-  (on! "resetButton" "click" reset-line!)
+  (on! "resetButton" "click" confirm-reset!)
+  (on! "resetDialog" "close" #(when (= "reset" (.-returnValue ($ "resetDialog"))) (reset-line!)))
   (on! "ronButton" "click" sheets/open-ron!)
   (on! "copyRonButton" "click" sheets/copy-ron!)
   (on! "downloadButton" "click" sheets/download!)
@@ -48,7 +54,8 @@
   (drag-drop/bind!)
   (fullscreen/bind!)
   (width-guide/bind!)
-  (keyboard/bind!))
+  (keyboard/bind!)
+  (sheets/close-on-backdrop!))
 
 (defn- watch-state! []
   (add-watch es/state ::render

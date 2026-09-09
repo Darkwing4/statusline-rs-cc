@@ -916,6 +916,20 @@ input[type="range"]::-moz-range-thumb {
   animation: sheet-in 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
+.sheet-confirm {
+  width: min(440px, calc(100vw - 32px));
+}
+
+.sheet-confirm h2 {
+  margin-bottom: 8px;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.sheet-confirm .sheet-head-actions {
+  justify-content: flex-end;
+}
+
 .sheet::backdrop {
   backdrop-filter: blur(4px);
   background: rgba(0, 0, 0, 0.55);

@@ -86,6 +86,17 @@
     </div>
   </div>
 
+  <dialog id="resetDialog" class="sheet sheet-confirm" aria-labelledby="resetDialogTitle">
+    <form method="dialog">
+      <h2 id="resetDialogTitle">Reset the line?</h2>
+      <p class="sheet-note">Every piece, colour and setting goes back to the defaults. This cannot be undone.</p>
+      <div class="sheet-head-actions">
+        <button id="confirmResetButton" class="button button-primary" value="reset" type="submit">Reset</button>
+        <button class="button button-quiet" value="cancel" type="submit" autofocus>Cancel</button>
+      </div>
+    </form>
+  </dialog>
+
   <dialog id="ronDialog" class="sheet" aria-labelledby="ronDialogTitle">
     <form method="dialog" class="sheet-head">
       <h2 id="ronDialogTitle">config.ron</h2>

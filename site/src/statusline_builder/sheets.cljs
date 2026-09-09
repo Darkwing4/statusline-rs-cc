@@ -38,6 +38,20 @@
           (.then #(show-copied! "copyCommandButton" "Install command copied."))
           (.catch #(js/console.error "Could not copy the install command." %))))))
 
+(defn- outside? [dialog event]
+  (let [box (.getBoundingClientRect dialog)
+        x (.-clientX event)
+        y (.-clientY event)]
+    (or (< x (.-left box)) (> x (.-right box)) (< y (.-top box)) (> y (.-bottom box)))))
+
+(defn close-on-backdrop! []
+  (doseq [dialog (dom/nodes "dialog.sheet")]
+    (.addEventListener dialog "click"
+                       (fn [event]
+
+                         (when (and (identical? dialog (.-target event)) (outside? dialog event))
+                           (.close dialog))))))
+
 (defn open-ron! []
   (let [state @es/state
         problems (ron/config-problems state)]
