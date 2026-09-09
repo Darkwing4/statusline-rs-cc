@@ -6,9 +6,9 @@ use crate::gradient::{gradient, Rgb};
 use crate::segments::{GitCache, Segment};
 
 const CONTEXT_GRADIENT: &[(f64, Rgb)] = &[
-    (0.0, (150, 150, 150)),
-    (20.0, (180, 165, 100)),
-    (30.0, (220, 60, 60)),
+    (0.0, (147, 153, 178)),
+    (20.0, (249, 226, 175)),
+    (30.0, (243, 139, 168)),
 ];
 
 impl Segment for ContextUsage {
@@ -86,14 +86,14 @@ mod tests {
 
     #[test]
     fn returns_colors_at_gradient_stops() {
-        assert_eq!(gradient(CONTEXT_GRADIENT, 0.0), (150, 150, 150));
-        assert_eq!(gradient(CONTEXT_GRADIENT, 20.0), (180, 165, 100));
-        assert_eq!(gradient(CONTEXT_GRADIENT, 30.0), (220, 60, 60));
+        assert_eq!(gradient(CONTEXT_GRADIENT, 0.0), (147, 153, 178));
+        assert_eq!(gradient(CONTEXT_GRADIENT, 20.0), (249, 226, 175));
+        assert_eq!(gradient(CONTEXT_GRADIENT, 30.0), (243, 139, 168));
     }
 
     #[test]
     fn interpolates_between_gradient_stops() {
-        assert_eq!(gradient(CONTEXT_GRADIENT, 10.0), (165, 158, 125));
-        assert_eq!(gradient(CONTEXT_GRADIENT, 25.0), (200, 113, 80));
+        assert_eq!(gradient(CONTEXT_GRADIENT, 10.0), (198, 190, 177));
+        assert_eq!(gradient(CONTEXT_GRADIENT, 25.0), (246, 183, 172));
     }
 }

@@ -48,8 +48,8 @@
   (is (zero? (width/display-width (text-of (fixture/create "Spacer") (first scenarios/all))))))
 
 (deftest git-state-has-the-runtime-space-before-the-state-marker
-  (let [drawn (preview/git-branch {"color" {:kind :named :code 32}
-                                   "state_color" {:kind :named :code 91}
+  (let [drawn (preview/git-branch {"color" {:kind :rgb :hex "#94e2d5"}
+                                   "state_color" {:kind :rgb :hex "#fab387"}
                                    "show_worktree" false
                                    "show_state" true
                                    "show_ahead_behind" true}

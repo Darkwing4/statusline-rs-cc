@@ -18,16 +18,16 @@ use crate::transcript_tail_reader::{scan_jsonl_records_from_end, JsonlRecord};
 const TTL_5M_SECS: i64 = 5 * 60;
 const TTL_1H_SECS: i64 = 60 * 60;
 const TTL_GRADIENT: &[(f64, Rgb)] = &[
-    (0.0, (120, 120, 120)),
-    (70.0, (200, 180, 80)),
-    (90.0, (230, 100, 60)),
-    (100.0, (255, 50, 50)),
+    (0.0, (147, 153, 178)),
+    (70.0, (249, 226, 175)),
+    (90.0, (250, 179, 135)),
+    (100.0, (243, 139, 168)),
 ];
 const COLD_GRADIENT: &[(f64, Rgb)] = &[
-    (0.0, (120, 120, 120)),
-    (40.0, (200, 180, 80)),
-    (75.0, (230, 100, 60)),
-    (100.0, (255, 50, 50)),
+    (0.0, (147, 153, 178)),
+    (40.0, (249, 226, 175)),
+    (75.0, (250, 179, 135)),
+    (100.0, (243, 139, 168)),
 ];
 
 pub(super) struct CacheSnapshot {
@@ -210,14 +210,14 @@ mod tests {
 
     #[test]
     fn preserves_ttl_gradient() {
-        assert_eq!(gradient(TTL_GRADIENT, 80.0), (215, 140, 70));
-        assert_eq!(gradient(TTL_GRADIENT, 95.0), (243, 75, 55));
+        assert_eq!(gradient(TTL_GRADIENT, 80.0), (250, 203, 155));
+        assert_eq!(gradient(TTL_GRADIENT, 95.0), (247, 159, 152));
     }
 
     #[test]
     fn preserves_cold_gradient() {
-        assert_eq!(gradient(COLD_GRADIENT, 57.5), (215, 140, 70));
-        assert_eq!(gradient(COLD_GRADIENT, 87.5), (243, 75, 55));
+        assert_eq!(gradient(COLD_GRADIENT, 57.5), (250, 203, 155));
+        assert_eq!(gradient(COLD_GRADIENT, 87.5), (247, 159, 152));
     }
 
     #[test]
@@ -310,7 +310,7 @@ mod tests {
 
         assert_eq!(
             gradient_segment.render(&json, &mut git),
-            Some("\x1b[38;2;120;120;120mcache cold\x1b[0m".to_string())
+            Some("\x1b[38;2;147;153;178mcache cold\x1b[0m".to_string())
         );
         assert_eq!(
             named_segment.render(&json, &mut git),

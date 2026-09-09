@@ -2,43 +2,43 @@
   (:require [statusline-builder.colour :as colour]))
 
 (def presets
-  {"Model" {"color" (colour/rgb 180 142 173)}
+  {"Model" {"color" (colour/rgb 203 166 247)}
    "Effort" {"color" (colour/grey)}
    "ContextUsage" {"color" colour/gradient
-                   "prefix_color" (colour/rgb 180 142 173)
-                   "suffix_color" (colour/rgb 180 142 173)}
+                   "prefix_color" (colour/rgb 203 166 247)
+                   "suffix_color" (colour/rgb 203 166 247)}
    "PromptCacheTtl" {"color" colour/gradient "prefix" "cache "}
    "RateLimit" {"style" "Percent"
                 "fill" "Remaining"
                 "color_mode" "Gradient"
                 "gradient_midpoint_percentage" 50
                 "usage_ttl_seconds" 300
-                "low_color" (colour/rgb 103 175 103)
-                "mid_color" (colour/rgb 195 179 100)
-                "high_color" (colour/rgb 220 60 60)}
+                "low_color" (colour/rgb 166 227 161)
+                "mid_color" (colour/rgb 249 226 175)
+                "high_color" (colour/rgb 243 139 168)}
    "SubagentStats" {"color" (colour/grey)
-                    "active_color" (colour/rgb 150 200 100)
-                    "stall_color" (colour/rgb 220 60 60)
+                    "active_color" (colour/rgb 166 227 161)
+                    "stall_color" (colour/rgb 243 139 168)
                     "prefix" "Sub-agents:"
                     "stall_marker" "!"
                     "stall_seconds" 120
                     "show_tokens" true}
-   "Reminder" {"color" (colour/rgb 230 180 80) "prefix" "⏰ " "separator" " · " "max_chars" 80}
-   "SessionNotice" {"color" (colour/named 93)
+   "Reminder" {"color" (colour/rgb 250 179 135) "prefix" "⏰ " "separator" " · " "max_chars" 80}
+   "SessionNotice" {"color" (colour/rgb 249 226 175)
                     "prefix" "📌 "
                     "max_chars" 120
                     "show_remaining" true
                     "standalone" true}
-   "Cwd" {"color" (colour/rgb 95 175 175)}
-   "GitBranch" {"color" (colour/named 32)
-                "state_color" (colour/named 91)
+   "Cwd" {"color" (colour/rgb 137 180 250)}
+   "GitBranch" {"color" (colour/rgb 148 226 213)
+                "state_color" (colour/rgb 250 179 135)
                 "show_worktree" true
                 "show_ahead_behind" true
                 "show_state" true}
-   "GitDiff" {"modified_color" (colour/named 33)
-              "untracked_color" (colour/named 32)
-              "deleted_color" (colour/named 31)}
-   "GitError" {"color" (colour/named 91) "text" "no git"}
+   "GitDiff" {"modified_color" (colour/rgb 116 199 236)
+              "untracked_color" (colour/rgb 116 199 236)
+              "deleted_color" (colour/rgb 243 139 168)}
+   "GitError" {"color" (colour/rgb 243 139 168) "text" "no git"}
    "MyLastPrompt" {"color" (colour/grey) "prefix" "» " "max_chars" 48 "standalone" true}
    "ClaudeResourceUsage" {"color" (colour/grey) "cpu_prefix" "CPU " "memory_prefix" "RSS "}
    "UserIdleTime" {"color" (colour/grey) "prefix" "idle "}
@@ -50,7 +50,7 @@
                     "prompt" ""
                     "ttl_seconds" 60
                     "max_chars" 80}
-   "LlmInsight" {"color" (colour/rgb 150 190 150)
+   "LlmInsight" {"color" (colour/rgb 186 194 222)
                  "prefix" "🎯 "
                  "command" "codex"
                  "args" ["exec" "--skip-git-repo-check" "-s" "read-only" "-c" "approval_policy=never"]
@@ -79,7 +79,7 @@
    "GitError"
    "LlmInsight"
    {:module "LlmInsight"
-    :config {"color" (colour/rgb 170 160 120)
+    :config {"color" (colour/rgb 245 224 220)
              "prefix" "💡 "
              "prompt" "In one sentence: what should be added to the user's last prompt to make the task more precise. Do not suggest what is already done. Only the suggestion, no quotes or explanations."}}])
 

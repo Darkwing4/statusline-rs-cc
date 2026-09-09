@@ -48,9 +48,9 @@ blocks need no changes:
             usage_ttl_seconds: 300,
             active_marker: "*",
             severity_markers: [("warning", "!"), ("critical", "!!")],
-            low_color:  Rgb(103, 175, 103),
-            mid_color:  Rgb(195, 179, 100),
-            high_color: Rgb(220,  60,  60),
+            low_color:  Rgb(166, 227, 161),
+            mid_color:  Rgb(249, 226, 175),
+            high_color: Rgb(243, 139, 168),
         ),
 ```
 
@@ -60,7 +60,7 @@ blocks need no changes:
 
 ```ron
 Model(
-    color: Rgb(180, 142, 173),
+    color: Rgb(203, 166, 247),
     prefix: "",
     replacements: [
         ("Opus 5 (1M context)", "Opus"),

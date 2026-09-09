@@ -2,40 +2,44 @@
   (:require [clojure.string :as str]
             [statusline-builder.number :as number]))
 
-(def ansi
-  [[30 "Black" "#303642"]
-   [31 "Red" "#d85c68"]
-   [32 "Green" "#69c88d"]
-   [33 "Yellow" "#d4b967"]
-   [34 "Blue" "#668fd4"]
-   [35 "Magenta" "#ad7ad0"]
-   [36 "Cyan" "#58c4d1"]
-   [37 "White" "#c9d1dc"]
-   [90 "Bright black" "#66758a"]
-   [91 "Bright red" "#ff7c88"]
-   [92 "Bright green" "#78d49b"]
-   [93 "Bright yellow" "#e4c879"]
-   [94 "Bright blue" "#7fa8ef"]
-   [95 "Bright magenta" "#c99af2"]
-   [96 "Bright cyan" "#63d9e6"]
-   [97 "Bright white" "#e8edf5"]])
+(def palette
+  [["Rosewater" "#f5e0dc"]
+   ["Flamingo" "#f2cdcd"]
+   ["Pink" "#f5c2e7"]
+   ["Mauve" "#cba6f7"]
+   ["Red" "#f38ba8"]
+   ["Maroon" "#eba0ac"]
+   ["Peach" "#fab387"]
+   ["Yellow" "#f9e2af"]
+   ["Green" "#a6e3a1"]
+   ["Teal" "#94e2d5"]
+   ["Sky" "#89dceb"]
+   ["Sapphire" "#74c7ec"]
+   ["Blue" "#89b4fa"]
+   ["Lavender" "#b4befe"]
+   ["Text" "#cdd6f4"]
+   ["Subtext 1" "#bac2de"]
+   ["Subtext 0" "#a6adc8"]
+   ["Overlay 2" "#9399b2"]
+   ["Overlay 1" "#7f849c"]
+   ["Overlay 0" "#6c7086"]])
 
 (def context-gradient-stops
-  [[0 [150 150 150]]
-   [20 [180 165 100]]
-   [30 [220 60 60]]])
+  [[0 [147 153 178]]
+   [20 [249 226 175]]
+   [30 [243 139 168]]])
 
 (def cache-ttl-gradient-stops
-  [[0 [120 120 120]]
-   [70 [200 180 80]]
-   [90 [230 100 60]]
-   [100 [255 50 50]]])
+  [[0 [147 153 178]]
+   [70 [249 226 175]]
+   [90 [250 179 135]]
+   [100 [243 139 168]]])
 
 (def cache-cold-gradient-stops
-  [[0 [120 120 120]]
-   [40 [200 180 80]]
-   [75 [230 100 60]]
-   [100 [255 50 50]]])
+  [[0 [147 153 178]]
+   [40 [249 226 175]]
+   [75 [250 179 135]]
+   [100 [243 139 168]]])
 
 (defn rgb-array->hex [channels]
   (str "#" (apply str (map #(number/hex2 (max 0 (min 255 %))) channels))))
@@ -44,16 +48,13 @@
   (let [digits (str/replace hex "#" "")]
     (mapv #(number/parse-hex (subs digits % (+ % 2))) [0 2 4])))
 
-(defn named [code]
-  {:kind :named :code code})
-
 (defn rgb [r g b]
   {:kind :rgb :hex (rgb-array->hex [r g b])})
 
 (def gradient {:kind :gradient})
 
 (defn grey []
-  (rgb 120 125 140))
+  (rgb 147 153 178))
 
 (defn- between [[start-position start-colour] [end-position end-colour] percentage quantize]
   (let [amount (max 0 (min 1 (/ (- percentage start-position) (- end-position start-position))))]
@@ -79,8 +80,7 @@
 (defn css [colour percentage]
   (case (:kind colour)
     :rgb (:hex colour)
-    :named (or (some (fn [[code _ hex]] (when (= code (:code colour)) hex)) ansi) "#a6b1c2")
-    (interpolate-stops [60 200 60] [220 200 40] [220 60 60] percentage 50)))
+    (interpolate-stops [166 227 161] [249 226 175] [243 139 168] percentage 50)))
 
 (defn colour->rgb [colour fallback]
   (if (= :rgb (:kind colour))
@@ -99,5 +99,5 @@
 
 (defn swatch [colour]
   (if (= :gradient (:kind colour))
-    "linear-gradient(90deg, #78d49b, #e4c879, #ff7c88)"
+    "linear-gradient(90deg, #a6e3a1, #f9e2af, #f38ba8)"
     (css colour 50)))

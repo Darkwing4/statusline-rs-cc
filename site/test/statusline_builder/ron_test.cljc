@@ -26,8 +26,8 @@
 
 (deftest the-default-line-renders-the-default-config-shape
   (let [text (ron/generate (fixture/fresh))]
-    (is (str/starts-with? text "(\n    separator: \" \",\n    separator_color: Rgb(120, 125, 140),\n    segments: [\n"))
-    (is (str/includes? text "        Model(\n            color: Rgb(180, 142, 173),\n            prefix: \"\",\n            replacements: [],\n        ),"))
+    (is (str/starts-with? text "(\n    separator: \" \",\n    separator_color: Rgb(147, 153, 178),\n    segments: [\n"))
+    (is (str/includes? text "        Model(\n            color: Rgb(203, 166, 247),\n            prefix: \"\",\n            replacements: [],\n        ),"))
     (is (str/includes? text "            window: FiveHour,"))
     (is (str/includes? text "            window: SevenDay,"))
     (is (str/ends-with? (str/trimr text) "    ],\n)"))))
