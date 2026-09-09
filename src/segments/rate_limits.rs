@@ -195,9 +195,9 @@ impl Segment for RateLimit {
                 color.paint(&text)
             }
             ColorMode::Gradient => {
-                let low = color_to_rgb(self.low_color, (60, 200, 60));
-                let mid = color_to_rgb(self.mid_color, (220, 200, 40));
-                let high = color_to_rgb(self.high_color, (220, 60, 60));
+                let low = color_to_rgb(self.low_color, (166, 227, 161));
+                let mid = color_to_rgb(self.mid_color, (249, 226, 175));
+                let high = color_to_rgb(self.high_color, (243, 139, 168));
                 let stops = [
                     (0.0, low),
                     (self.gradient_midpoint_percentage, mid),

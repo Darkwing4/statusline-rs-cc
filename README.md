@@ -58,18 +58,18 @@ Or write it by hand. The config is a [RON](https://github.com/ron-rs/ron) file; 
 ```ron
 (
     separator: " ",
-    separator_color: Rgb(120, 125, 140),
+    separator_color: Rgb(147, 153, 178),
     segments: [
-        Model(color: Rgb(180, 142, 173), prefix: "", replacements: []),
+        Model(color: Rgb(203, 166, 247), prefix: "", replacements: []),
         ContextUsage(
             color: Gradient,
-            prefix: "", prefix_color: Rgb(180, 142, 173),
-            suffix: "", suffix_color: Rgb(180, 142, 173),
+            prefix: "", prefix_color: Rgb(203, 166, 247),
+            suffix: "", suffix_color: Rgb(203, 166, 247),
         ),
         Spacer(shape: Gap),
-        Cwd(color: Rgb(95, 175, 175)),
+        Cwd(color: Rgb(137, 180, 250)),
         GitBranch(
-            color: Named(32), state_color: Named(91),
+            color: Rgb(148, 226, 213), state_color: Rgb(250, 179, 135),
             show_worktree: true, show_ahead_behind: true, show_state: true,
         ),
     ],
@@ -127,7 +127,7 @@ Register it with `pub mod user_idle_time;` in `src/segments.rs`, then add it to 
 
 ```ron
 UserIdleTime(
-    color: Rgb(120, 125, 140),
+    color: Rgb(147, 153, 178),
     prefix: "idle ",
     threshold_seconds: 0,
 )

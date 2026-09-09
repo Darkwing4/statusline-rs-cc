@@ -130,9 +130,9 @@
                      (< used 50) (colour/css (config "low_color") used)
                      (<= used 80) (colour/css (config "mid_color") used)
                      :else (colour/css (config "high_color") used))
-                   (colour/interpolate-stops (colour/colour->rgb (config "low_color") [60 200 60])
-                                             (colour/colour->rgb (config "mid_color") [220 200 40])
-                                             (colour/colour->rgb (config "high_color") [220 60 60])
+                   (colour/interpolate-stops (colour/colour->rgb (config "low_color") [166 227 161])
+                                             (colour/colour->rgb (config "mid_color") [249 226 175])
+                                             (colour/colour->rgb (config "high_color") [243 139 168])
                                              used
                                              (config "gradient_midpoint_percentage")))]
       [(piece (str body (rate-limit-markers config data)) colour)])))

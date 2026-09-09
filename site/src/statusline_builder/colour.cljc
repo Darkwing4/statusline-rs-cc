@@ -21,21 +21,21 @@
    [97 "Bright white" "#e8edf5"]])
 
 (def context-gradient-stops
-  [[0 [150 150 150]]
-   [20 [180 165 100]]
-   [30 [220 60 60]]])
+  [[0 [147 153 178]]
+   [20 [249 226 175]]
+   [30 [243 139 168]]])
 
 (def cache-ttl-gradient-stops
-  [[0 [120 120 120]]
-   [70 [200 180 80]]
-   [90 [230 100 60]]
-   [100 [255 50 50]]])
+  [[0 [147 153 178]]
+   [70 [249 226 175]]
+   [90 [250 179 135]]
+   [100 [243 139 168]]])
 
 (def cache-cold-gradient-stops
-  [[0 [120 120 120]]
-   [40 [200 180 80]]
-   [75 [230 100 60]]
-   [100 [255 50 50]]])
+  [[0 [147 153 178]]
+   [40 [249 226 175]]
+   [75 [250 179 135]]
+   [100 [243 139 168]]])
 
 (defn rgb-array->hex [channels]
   (str "#" (apply str (map #(number/hex2 (max 0 (min 255 %))) channels))))
@@ -53,7 +53,7 @@
 (def gradient {:kind :gradient})
 
 (defn grey []
-  (rgb 120 125 140))
+  (rgb 147 153 178))
 
 (defn- between [[start-position start-colour] [end-position end-colour] percentage quantize]
   (let [amount (max 0 (min 1 (/ (- percentage start-position) (- end-position start-position))))]
@@ -80,7 +80,7 @@
   (case (:kind colour)
     :rgb (:hex colour)
     :named (or (some (fn [[code _ hex]] (when (= code (:code colour)) hex)) ansi) "#a6b1c2")
-    (interpolate-stops [60 200 60] [220 200 40] [220 60 60] percentage 50)))
+    (interpolate-stops [166 227 161] [249 226 175] [243 139 168] percentage 50)))
 
 (defn colour->rgb [colour fallback]
   (if (= :rgb (:kind colour))
@@ -99,5 +99,5 @@
 
 (defn swatch [colour]
   (if (= :gradient (:kind colour))
-    "linear-gradient(90deg, #78d49b, #e4c879, #ff7c88)"
+    "linear-gradient(90deg, #a6e3a1, #f9e2af, #f38ba8)"
     (css colour 50)))
