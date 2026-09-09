@@ -505,7 +505,9 @@ mod tests {
 
     #[test]
     fn rejects_a_field_without_a_hint() {
-        let source = schema("/// Foo.\n#[derive(Deserialize)]\npub struct Foo {\n    pub color: Color,\n}\n");
+        let source = schema(
+            "/// Foo.\n#[derive(Deserialize)]\npub struct Foo {\n    pub color: Color,\n}\n",
+        );
 
         let error = parse(&source).unwrap_err();
 

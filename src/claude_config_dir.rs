@@ -46,14 +46,20 @@ mod tests {
     #[test]
     fn prefers_claude_config_dir_over_home() {
         assert_eq!(
-            resolve(Some(OsString::from("/home/ivan/.claude-2")), Some(OsString::from("/home/ivan"))),
+            resolve(
+                Some(OsString::from("/home/ivan/.claude-2")),
+                Some(OsString::from("/home/ivan"))
+            ),
             Some(PathBuf::from("/home/ivan/.claude-2"))
         );
         assert_eq!(
             resolve(Some(OsString::new()), Some(OsString::from("/home/ivan"))),
             Some(PathBuf::from("/home/ivan/.claude"))
         );
-        assert_eq!(resolve(None, Some(OsString::from("/home/ivan"))), Some(PathBuf::from("/home/ivan/.claude")));
+        assert_eq!(
+            resolve(None, Some(OsString::from("/home/ivan"))),
+            Some(PathBuf::from("/home/ivan/.claude"))
+        );
         assert_eq!(resolve(None, None), None);
     }
 
@@ -64,6 +70,8 @@ mod tests {
 
         assert_ne!(main, second);
         assert_eq!(second, "_home_ivan__claude-2");
-        assert!(second.chars().all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_'));
+        assert!(second
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_'));
     }
 }

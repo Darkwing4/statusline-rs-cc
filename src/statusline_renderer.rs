@@ -145,10 +145,7 @@ mod tests {
         let renderer = Renderer {
             separator: " ".to_string(),
             separator_color: Color::Gradient,
-            segments: vec![
-                segment("first standalone", true),
-                segment("main", false),
-            ],
+            segments: vec![segment("first standalone", true), segment("main", false)],
         };
 
         assert_eq!(

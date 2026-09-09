@@ -50,8 +50,23 @@ mod tests {
 
     #[test]
     fn follows_the_configured_shape() {
-        assert_eq!((render(SpacerShape::Gap).1, render(SpacerShape::Gap).2), (false, false));
-        assert_eq!((render(SpacerShape::LineBreak).1, render(SpacerShape::LineBreak).2), (false, true));
-        assert_eq!((render(SpacerShape::BlankLine).1, render(SpacerShape::BlankLine).2), (true, false));
+        assert_eq!(
+            (render(SpacerShape::Gap).1, render(SpacerShape::Gap).2),
+            (false, false)
+        );
+        assert_eq!(
+            (
+                render(SpacerShape::LineBreak).1,
+                render(SpacerShape::LineBreak).2
+            ),
+            (false, true)
+        );
+        assert_eq!(
+            (
+                render(SpacerShape::BlankLine).1,
+                render(SpacerShape::BlankLine).2
+            ),
+            (true, false)
+        );
     }
 }
