@@ -26,7 +26,7 @@
 (defn graphemes [text]
   #?(:cljs (vec (js/Array.from (.segment (js/Intl.Segmenter. js/undefined #js {:granularity "grapheme"}) text)
                                #(unchecked-get % "segment")))
-     :clj (mapv str text)))
+     :clj (vec (re-seq #"\X" text))))
 
 (defn- grapheme-width [grapheme]
   #?(:cljs (cond
@@ -36,19 +36,21 @@
              (wide-code-point? (.codePointAt grapheme 0)) 2
              (.test marks-only grapheme) 0
              :else 1)
-     :clj (let [cp (.codePointAt ^String grapheme 0)
-                category (Character/getType cp)]
+     :clj (let [cp (.codePointAt ^String grapheme 0)]
             (cond
-              (or (< cp 0x20) (<= 0x7f cp 0x9f)) 0
+              (re-matches #"^[\u0000-\u001f\u007f-\u009f]*$" grapheme) 0
+              (re-find #"\p{IsExtended_Pictographic}" grapheme) 2
+              (re-matches #"^[\x{1f1e6}-\x{1f1ff}]{2}$" grapheme) 2
+              (re-find #"\u20e3" grapheme) 2
               (wide-code-point? cp) 2
-              (contains? #{Character/NON_SPACING_MARK Character/ENCLOSING_MARK Character/COMBINING_SPACING_MARK Character/FORMAT} category) 0
+              (re-matches #"^[\p{M}\p{Cf}]+$" grapheme) 0
               :else 1))))
 
 (defn display-width [text]
   (reduce + 0 (map grapheme-width (graphemes text))))
 
 (defn cut [text max-chars]
-  (let [characters #?(:cljs (vec (js/Array.from text)) :clj (mapv str text))]
+  (let [characters #?(:cljs (vec (js/Array.from text)) :clj (vec (re-seq #"(?s)." text)))]
     (if (or (zero? max-chars) (<= (count characters) max-chars))
       text
       (str (apply str (subvec characters 0 (max 0 (dec max-chars)))) "…"))))

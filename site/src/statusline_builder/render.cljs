@@ -12,12 +12,18 @@
 
 (def ^:private animated-pieces ".piece, .ghost-piece, .shelf-piece")
 
-(defn- piece-button [class segment module]
+(defn animation-key [module segment-id]
+  (if (and (:repeatable module) segment-id)
+    (str "segment:" segment-id)
+    (str "module:" (:id module))))
+
+(defn- piece-button [state class segment module]
   (let [node (el "button" class)]
     (set! (.-type node) "button")
     (.setAttribute node "data-segment-id" (:id segment))
     (.setAttribute node "data-module-id" (:module-id segment))
-    (when (= (:id segment) (:selected-id @es/state))
+    (.setAttribute node "data-animation-key" (animation-key module (:id segment)))
+    (when (= (:id segment) (:selected-id state))
       (.add (.-classList node) "is-selected"))
     (.addEventListener node "click" #(actions/select! (:id segment)))
     (drag-drop/make-draggable! node {:kind :line :id (:id segment)} "move" (:label module))
@@ -25,7 +31,7 @@
 
 (defn- piece-node [state segment pieces]
   (let [module (es/segment-module state segment)
-        node (piece-button "piece" segment module)]
+        node (piece-button state "piece" segment module)]
     (set! (.-title node) (:label module))
     (.setAttribute node "aria-label" (str (:label module) " on the line"))
     (cond
@@ -65,7 +71,7 @@
       (.append container (el "span" "hidden-pieces-label" "Silent in this session:"))
       (doseq [{:keys [segment]} entries]
         (let [module (es/segment-module state segment)
-              node (piece-button "ghost-piece" segment module)]
+              node (piece-button state "ghost-piece" segment module)]
           (set! (.-textContent node) (:label module))
           (set! (.-title node) (:description module))
           (.append container node))))))
@@ -111,9 +117,10 @@
         (let [node (el "button" "shelf-piece")]
           (set! (.-type node) "button")
           (.setAttribute node "data-module-id" (:id module))
+          (.setAttribute node "data-animation-key" (animation-key module nil))
           (set! (.-title node) (:description module))
           (.append node (el "span" "shelf-piece-name" (:label module)) (el "span" "shelf-piece-pitch" (:description module)))
-          (.addEventListener node "click" #(actions/add! (:id module) (count (:segments @es/state))))
+          (.addEventListener node "click" #(actions/append! (:id module)))
           (drag-drop/make-draggable! node {:kind :shelf :module-id (:id module)} "copy" (:label module))
           (.append shelf node))))))
 
@@ -150,12 +157,15 @@
                                                    #(actions/set-field! (:id selected) (:name field) %))))))))))
 
 (defn capture-positions []
-  (into {} (map (fn [node] [(.getAttribute node "data-module-id") (.getBoundingClientRect node)]) (dom/nodes animated-pieces))))
+  (into {}
+        (map (fn [node]
+               [(.getAttribute node "data-animation-key") (.getBoundingClientRect node)]))
+        (dom/nodes animated-pieces)))
 
 (defn play-flip! [positions]
   (when-not (or (empty? positions) (dom/reduced-motion?))
     (doseq [node (dom/nodes animated-pieces)]
-      (when-let [before (get positions (.getAttribute node "data-module-id"))]
+      (when-let [before (get positions (.getAttribute node "data-animation-key"))]
         (let [after (.getBoundingClientRect node)
               dx (- (.-left before) (.-left after))
               dy (- (.-top before) (.-top after))]

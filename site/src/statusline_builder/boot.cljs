@@ -23,7 +23,7 @@
     (set! (.-value select) (:scenario-id @es/state))))
 
 (defn- reset-line! []
-  (swap! es/state es/reset)
+  (actions/reset-line!)
   (let [state @es/state]
     (set! (.-value ($ "scenarioSelect")) (:scenario-id state))
     (render/inspector! state)
@@ -63,7 +63,8 @@
                (render/changes! old new))))
 
 (defn- start! [catalogue]
-  (swap! es/state #(es/reset (es/install-catalogue % catalogue)))
+  (let [reset-id (str (random-uuid))]
+    (swap! es/state #(es/reset (es/install-catalogue % catalogue) reset-id)))
   (dom/set-text! "catalogVersion" (str "v" (:catalogue-version @es/state)))
   (render/all! @es/state)
   (watch-state!))

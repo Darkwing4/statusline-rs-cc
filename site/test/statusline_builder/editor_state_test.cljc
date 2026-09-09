@@ -42,7 +42,20 @@
     (is (= [(ids 1) (ids 2) (ids 0) (ids 3)] (subvec (mapv :id (:segments moved)) 0 4)))
     (is (= (ids 0) (:selected-id moved)))
     (is (identical? state (es/move-segment-to state (ids 2) 2)))
-    (is (identical? state (es/add-segment state "Model" 0)))))
+    (is (identical? state (es/add-segment state "Model" 0 "duplicate-model")))))
+
+(deftest state-transitions-use-explicit-identities
+  (let [state (fixture/fresh)
+        reset-state (es/reset fixture/installed "reset")
+        reset-ids (mapv :id (:segments reset-state))
+        added (es/add-segment state "LlmInsight" 0 "new-insight")]
+    (is (= reset-state (es/reset fixture/installed "reset")))
+    (is (= (count reset-ids) (count (set reset-ids))))
+    (is (not-any? (set (map :id (:segments state))) reset-ids))
+    (is (= added (es/add-segment state "LlmInsight" 0 "new-insight")))
+    (is (= "new-insight" (:selected-id added)))
+    (is (= "new-insight" (:id (first (:segments added)))))
+    (is (= (inc (count (:segments state))) (count (:segments added))))))
 
 (deftest reordering-the-line-leaves-the-shelf-untouched
   (let [state (fixture/fresh)

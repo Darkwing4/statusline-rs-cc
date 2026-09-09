@@ -117,8 +117,8 @@
                  (:fields module))
            (:overrides module))))
 
-(defn create [module]
-  {:id (str "segment-" (random-uuid))
+(defn create [module id]
+  {:id id
    :module-id (:id module)
    :type (:type module)
    :config (defaults module)})

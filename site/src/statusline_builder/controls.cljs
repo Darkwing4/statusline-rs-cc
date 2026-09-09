@@ -64,7 +64,7 @@
                       2000 true)
     (.append (el "span" "control-hint" hint))))
 
-(defn- number-control [label-text {:keys [min max step] :as range} value on-change]
+(defn- number-control [label-text {:keys [min max step]} value on-change]
   (let [input (el "input" "control-input")]
     (set! (.-type input) "number")
     (set! (.-value input) (str value))
@@ -80,7 +80,9 @@
     (.addEventListener input "change"
                        (fn []
                          (let [typed (js/Number (.-value input))
-                               bounded (-> (if (js/Number.isFinite typed) typed value) (clojure.core/max min) (clojure.core/min max))
+                               bounded (-> (if (js/Number.isFinite typed) typed value)
+                                           (clojure.core/max min)
+                                           (clojure.core/min max))
                                number (if (= 1 step) (js/Math.round bounded) bounded)]
                            (set! (.-value input) (str number))
                            (on-change number))))
@@ -110,6 +112,13 @@
     (.append wrapper container (button "list-add" "+ add" (str "Add " label-text) add-row))
     wrapper))
 
+(defn- without-row [rows index]
+  (into (subvec rows 0 index) (subvec rows (inc index))))
+
+(defn- remove-row-button [label-text index rows on-change]
+  (button "list-remove" "×" (str "Remove " label-text " " (inc index))
+          #(on-change (without-row @rows index))))
+
 (defn- list-control [label-text value on-change]
   (let [items (atom (mapv str value))
         row (fn [index item]
@@ -117,8 +126,7 @@
                     node (el "div" "list-row")]
                 (.setAttribute input "aria-label" (str label-text " " (inc index)))
                 (.addEventListener input "input" #(on-change (swap! items assoc index (.-value input))))
-                (.append node input (button "list-remove" "×" (str "Remove " label-text " " (inc index))
-                                           #(on-change (vec (keep-indexed (fn [at entry] (when (not= at index) entry)) @items)))))
+                (.append node input (remove-row-button label-text index items on-change))
                 node))]
     (rows-control label-text (map-indexed row @items) #(on-change (conj @items "")))))
 
@@ -132,8 +140,7 @@
                     (.setAttribute input "aria-label" (str label-text " " (inc index) " " side))
                     (.addEventListener input "input" #(on-change (swap! pairs assoc-in [index position] (.-value input))))
                     (.append node input)))
-                (.append node (button "list-remove" "×" (str "Remove " label-text " " (inc index))
-                                      #(on-change (vec (keep-indexed (fn [at entry] (when (not= at index) entry)) @pairs)))))
+                (.append node (remove-row-button label-text index pairs on-change))
                 node))]
     (rows-control label-text (map-indexed row @pairs) #(on-change (conj @pairs ["" ""])))))
 
@@ -154,7 +161,9 @@
     select))
 
 (defn- colour-editor [label-text value swatch on-change]
-  (let [paint! (fn [next] (.setProperty (.-style swatch) "--swatch" (colour/swatch next)) (on-change next))]
+  (let [paint! (fn [colour]
+                 (.setProperty (.-style swatch) "--swatch" (colour/swatch colour))
+                 (on-change colour))]
     (case (:kind value)
       :named (let [select (el "select" "ansi-select")]
                (.setAttribute select "aria-label" (str label-text " ANSI color"))

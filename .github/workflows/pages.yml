@@ -44,6 +44,17 @@ jobs:
           distribution: temurin
           java-version: 21
 
+      - name: install clojure quality tools
+        uses: DeLaGuardo/setup-clojure@13.7
+        with:
+          bb: '1.13.219'
+          cljfmt: '0.16.5'
+          clj-kondo: '2026.08.04'
+
+      - name: check clojure code
+        working-directory: site
+        run: bb check
+
       - uses: actions/cache@v4
         with:
           path: ~/.m2

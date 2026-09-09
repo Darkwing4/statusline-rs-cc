@@ -25,9 +25,14 @@
                (let [segment-width (pieces-width (:pieces entry))
                      projected (+ line-width separator-width segment-width)]
                  (cond
-                   (empty? line) {:lines lines :line [{:entry entry :separator false}] :line-width segment-width}
-                   (> projected max-columns) {:lines (conj lines line) :line [{:entry entry :separator false}] :line-width segment-width}
-                   :else {:lines lines :line (conj line {:entry entry :separator true}) :line-width projected})))
+                   (empty? line)
+                   {:lines lines :line [{:entry entry :separator false}] :line-width segment-width}
+
+                   (> projected max-columns)
+                   {:lines (conj lines line) :line [{:entry entry :separator false}] :line-width segment-width}
+
+                   :else
+                   {:lines lines :line (conj line {:entry entry :separator true}) :line-width projected})))
         {:keys [lines line]} (reduce step {:lines [] :line [] :line-width 0} entries)]
     (if (seq line) (conj lines line) lines)))
 
@@ -44,13 +49,11 @@
 
 (defn truncate-pieces [pieces max-columns]
   (let [cells (graphemes-of pieces)]
-
     (if (<= (reduce + 0 (map :width cells)) max-columns)
       pieces
       (let [room (max 0 (dec max-columns))
             kept (loop [remaining cells, kept [], used 0]
                    (let [cell (first remaining)]
-
                      (if (or (nil? cell) (> (+ used (:width cell)) room))
                        kept
                        (recur (rest remaining) (conj kept cell) (+ used (:width cell))))))
@@ -87,30 +90,42 @@
 (defn layout-rows [entries separator max-columns]
   (if (empty? entries)
     []
-    (let [flush (fn [rows block]
-                  (if (or (empty? rows) (seq block))
-                    (into rows (block-rows block separator max-columns))
-                    rows))
+    (let [flush-block (fn [rows block]
+                        (if (or (empty? rows) (seq block))
+                          (into rows (block-rows block separator max-columns))
+                          rows))
           break-cell {:separator false}
           end-line (fn [rows block entry]
-                     (let [flushed (flush rows block)
+                     (let [flushed (flush-block rows block)
                            last-row (dec (count flushed))]
                        (update-in flushed [last-row :cells] conj (assoc break-cell :entry entry))))
-          [rows block] (reduce (fn [[rows block] entry]
-                                 (cond
-                                   (:standalone entry) [(conj (flush rows block) {:standalone true :cells [{:entry (fit-standalone entry max-columns) :separator false}]}) []]
-                                   (and (:line-break entry) (seq block)) [(end-line rows block entry) []]
-                                   :else [rows (conj block entry)]))
-                               [[] []]
-                               entries)]
-      (flush rows block))))
+          add-entry (fn [[rows block] entry]
+                      (cond
+                        (:standalone entry)
+                        (let [cell {:entry (fit-standalone entry max-columns) :separator false}
+                              row {:standalone true :cells [cell]}]
+                          [(conj (flush-block rows block) row) []])
+
+                        (and (:line-break entry) (seq block))
+                        [(end-line rows block entry) []]
+
+                        :else
+                        [rows (conj block entry)]))
+          [rows block] (reduce add-entry [[] []] entries)]
+      (flush-block rows block))))
+
+(defn- row-text [row separator]
+  (let [cell-text (fn [{:keys [entry] separator? :separator}]
+                    (str (when separator? separator) (apply str (map :text (:pieces entry)))))]
+    (apply str (map cell-text (:cells row)))))
+
+(defn- row-width [row separator]
+  (let [lines (str/split (row-text row separator) #"\n")]
+    (reduce max 0 (map width/display-width lines))))
 
 (defn describe-line-fill [entries separator max-columns]
   (let [rows (layout-rows entries separator max-columns)
-        row-text (fn [row]
-                   (apply str (mapcat (fn [cell] (cons (if (:separator cell) separator "") (map :text (:pieces (:entry cell))))) (:cells row))))
-        row-width (fn [row] (reduce max 0 (map width/display-width (str/split (row-text row) #"\n"))))
-        widest (reduce max 0 (map row-width rows))
+        widest (reduce max 0 (map #(row-width % separator) rows))
         count-text (if (= 1 (count rows)) "1 row" (str (count rows) " rows"))]
     (str widest " of " max-columns " cols, " count-text)))
 

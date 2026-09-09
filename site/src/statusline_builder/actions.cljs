@@ -12,10 +12,17 @@
       [before after])))
 
 (defn add! [module-id index]
-  (when-let [[_ after] (change! #(es/add-segment % module-id index))]
-    (let [id (:selected-id after)]
-      (dom/announce! (str (label after id) " put on the line at position " (inc (es/segment-index after id)) "."))
+  (let [id (str "segment-" (random-uuid))]
+    (when-let [[_ after] (change! #(es/add-segment % module-id index id))]
+      (dom/announce! (str (label after id) " put on the line at position "
+                          (inc (es/segment-index after id)) "."))
       (dom/focus-piece! id))))
+
+(defn reset-line! []
+  (swap! es/state es/reset (str (random-uuid))))
+
+(defn append! [module-id]
+  (add! module-id (count (:segments @es/state))))
 
 (defn remove! [id]
   (when-let [[before _] (change! #(es/remove-segment % id))]

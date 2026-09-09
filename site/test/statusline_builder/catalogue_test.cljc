@@ -13,7 +13,7 @@
     (doseq [window windows]
       (let [module (some #(when (= (str "RateLimit:" window) (:id %)) %) fixture/modules)]
         (is (some? module) window)
-        (is (= window (get-in (segment/create module) [:config "window"])))))))
+        (is (= window (get-in (segment/create module "rate-limit") [:config "window"])))))))
 
 (deftest presets-only-name-fields-the-catalogue-declares
   (doseq [[type preset] segment/presets]

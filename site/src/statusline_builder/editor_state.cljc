@@ -51,17 +51,21 @@
          :modules (catalogue/build-modules catalogue)
          :catalogue-version (:version catalogue)))
 
-(defn- default-segments [state]
-  (mapv (fn [entry]
-          (if (string? entry)
-            (segment/create (module-entry state entry))
-            (update (segment/create (module-entry state (:module entry))) :config merge (:config entry))))
+(defn- default-segments [state reset-id]
+  (mapv (fn [index entry]
+          (let [module-id (if (string? entry) entry (:module entry))
+                id (str "segment-" reset-id "-" index)
+                created (segment/create (module-entry state module-id) id)]
+            (if (string? entry)
+              created
+              (update created :config merge (:config entry)))))
+        (range)
         segment/default-line))
 
-(defn reset [state]
+(defn reset [state reset-id]
   (merge state
          (dissoc initial :modules :catalogue-version :font-px)
-         {:segments (default-segments state)}))
+         {:segments (default-segments state reset-id)}))
 
 (defn- insert-at [items index item]
   (vec (concat (subvec items 0 index) [item] (subvec items index))))
@@ -69,11 +73,11 @@
 (defn- remove-at [items index]
   (vec (concat (subvec items 0 index) (subvec items (inc index)))))
 
-(defn add-segment [state module-id index]
+(defn add-segment [state module-id index id]
   (let [module (module-entry state module-id)]
     (if (and (not (:repeatable module)) (contains? (used-module-ids state) module-id))
       state
-      (let [created (segment/create module)
+      (let [created (segment/create module id)
             target (max 0 (min index (count (:segments state))))]
         (-> state
             (update :segments insert-at target created)
@@ -98,8 +102,13 @@
     state))
 
 (defn set-field [state id field value]
-  (update state :segments (fn [segments]
-                            (mapv #(if (= id (:id %)) (assoc-in % [:config field] value) %) segments))))
+  (update state :segments
+          (fn [segments]
+            (mapv (fn [segment]
+                    (if (= id (:id segment))
+                      (assoc-in segment [:config field] value)
+                      segment))
+                  segments))))
 
 (defn select [state target]
   (assoc state :selected-id target))

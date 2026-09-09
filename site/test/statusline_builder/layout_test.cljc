@@ -55,19 +55,28 @@
   (is (= 0 (width/display-width "\u2060")))
   (is (= 1 (width/display-width "é"))))
 
-#?(:cljs
-   (deftest preview-width-handles-terminal-graphemes
-     (is (= 5 (width/display-width "a界🙂")))
-     (is (= 2 (width/display-width "👩‍💻")))
-     (is (= 2 (width/display-width "🇺🇸")))
-     (is (= 2 (width/display-width "1️⃣")))))
+(deftest preview-width-handles-terminal-graphemes
+  (is (= 5 (width/display-width "a界🙂")))
+  (is (= 2 (width/display-width "👩‍💻")))
+  (is (= 2 (width/display-width "🇺🇸")))
+  (is (= 2 (width/display-width "1️⃣"))))
 
-#?(:cljs
-   (deftest flag-and-keycap-widths-preserve-wrapping-boundaries
-     (is (= 1 (count (layout/wrap-preview-segments [(entry "a") (entry "🇺🇸")] " " 4))))
-     (is (= 2 (count (layout/wrap-preview-segments [(entry "a") (entry "🇺🇸")] " " 3))))
-     (is (= 1 (count (layout/wrap-preview-segments [(entry "a") (entry "1️⃣")] " " 4))))
-     (is (= 2 (count (layout/wrap-preview-segments [(entry "a") (entry "1️⃣")] " " 3))))))
+(deftest flag-and-keycap-widths-preserve-wrapping-boundaries
+  (is (= 1 (count (layout/wrap-preview-segments [(entry "a") (entry "🇺🇸")] " " 4))))
+  (is (= 2 (count (layout/wrap-preview-segments [(entry "a") (entry "🇺🇸")] " " 3))))
+  (is (= 1 (count (layout/wrap-preview-segments [(entry "a") (entry "1️⃣")] " " 4))))
+  (is (= 2 (count (layout/wrap-preview-segments [(entry "a") (entry "1️⃣")] " " 3)))))
+
+(deftest graphemes-and-cuts-preserve-unicode-boundaries
+  (is (= ["👩‍💻" "🇺🇸" "1️⃣" "é"] (width/graphemes "👩‍💻🇺🇸1️⃣é")))
+  (is (= [] (width/graphemes "")))
+  (is (= "🙂…" (width/cut "🙂🙃x" 2)))
+  (is (= "a\n…" (width/cut "a\n🙂x" 3)))
+  (is (= 0 (width/display-width "\r\n")))
+  (is (= 0 (width/display-width "́")))
+  (is (= 2 (width/display-width "👋🏽")))
+  (is (= [{:text "👩‍💻…" :colour "#ffffff"}]
+         (layout/truncate-pieces (pieces "👩‍💻abcd") 3))))
 
 (deftest a-line-break-ends-the-row-and-stays-visible-at-its-end
   (let [break {:pieces (pieces "\u2060") :standalone false :line-break true}
