@@ -2,23 +2,27 @@
   (:require [clojure.string :as str]
             [statusline-builder.number :as number]))
 
-(def ansi
-  [[30 "Black" "#303642"]
-   [31 "Red" "#d85c68"]
-   [32 "Green" "#69c88d"]
-   [33 "Yellow" "#d4b967"]
-   [34 "Blue" "#668fd4"]
-   [35 "Magenta" "#ad7ad0"]
-   [36 "Cyan" "#58c4d1"]
-   [37 "White" "#c9d1dc"]
-   [90 "Bright black" "#66758a"]
-   [91 "Bright red" "#ff7c88"]
-   [92 "Bright green" "#78d49b"]
-   [93 "Bright yellow" "#e4c879"]
-   [94 "Bright blue" "#7fa8ef"]
-   [95 "Bright magenta" "#c99af2"]
-   [96 "Bright cyan" "#63d9e6"]
-   [97 "Bright white" "#e8edf5"]])
+(def palette
+  [["Rosewater" "#f5e0dc"]
+   ["Flamingo" "#f2cdcd"]
+   ["Pink" "#f5c2e7"]
+   ["Mauve" "#cba6f7"]
+   ["Red" "#f38ba8"]
+   ["Maroon" "#eba0ac"]
+   ["Peach" "#fab387"]
+   ["Yellow" "#f9e2af"]
+   ["Green" "#a6e3a1"]
+   ["Teal" "#94e2d5"]
+   ["Sky" "#89dceb"]
+   ["Sapphire" "#74c7ec"]
+   ["Blue" "#89b4fa"]
+   ["Lavender" "#b4befe"]
+   ["Text" "#cdd6f4"]
+   ["Subtext 1" "#bac2de"]
+   ["Subtext 0" "#a6adc8"]
+   ["Overlay 2" "#9399b2"]
+   ["Overlay 1" "#7f849c"]
+   ["Overlay 0" "#6c7086"]])
 
 (def context-gradient-stops
   [[0 [147 153 178]]
@@ -43,9 +47,6 @@
 (defn hex->rgb [hex]
   (let [digits (str/replace hex "#" "")]
     (mapv #(number/parse-hex (subs digits % (+ % 2))) [0 2 4])))
-
-(defn named [code]
-  {:kind :named :code code})
 
 (defn rgb [r g b]
   {:kind :rgb :hex (rgb-array->hex [r g b])})
@@ -79,7 +80,6 @@
 (defn css [colour percentage]
   (case (:kind colour)
     :rgb (:hex colour)
-    :named (or (some (fn [[code _ hex]] (when (= code (:code colour)) hex)) ansi) "#a6b1c2")
     (interpolate-stops [166 227 161] [249 226 175] [243 139 168] percentage 50)))
 
 (defn colour->rgb [colour fallback]

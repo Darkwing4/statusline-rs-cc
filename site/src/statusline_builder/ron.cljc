@@ -17,7 +17,6 @@
 
 (defn- colour->ron [colour]
   (case (:kind colour)
-    :named (str "Named(" (:code colour) ")")
     :rgb (let [[r g b] (colour/hex->rgb (:hex colour))] (str "Rgb(" r ", " g ", " b ")"))
     "Gradient"))
 

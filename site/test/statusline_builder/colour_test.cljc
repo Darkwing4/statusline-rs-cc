@@ -3,7 +3,7 @@
             [statusline-builder.colour :as colour]
             [statusline-builder.preview :as preview]))
 
-(def ^:private named {:kind :named :code 32})
+(def ^:private non-rgb colour/gradient)
 
 (deftest context-gradient-matches-the-runtime-stops-and-truncation
   (is (= [147 153 178] (colour/gradient-rgb colour/context-gradient-stops -1 :truncate)))
@@ -36,9 +36,16 @@
     (is (= "#f9bb8d" (colour/cache-ttl-css colour/gradient clean)))))
 
 (deftest rate-limit-gradient-uses-runtime-fallbacks-for-non-rgb-colours
-  (is (= [166 227 161] (colour/colour->rgb named [166 227 161])))
-  (is (= "#d0e3a8" (colour/interpolate-stops (colour/colour->rgb named [166 227 161])
-                                             (colour/colour->rgb named [249 226 175])
-                                             (colour/colour->rgb named [243 139 168])
+  (is (= [166 227 161] (colour/colour->rgb non-rgb [166 227 161])))
+  (is (= "#d0e3a8" (colour/interpolate-stops (colour/colour->rgb non-rgb [166 227 161])
+                                             (colour/colour->rgb non-rgb [249 226 175])
+                                             (colour/colour->rgb non-rgb [243 139 168])
                                              25
                                              50))))
+
+(deftest every-palette-entry-is-a-distinct-hex-that-round-trips-through-rgb
+  (doseq [[name hex] colour/palette]
+    (is (re-matches #"#[0-9a-f]{6}" hex) name)
+    (is (= hex (:hex (apply colour/rgb (colour/hex->rgb hex)))) name)
+    (is (= hex (colour/css {:kind :rgb :hex hex} 50)) name))
+  (is (= (count colour/palette) (count (set (map second colour/palette))))))

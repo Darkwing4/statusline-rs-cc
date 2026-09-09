@@ -137,50 +137,58 @@
                 node))]
     (rows-control label-text (map-indexed row @pairs) #(on-change (conj @pairs ["" ""])))))
 
-(def ^:private colour-kinds [[:named "ANSI"] [:rgb "RGB"] [:gradient "Gradient"]])
+(defn- tile-key [tile-colour]
+  (if (= :rgb (:kind tile-colour)) (:hex tile-colour) "gradient"))
 
-(defn- kind-select [label-text value allow-gradient on-change]
-  (let [select (el "select" "color-kind")]
-    (doseq [[kind name] (if allow-gradient colour-kinds (butlast colour-kinds))]
-      (.append select (option name (clojure.core/name kind))))
-    (set! (.-value select) (name (:kind value)))
-    (.setAttribute select "aria-label" (str label-text " color type"))
-    (.addEventListener select "change"
-                       (fn []
-                         (on-change (case (.-value select)
-                                      "named" (colour/grey)
-                                      "rgb" (apply colour/rgb (colour/colour->rgb value [183 165 255]))
-                                      colour/gradient))))
-    select))
+(defn- press-tile! [grid value]
+  (let [pressed (tile-key value)]
+    (doseq [tile (array-seq (.-children grid))]
+      (.setAttribute tile "aria-pressed" (str (= pressed (.getAttribute tile "data-tile")))))))
 
-(defn- colour-editor [label-text value swatch on-change]
-  (let [paint! (fn [next] (.setProperty (.-style swatch) "--swatch" (colour/swatch next)) (on-change next))]
-    (case (:kind value)
-      :named (let [select (el "select" "ansi-select")]
-               (.setAttribute select "aria-label" (str label-text " ANSI color"))
-               (doseq [[code name] colour/ansi]
-                 (.append select (option (str code " · " name) (str code))))
-               (set! (.-value select) (str (:code value)))
-               (.addEventListener select "change" #(paint! (colour/named (js/Number (.-value select)))))
-               select)
-      :rgb (let [input (el "input" "rgb-input")]
-             (set! (.-type input) "color")
-             (set! (.-value input) (:hex value))
-             (.setAttribute input "aria-label" (str label-text " RGB color"))
-             (.addEventListener input "input" #(paint! {:kind :rgb :hex (.-value input)}))
-             input)
-      (el "div" "gradient-readout" "follows the value"))))
+(defn- palette-tile [grid label-text tile-name tile-colour on-pick]
+  (let [tile (button "palette-tile" "" (str label-text " " tile-name)
+                     (fn [] (press-tile! grid tile-colour) (on-pick tile-colour)))]
+    (set! (.-title tile) tile-name)
+    (.setAttribute tile "data-tile" (tile-key tile-colour))
+    (.setProperty (.-style tile) "--swatch" (colour/swatch tile-colour))
+    tile))
+
+(defn- palette-grid [label-text value allow-gradient on-pick]
+  (let [grid (el "div" "palette-grid")]
+    (.setAttribute grid "role" "group")
+    (.setAttribute grid "aria-label" (str label-text " palette"))
+    (doseq [[tile-name hex] colour/palette]
+      (.append grid (palette-tile grid label-text tile-name {:kind :rgb :hex hex} on-pick)))
+    (when allow-gradient
+      (.append grid (palette-tile grid label-text "Gradient" colour/gradient on-pick)))
+    (press-tile! grid value)
+    grid))
 
 (defn colour-control [label-text value on-change allow-gradient]
   (let [wrapper (el "div" "color-control")
         heading (el "div" "color-control-label")
         swatch (el "span" "color-swatch")
-        editor (el "div" "color-editor")]
+        custom (el "label" "color-custom")
+        custom-input (el "input" "rgb-input")
+        pick! (fn [next]
+                (.setProperty (.-style swatch) "--swatch" (colour/swatch next))
+                (when (= :rgb (:kind next))
+                  (set! (.-value custom-input) (:hex next)))
+                (on-change next))
+        grid (palette-grid label-text value allow-gradient pick!)]
     (.setAttribute swatch "aria-hidden" "true")
     (.setProperty (.-style swatch) "--swatch" (colour/swatch value))
     (.append heading (el "span" "" label-text) swatch)
-    (.append editor (kind-select label-text value allow-gradient on-change) (colour-editor label-text value swatch on-change))
-    (.append wrapper heading editor)
+    (set! (.-type custom-input) "color")
+    (set! (.-value custom-input) (if (= :rgb (:kind value)) (:hex value) "#9399b2"))
+    (.setAttribute custom-input "aria-label" (str label-text " custom color"))
+    (.addEventListener custom-input "input"
+                       (fn []
+                         (let [next {:kind :rgb :hex (.-value custom-input)}]
+                           (press-tile! grid next)
+                           (pick! next))))
+    (.append custom custom-input (el "span" "color-custom-label" "custom"))
+    (.append wrapper heading grid custom)
     wrapper))
 
 (defn control [field type value on-change]
