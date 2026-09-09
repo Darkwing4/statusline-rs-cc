@@ -5,8 +5,8 @@ mod config_schema;
 mod duration_format;
 mod gradient;
 mod iso8601;
-#[cfg(target_os = "linux")]
 mod private_file;
+#[cfg(target_os = "linux")]
 mod process_stat;
 mod segment_catalog;
 mod segments;
