@@ -29,9 +29,6 @@
 (defn segment-id [node]
   (.getAttribute node "data-segment-id"))
 
-(defn index-of [items item]
-  (first (keep-indexed (fn [index candidate] (when (= item candidate) index)) items)))
-
 (defn announce! [message]
   (set-text! "liveRegion" "")
   (js/requestAnimationFrame #(set-text! "liveRegion" message)))
@@ -43,5 +40,4 @@
        (.focus node)))))
 
 (defn reduced-motion? []
-  (boolean (and js/globalThis.matchMedia
-                (.-matches (js/globalThis.matchMedia "(prefers-reduced-motion: reduce)")))))
+  (.-matches (js/matchMedia "(prefers-reduced-motion: reduce)")))

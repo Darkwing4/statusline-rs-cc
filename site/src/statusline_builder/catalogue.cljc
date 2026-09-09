@@ -7,16 +7,14 @@
   {"FiveHour" {"prefix" "{t}h "}
    "Fable" {"prefix" "- {t}d " "active_marker" " |"}})
 
-(def ^:private acronyms {"Ttl" "TTL" "Llm" "LLM"})
-
 (def ^:private repeatable-segments #{"Spacer" "LlmInsight"})
+
+(def ^:private unit-words {"ttl" "TTL" "llm" "LLM" "kib" "KiB" "cpu" "CPU"})
 
 (defn segment-label [name]
   (->> (str/split (str/replace name #"([a-z0-9])([A-Z])" "$1 $2") #" ")
-       (map-indexed (fn [index word] (or (acronyms word) (if (zero? index) word (str/lower-case word)))))
+       (map-indexed (fn [index word] (or (unit-words (str/lower-case word)) (if (zero? index) word (str/lower-case word)))))
        (str/join " ")))
-
-(def ^:private unit-words {"ttl" "TTL" "kib" "KiB" "cpu" "CPU"})
 
 (defn field-label [name]
   (let [text (str/join " " (map #(get unit-words % %) (str/split name #"_")))]

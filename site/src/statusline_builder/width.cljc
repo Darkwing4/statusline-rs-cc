@@ -24,10 +24,8 @@
            (and (>= cp 0x20000) (<= cp 0x3fffd)))))
 
 (defn graphemes [text]
-  #?(:cljs (vec (if (exists? js/Intl.Segmenter)
-                  (js/Array.from (.segment (js/Intl.Segmenter. js/undefined #js {:granularity "grapheme"}) text)
-                                 #(unchecked-get % "segment"))
-                  (js/Array.from text)))
+  #?(:cljs (vec (js/Array.from (.segment (js/Intl.Segmenter. js/undefined #js {:granularity "grapheme"}) text)
+                               #(unchecked-get % "segment")))
      :clj (mapv str text)))
 
 (defn- grapheme-width [grapheme]

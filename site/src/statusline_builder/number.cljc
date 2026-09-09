@@ -12,10 +12,6 @@
   #?(:cljs (js/Math.floor value)
      :clj (long (Math/floor (double value)))))
 
-(defn nan? [value]
-  #?(:cljs (js/Number.isNaN value)
-     :clj (Double/isNaN (double value))))
-
 (defn integer-valued? [value]
   #?(:cljs (js/Number.isInteger value)
      :clj (== value (long value))))

@@ -41,7 +41,7 @@
 (defn- drop-index [event state]
   (if-let [{:keys [node before]} (drop-slot event)]
     (let [visible (visible-piece-nodes)
-          left (if before (get visible (dec (dom/index-of visible node))) node)]
+          left (if before (get visible (dec (.indexOf visible node))) node)]
       (if left
         (inc (es/segment-index state (dom/segment-id left)))
         0))

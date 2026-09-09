@@ -30,7 +30,7 @@
   (is (= 320 (layout/snap-columns 900))))
 
 (deftest preview-wrapping-uses-cols-minus-four-and-never-leads-with-a-separator
-  (let [separators (fn [columns] (map #(map :separator %) (layout/wrap-preview-segments [(pieces "one") (pieces "two")] " | " (layout/runtime-preview-columns columns))))]
+  (let [separators (fn [columns] (map #(map :separator %) (layout/wrap-preview-segments [(entry "one") (entry "two")] " | " (layout/runtime-preview-columns columns))))]
     (is (= 8 (layout/runtime-preview-columns 12)))
     (is (= [[false] [false]] (separators 12)))
     (is (= [[false true]] (separators 13)))))
@@ -64,10 +64,10 @@
 
 #?(:cljs
    (deftest flag-and-keycap-widths-preserve-wrapping-boundaries
-     (is (= 1 (count (layout/wrap-preview-segments [(pieces "a") (pieces "🇺🇸")] " " 4))))
-     (is (= 2 (count (layout/wrap-preview-segments [(pieces "a") (pieces "🇺🇸")] " " 3))))
-     (is (= 1 (count (layout/wrap-preview-segments [(pieces "a") (pieces "1️⃣")] " " 4))))
-     (is (= 2 (count (layout/wrap-preview-segments [(pieces "a") (pieces "1️⃣")] " " 3))))))
+     (is (= 1 (count (layout/wrap-preview-segments [(entry "a") (entry "🇺🇸")] " " 4))))
+     (is (= 2 (count (layout/wrap-preview-segments [(entry "a") (entry "🇺🇸")] " " 3))))
+     (is (= 1 (count (layout/wrap-preview-segments [(entry "a") (entry "1️⃣")] " " 4))))
+     (is (= 2 (count (layout/wrap-preview-segments [(entry "a") (entry "1️⃣")] " " 3))))))
 
 (deftest a-line-break-ends-the-row-and-stays-visible-at-its-end
   (let [break {:pieces (pieces "\u2060") :standalone false :line-break true}

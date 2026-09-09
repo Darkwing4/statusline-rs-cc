@@ -85,14 +85,6 @@
       (= id (:selected-id state)) (assoc :selected-id line-selection))
     state))
 
-(defn move-segment [state id delta]
-  (let [from (segment-index state id)
-        to (when from (+ from delta))]
-    (if (and from (<= 0 to) (< to (count (:segments state))))
-      (let [moved (get-in state [:segments from])]
-        (update state :segments #(insert-at (remove-at % from) to moved)))
-      state)))
-
 (defn move-segment-to [state id requested-index]
   (if-let [from (segment-index state id)]
     (let [segments (:segments state)
@@ -111,9 +103,6 @@
 
 (defn select [state target]
   (assoc state :selected-id target))
-
-(defn config-key [state]
-  (select-keys state [:separator :separator-color :segments]))
 
 (defn line-key [state]
   (select-keys state [:separator :separator-color :segments :terminal-width :scenario-id]))

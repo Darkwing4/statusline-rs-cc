@@ -19,16 +19,16 @@
 (defn- pieces-width [pieces]
   (reduce + 0 (map #(width/display-width (:text %)) pieces)))
 
-(defn wrap-preview-segments [segments separator max-columns]
+(defn wrap-preview-segments [entries separator max-columns]
   (let [separator-width (width/display-width separator)
-        step (fn [{:keys [lines line line-width]} pieces]
-               (let [segment-width (pieces-width pieces)
+        step (fn [{:keys [lines line line-width]} entry]
+               (let [segment-width (pieces-width (:pieces entry))
                      projected (+ line-width separator-width segment-width)]
                  (cond
-                   (empty? line) {:lines lines :line [{:pieces pieces :separator false}] :line-width segment-width}
-                   (> projected max-columns) {:lines (conj lines line) :line [{:pieces pieces :separator false}] :line-width segment-width}
-                   :else {:lines lines :line (conj line {:pieces pieces :separator true}) :line-width projected})))
-        {:keys [lines line]} (reduce step {:lines [] :line [] :line-width 0} segments)]
+                   (empty? line) {:lines lines :line [{:entry entry :separator false}] :line-width segment-width}
+                   (> projected max-columns) {:lines (conj lines line) :line [{:entry entry :separator false}] :line-width segment-width}
+                   :else {:lines lines :line (conj line {:entry entry :separator true}) :line-width projected})))
+        {:keys [lines line]} (reduce step {:lines [] :line [] :line-width 0} entries)]
     (if (seq line) (conj lines line) lines)))
 
 (defn- graphemes-of [pieces]
@@ -79,14 +79,10 @@
     entry))
 
 (defn- block-rows [block separator max-columns]
-  (let [lines (wrap-preview-segments (map :pieces block) separator max-columns)]
+  (let [lines (wrap-preview-segments block separator max-columns)]
     (if (empty? lines)
       [{:standalone false :cells []}]
-      (loop [lines lines, entries block, rows []]
-        (if-let [line (first lines)]
-          (let [cells (mapv (fn [cell entry] {:entry entry :separator (:separator cell)}) line entries)]
-            (recur (rest lines) (drop (count line) entries) (conj rows {:standalone false :cells cells})))
-          rows)))))
+      (mapv (fn [line] {:standalone false :cells line}) lines))))
 
 (defn layout-rows [entries separator max-columns]
   (if (empty? entries)

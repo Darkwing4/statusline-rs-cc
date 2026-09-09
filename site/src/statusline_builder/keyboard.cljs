@@ -6,9 +6,9 @@
 
 (defn- move-along-line! [state id direction]
   (let [visible (mapv dom/segment-id (dom/line-piece-nodes))
-        position (dom/index-of visible id)]
-    (if (nil? position)
-      (actions/move! id direction)
+        position (.indexOf visible id)]
+
+    (when-not (neg? position)
       (when-let [neighbour (es/segment-index state (get visible (+ position direction)))]
         (actions/move-to! id (if (pos? direction) (inc neighbour) neighbour))))))
 

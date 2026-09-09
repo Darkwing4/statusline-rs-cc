@@ -21,11 +21,6 @@
   (when-let [[before _] (change! #(es/remove-segment % id))]
     (dom/announce! (str (label before id) " taken off the line."))))
 
-(defn move! [id delta]
-  (when-let [[_ after] (change! #(es/move-segment % id delta))]
-    (dom/announce! (str (label after id) " moved to position " (inc (es/segment-index after id)) "."))
-    (dom/focus-piece! id)))
-
 (defn move-to! [id index]
   (when-let [[_ after] (change! #(es/move-segment-to % id index))]
     (dom/announce! (str (label after id) " moved to position " (inc (es/segment-index after id)) "."))

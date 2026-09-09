@@ -56,20 +56,16 @@
   (rgb 120 125 140))
 
 (defn- between [[start-position start-colour] [end-position end-colour] percentage quantize]
-  (let [span (- end-position start-position)]
-    (if (<= span 0)
-      (vec end-colour)
-      (let [amount (max 0 (min 1 (/ (- percentage start-position) span)))]
-        (mapv (fn [channel end-channel]
-                (quantize (max 0 (min 255 (+ channel (* (- end-channel channel) amount))))))
-              start-colour
-              end-colour)))))
+  (let [amount (max 0 (min 1 (/ (- percentage start-position) (- end-position start-position))))]
+    (mapv (fn [channel end-channel]
+            (quantize (max 0 (min 255 (+ channel (* (- end-channel channel) amount))))))
+          start-colour
+          end-colour)))
 
 (defn gradient-rgb [stops percentage quantization]
   (let [quantize (if (= :truncate quantization) number/trunc number/round)
         [first-position first-colour] (first stops)]
     (cond
-      (or (empty? stops) (number/nan? percentage)) [0 0 0]
       (<= percentage first-position) (vec first-colour)
       :else (or (some (fn [[start end]]
                         (when (<= percentage (first end))
