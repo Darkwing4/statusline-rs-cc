@@ -17,6 +17,10 @@ impl Segment for Spacer {
     fn breaks_line(&self) -> bool {
         self.shape == SpacerShape::LineBreak
     }
+
+    fn divides(&self) -> bool {
+        self.shape == SpacerShape::Divider
+    }
 }
 
 #[cfg(test)]
@@ -68,5 +72,21 @@ mod tests {
             ),
             (true, false)
         );
+    }
+
+    #[test]
+    fn only_the_divider_shape_divides_its_neighbours() {
+        assert!(Spacer {
+            shape: SpacerShape::Divider
+        }
+        .divides());
+        assert!(!Spacer {
+            shape: SpacerShape::Gap
+        }
+        .divides());
+        assert!(!Spacer {
+            shape: SpacerShape::LineBreak
+        }
+        .divides());
     }
 }

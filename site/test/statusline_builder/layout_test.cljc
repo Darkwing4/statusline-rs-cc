@@ -23,6 +23,12 @@
     (is (= 3 (count (layout/layout-rows [(entry "below" true) (entry "after")] " " 80))))
     (is (= 3 (count (layout/layout-rows [(entry "one") (entry "below" true) (entry "also" true)] " " 80))))))
 
+(deftest a-divider-only-stays-between-two-shown-pieces
+  (let [divider {:pieces (pieces "│") :divider true}
+        line-break {:pieces (pieces "⁠") :line-break true}
+        kept (layout/drop-idle-dividers [divider (entry "turn") divider divider (entry "cost") divider line-break divider (entry "next") (entry "below" true) divider])]
+    (is (= ["turn" "│" "cost" "⁠" "next" "below"] (map #(:text (first (:pieces %))) kept)))))
+
 (deftest dragged-columns-snap-to-the-slider-steps
   (is (= 148 (layout/snap-columns 147.2)))
   (is (= 152 (layout/snap-columns 150)))

@@ -85,17 +85,34 @@
       (let [text (str/join (config "separator") (map (fn [[model tokens]] (str model " " (format-tokens tokens))) ranked))]
         [(piece (str (config "prefix") text) (colour/css (config "color") 50))]))))
 
+(defn- spend-total [{:keys [input output cache-read cache-write]}]
+  (+ input output cache-read cache-write))
+
+(defn- spend-block [config label spent]
+  (let [label-colour (colour/css (config "label_color") 50)
+        count-colour (colour/css (config "color") 50)
+        metric (fn [word tokens] [(piece word label-colour) (piece (format-tokens tokens) count-colour)])
+        {:keys [input output thinking cache-read cache-write]} spent
+        cache (cond-> (metric "cache " cache-read)
+                (pos? cache-write) (conj (piece (str " +" (format-tokens cache-write)) count-colour)))
+        details (cond-> [(metric "out " output)]
+                  (pos? thinking) (conj (metric "think " thinking))
+                  :always (conj (metric "in " input))
+                  (pos? (+ cache-read cache-write)) (conj cache))]
+    (vec (concat (metric label (spend-total spent))
+                 [(piece "  " label-colour)]
+                 (apply concat (interpose [(piece " · " label-colour)] details))))))
+
 (defn- token-spend [config session]
-  (when-let [{:keys [input output thinking cache-read cache-write]} (get (:token-spend session) (config "scope"))]
-    (let [total (+ input output cache-read cache-write)]
-      (when (pos? total)
-        [(piece (str (config "prefix") (format-tokens total)
-                     ": in " (format-tokens input)
-                     " out " (format-tokens output)
-                     " think " (format-tokens thinking)
-                     " cache read " (format-tokens cache-read)
-                     " write " (format-tokens cache-write))
-                (colour/css (config "color") 50))]))))
+  (let [{:keys [turn] :as spend} (:token-spend session)
+        whole (:session spend)]
+    (when (and whole (pos? (spend-total whole)))
+      (let [session-block (spend-block config "session " whole)]
+        (if (or (nil? turn) (zero? (spend-total turn)) (= turn whole))
+          session-block
+          (vec (concat (spend-block config "turn " turn)
+                       [(piece " │ " (colour/css (config "label_color") 50))]
+                       session-block)))))))
 
 (defn- session-cost [config session]
   (let [dollars (:cost session)]
@@ -194,5 +211,7 @@
        "CommandOutput" (text-piece config (width/cut (:command-output session) (config "max_chars")))
        "LlmInsight" (text-piece config (width/cut (:llm-insight session) (config "max_chars")))
        "Weather" (text-piece config (width/cut (:weather session) (config "max_chars")))
-       "Spacer" [(piece "\u2060" "transparent")]
+       "Spacer" (if (= "Divider" (config "shape"))
+                  [(piece "\u2502" (colour/css separator-colour 50))]
+                  [(piece "\u2060" "transparent")])
        nil))))

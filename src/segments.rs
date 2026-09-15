@@ -49,6 +49,10 @@ pub trait Segment {
         false
     }
 
+    fn divides(&self) -> bool {
+        false
+    }
+
     fn overflow(&self) -> Overflow {
         Overflow::Wrap
     }

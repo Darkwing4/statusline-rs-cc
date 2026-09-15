@@ -40,13 +40,16 @@
     (is (= "tokens sonnet-5 640k · haiku-4-5 42k" (text-of tokens (assoc clean :model-tokens [["haiku-4-5" 42000] ["opus-5" 0] ["sonnet-5" 640000]]))))
     (is (nil? (preview/pieces tokens (assoc clean :model-tokens []))))))
 
+(defn- line-of [segment session]
+  (apply str (map :text (preview/pieces segment session))))
+
 (deftest token-spend-follows-the-runtime-format
-  (let [turn (fixture/create "TokenSpend")
-        session (-> turn (fixture/with-field "scope" "Session") (fixture/with-field "prefix" "session "))
-        active (fixture/scenario "active")]
-    (is (= "turn 58k: in 1.2k out 3.4k think 1.1k cache read 52k write 1.9k" (text-of turn active)))
-    (is (= "session 3.4M: in 12k out 210k think 70k cache read 3.0M write 180k" (text-of session active)))
-    (is (nil? (preview/pieces turn (assoc active :token-spend {}))))))
+  (let [spend (fixture/create "TokenSpend")
+        active (fixture/scenario "active")
+        session-only (-> (get-in active [:token-spend :session]) (assoc :thinking 0 :cache-write 0))]
+    (is (= "turn 58k  out 3.4k · think 1.1k · in 1.2k · cache 52k +1.9k │ session 3.4M  out 210k · think 70k · in 12k · cache 3.0M +180k" (line-of spend active)))
+    (is (= "session 3.3M  out 210k · in 12k · cache 3.0M" (line-of spend (assoc active :token-spend {:turn session-only :session session-only}))))
+    (is (nil? (preview/pieces spend (assoc active :token-spend {}))))))
 
 (deftest session-cost-shows-dollars-and-cents
   (let [cost (fixture/create "SessionCost")]

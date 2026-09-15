@@ -12,6 +12,8 @@ use crate::config_schema::Color;
 use crate::segments::{GitCache, Overflow, Segment};
 use crate::statusline_input;
 
+const DIVIDER: &str = "│";
+
 pub struct Renderer {
     pub separator: String,
     pub separator_color: Color,
@@ -24,12 +26,14 @@ impl Renderer {
         let mut git = GitCache::new(cwd);
 
         let sep = self.separator_color.paint(&self.separator);
+        let divider = self.separator_color.paint(DIVIDER);
         let width = terminal_width()
             .map(|cols| cols.saturating_sub(4))
             .filter(|max| *max > 0);
 
         let mut lines: Vec<String> = Vec::new();
         let mut main_parts: Vec<String> = Vec::new();
+        let mut divider_pending = false;
 
         for segment in &self.segments {
             if segment.breaks_line() {
@@ -38,6 +42,12 @@ impl Renderer {
                     main_parts.clear();
                 }
 
+                divider_pending = false;
+                continue;
+            }
+
+            if segment.divides() {
+                divider_pending = !main_parts.is_empty();
                 continue;
             }
 
@@ -50,9 +60,19 @@ impl Renderer {
             }
 
             if !segment.standalone() {
+                if divider_pending {
+                    if let Some(last) = main_parts.last_mut() {
+                        last.push_str(&sep);
+                        last.push_str(&divider);
+                    }
+                }
+
+                divider_pending = false;
                 main_parts.push(rendered);
                 continue;
             }
+
+            divider_pending = false;
 
             if lines.is_empty() || !main_parts.is_empty() {
                 lines.push(main_block(&main_parts, &sep, width));
@@ -241,5 +261,36 @@ mod tests {
         };
 
         assert_eq!(renderer.render(&serde_json::json!({})), "");
+    }
+
+    fn divider() -> Box<dyn Segment> {
+        Box::new(Spacer {
+            shape: SpacerShape::Divider,
+        })
+    }
+
+    #[test]
+    fn draws_a_divider_only_between_two_shown_neighbours_on_one_line() {
+        let renderer = Renderer {
+            separator: " ".to_string(),
+            separator_color: Color::Gradient,
+            segments: vec![
+                divider(),
+                segment("turn", false),
+                divider(),
+                omitted_segment(false),
+                divider(),
+                segment("cost", false),
+                divider(),
+                Box::new(Spacer {
+                    shape: SpacerShape::LineBreak,
+                }),
+                divider(),
+                segment("next", false),
+                divider(),
+            ],
+        };
+
+        assert_eq!(renderer.render(&serde_json::json!({})), "turn │ cost\nnext");
     }
 }

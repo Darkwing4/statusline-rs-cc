@@ -78,6 +78,22 @@
     (update entry :pieces (if (= :truncate (:overflow entry)) truncate-pieces wrap-pieces) max-columns)
     entry))
 
+(defn drop-idle-dividers [entries]
+  (let [boundary? (fn [entry] (or (:standalone entry) (:line-break entry)))
+        step (fn [kept entry]
+               (let [previous (peek kept)]
+                 (cond
+                   (:divider entry) (if (or (nil? previous) (:divider previous) (boundary? previous))
+                                      kept
+                                      (conj kept entry))
+                   (and (:divider previous) (boundary? entry)) (conj (pop kept) entry)
+                   :else (conj kept entry))))
+        kept (reduce step [] entries)]
+
+    (if (:divider (peek kept))
+      (pop kept)
+      kept)))
+
 (defn- block-rows [block separator max-columns]
   (let [lines (wrap-preview-segments block separator max-columns)]
     (if (empty? lines)

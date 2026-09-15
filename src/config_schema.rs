@@ -61,10 +61,10 @@ pub struct Cwd {
     pub color: Color,
 }
 
-/// Nothing at all: a gap between two neighbours, a line break, or a blank line of its own.
+/// Nothing at all, or a thin bar: a gap between two neighbours, a line break, a blank line of its own, or a │ between two neighbours that are both shown.
 #[derive(Deserialize)]
 pub struct Spacer {
-    /// Gap sits between two neighbours, LineBreak starts the next piece on a new line, BlankLine leaves an empty line.
+    /// Gap sits between two neighbours, LineBreak starts the next piece on a new line, BlankLine leaves an empty line, Divider draws │ only while there is something shown on both sides.
     pub shape: SpacerShape,
 }
 
@@ -73,6 +73,7 @@ pub enum SpacerShape {
     Gap,
     LineBreak,
     BlankLine,
+    Divider,
 }
 
 /// How hard the model is currently set to think.
@@ -187,21 +188,13 @@ pub struct TokensByModel {
     pub separator: String,
 }
 
-#[derive(Clone, Copy, Deserialize)]
-pub enum TokenScope {
-    LastTurn,
-    Session,
-}
-
-/// Tokens spent on your last prompt or on the whole session, subagents included, split into input, output, reasoning and cache, as turn 58k: in 1.2k out 3.4k think 1.1k cache read 52k write 1.9k.
+/// Tokens spent on your last prompt and on the whole session, subagents included, as turn 78k  out 1.2k · think 408 · in 34 · cache 51k +26k │ session 1.4M  out 96k · in 2.1k · cache 1.2M +110k.
 #[derive(Deserialize)]
 pub struct TokenSpend {
-    /// Count the tokens spent answering your last prompt, or every token since the session started.
-    pub scope: TokenScope,
     /// Colour of the token counts.
     pub color: Color,
-    /// Text before the total.
-    pub prefix: String,
+    /// Colour of the words, the dots, and the bar between the turn and the session.
+    pub label_color: Color,
 }
 
 /// What this session has cost so far at API list prices, as Claude Code estimates it, as $4.20.

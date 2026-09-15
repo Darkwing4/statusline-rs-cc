@@ -401,7 +401,7 @@ mod tests {
             .unwrap();
         let shape = field(&spacer.fields, "shape");
         assert_eq!(shape.kind, FieldKind::Enum);
-        assert_eq!(shape.variants, ["Gap", "LineBreak", "BlankLine"]);
+        assert_eq!(shape.variants, ["Gap", "LineBreak", "BlankLine", "Divider"]);
 
         let rate_limit = catalog
             .segments

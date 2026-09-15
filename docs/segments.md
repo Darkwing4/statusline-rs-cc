@@ -89,9 +89,9 @@ Claude Code writes a transcript row per content block and repeats the response's
 
 ## Token spend
 
-`TokenSpend` renders `turn 58k: in 1.2k out 3.4k think 1.1k cache read 52k write 1.9k` — the total first, then what it is made of. `in` is fresh input, `cache read` is context replayed from the prompt cache, `cache write` is what was added to the cache, and `out` is everything the model produced. `think` is the reasoning share of `out`, taken from `usage.output_tokens_details.thinking_tokens`, so it is not added to the total a second time; transcripts written before Claude Code reported it show `think 0`.
+`TokenSpend` renders `turn 78k  out 1.2k · think 408 · in 34 · cache 51k +26k │ session 1.4M  out 96k · think 41k · in 2.1k · cache 1.2M +110k`: each block starts with its total and then lists what it is made of. `out` is everything the model produced and `think` is the reasoning share of it, taken from `usage.output_tokens_details.thinking_tokens`, so it is not added to the total a second time. `in` is fresh input, `cache 51k` is context replayed from the prompt cache, and `+26k` is what was written to the cache. Counts go in `color`, the words, dots, and the bar in `label_color`. A reasoning count or a cache write of zero is left out.
 
-`scope: LastTurn` counts from your last prompt, so the numbers grow while the answer runs and stay on screen once it is done. A prompt is a user row you typed: tool results, skill bodies marked `isMeta`, and injected wrappers such as `<task-notification>` or a slash command keep the current turn going. Subagent rows join the turn when they were written after that prompt. `scope: Session` counts everything since the session started — the total `TokensByModel` splits by model. Add the block twice to see both.
+The turn counts from your last prompt, so its numbers grow while the answer runs and stay on screen once it is done. A prompt is a user row you typed: tool results, skill bodies marked `isMeta`, and injected wrappers such as `<task-notification>` or a slash command keep the current turn going. Subagent rows join the turn when they were written after that prompt. The session counts everything since the session started — the total `TokensByModel` splits by model. While the turn has spent nothing yet, or is still the whole session, only the session block is shown.
 
 ## Session cost
 

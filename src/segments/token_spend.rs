@@ -1,70 +1,129 @@
 use serde_json::Value;
 
-use crate::config_schema::TokenScope;
 pub use crate::config_schema::TokenSpend;
 use crate::segments::{GitCache, Segment};
 use crate::session_token_tallies::load_session_tallies;
 use crate::token_count_format::format_tokens;
 use crate::transcript_token_tally::{TokenBuckets, TranscriptTally};
 
+const TURN_LABEL: &str = "turn ";
+const SESSION_LABEL: &str = "session ";
+const DETAILS_GAP: &str = "  ";
+const DETAIL_SEPARATOR: &str = " · ";
+const SCOPE_SEPARATOR: &str = " │ ";
+
+struct Spent {
+    turn: TokenBuckets,
+    session: TokenBuckets,
+}
+
 impl Segment for TokenSpend {
     fn render(&self, json: &Value, _git: &mut GitCache) -> Option<String> {
         let tallies = load_session_tallies(json)?;
-        let text = self.format(&self.spent(tallies.transcripts()))?;
 
-        Some(self.color.paint(&text))
+        self.format(&spent(tallies.transcripts()))
     }
 }
 
 impl TokenSpend {
-    fn spent<'a>(
-        &self,
-        transcripts: impl IntoIterator<Item = &'a TranscriptTally>,
-    ) -> TokenBuckets {
-        let mut spent = TokenBuckets::default();
-
-        for transcript in transcripts {
-            let buckets = match self.scope {
-                TokenScope::LastTurn => transcript.tally.turn(),
-                TokenScope::Session => transcript.tally.session(),
-            };
-            spent.add(buckets);
-        }
-
-        spent
-    }
-
-    fn format(&self, spent: &TokenBuckets) -> Option<String> {
-        if spent.total() == 0 {
+    fn format(&self, spent: &Spent) -> Option<String> {
+        if spent.session.total() == 0 {
             return None;
         }
 
+        let session = self.block(SESSION_LABEL, &spent.session);
+
+        if spent.turn.total() == 0 || spent.turn == spent.session {
+            return Some(session);
+        }
+
         Some(format!(
-            "{}{}: in {} out {} think {} cache read {} write {}",
-            self.prefix,
-            format_tokens(spent.total()),
-            format_tokens(spent.input),
-            format_tokens(spent.output),
-            format_tokens(spent.thinking),
-            format_tokens(spent.cache_read),
-            format_tokens(spent.cache_write),
+            "{}{}{}",
+            self.block(TURN_LABEL, &spent.turn),
+            self.label_color.paint(SCOPE_SEPARATOR),
+            session
         ))
     }
+
+    fn block(&self, label: &str, spent: &TokenBuckets) -> String {
+        let mut details = vec![self.metric("out ", spent.output)];
+
+        if spent.thinking > 0 {
+            details.push(self.metric("think ", spent.thinking));
+        }
+
+        details.push(self.metric("in ", spent.input));
+
+        if spent.cache_read > 0 || spent.cache_write > 0 {
+            details.push(self.cache(spent));
+        }
+
+        format!(
+            "{}{}{}",
+            self.metric(label, spent.total()),
+            DETAILS_GAP,
+            details.join(&self.label_color.paint(DETAIL_SEPARATOR))
+        )
+    }
+
+    fn cache(&self, spent: &TokenBuckets) -> String {
+        let mut text = self.metric("cache ", spent.cache_read);
+
+        if spent.cache_write > 0 {
+            text.push(' ');
+            text.push_str(
+                &self
+                    .color
+                    .paint(&format!("+{}", format_tokens(spent.cache_write))),
+            );
+        }
+
+        text
+    }
+
+    fn metric(&self, label: &str, tokens: u64) -> String {
+        format!(
+            "{}{}",
+            self.label_color.paint(label),
+            self.color.paint(&format_tokens(tokens))
+        )
+    }
+}
+
+fn spent<'a>(transcripts: impl IntoIterator<Item = &'a TranscriptTally>) -> Spent {
+    let mut spent = Spent {
+        turn: TokenBuckets::default(),
+        session: TokenBuckets::default(),
+    };
+
+    for transcript in transcripts {
+        spent.turn.add(transcript.tally.turn());
+        spent.session.add(transcript.tally.session());
+    }
+
+    spent
 }
 
 #[cfg(test)]
 mod tests {
     use std::io::Cursor;
 
-    use super::TokenSpend;
-    use crate::config_schema::{Color, TokenScope};
+    use super::{spent, Spent, TokenSpend};
+    use crate::config_schema::Color;
     use crate::transcript_token_tally::{tally_tokens, TokenBuckets, TokenTally, TranscriptTally};
 
-    fn spend(scope: TokenScope) -> TokenSpend {
+    const FIRST_TURN: TokenBuckets = TokenBuckets {
+        input: 34,
+        output: 1_200,
+        thinking: 408,
+        cache_write: 26_000,
+        cache_read: 51_000,
+    };
+
+    fn plain() -> TokenSpend {
         TokenSpend {
-            scope,
-            color: Color::Named(90),
-            prefix: "turn ".to_string(),
+            color: Color::Gradient,
+            label_color: Color::Gradient,
         }
     }
 
@@ -81,31 +140,90 @@ mod tests {
     }
 
     #[test]
-    fn spells_out_every_bucket_after_the_total() {
-        let spent = TokenBuckets {
-            input: 1_200,
-            output: 3_400,
-            thinking: 1_100,
-            cache_write: 1_900,
-            cache_read: 51_600,
+    fn shows_the_turn_then_the_session_with_every_bucket() {
+        let spent = Spent {
+            turn: FIRST_TURN,
+            session: TokenBuckets {
+                input: 2_100,
+                output: 96_000,
+                thinking: 41_000,
+                cache_write: 110_000,
+                cache_read: 1_200_000,
+            },
         };
 
         assert_eq!(
-            spend(TokenScope::LastTurn).format(&spent).as_deref(),
-            Some("turn 58k: in 1.2k out 3.4k think 1.1k cache read 52k write 1.9k")
+            plain().format(&spent).as_deref(),
+            Some("turn 78k  out 1.2k · think 408 · in 34 · cache 51k +26k │ session 1.4M  out 96k · think 41k · in 2.1k · cache 1.2M +110k")
+        );
+    }
+
+    #[test]
+    fn shows_one_block_while_the_turn_is_the_whole_session_or_has_not_spent_yet() {
+        let first = Spent {
+            turn: FIRST_TURN,
+            session: FIRST_TURN,
+        };
+        let waiting = Spent {
+            turn: TokenBuckets::default(),
+            session: FIRST_TURN,
+        };
+        let expected = "session 78k  out 1.2k · think 408 · in 34 · cache 51k +26k";
+
+        assert_eq!(plain().format(&first).as_deref(), Some(expected));
+        assert_eq!(plain().format(&waiting).as_deref(), Some(expected));
+    }
+
+    #[test]
+    fn leaves_out_reasoning_and_cache_writes_that_did_not_happen() {
+        let spent = Spent {
+            turn: TokenBuckets::default(),
+            session: TokenBuckets {
+                input: 2,
+                output: 446,
+                cache_read: 11_000,
+                ..TokenBuckets::default()
+            },
+        };
+
+        assert_eq!(
+            plain().format(&spent).as_deref(),
+            Some("session 11k  out 446 · in 2 · cache 11k")
         );
     }
 
     #[test]
     fn hides_itself_before_any_tokens_are_spent() {
+        let spent = Spent {
+            turn: TokenBuckets::default(),
+            session: TokenBuckets::default(),
+        };
+
+        assert_eq!(plain().format(&spent), None);
+    }
+
+    #[test]
+    fn paints_counts_and_labels_in_their_own_colours() {
+        let segment = TokenSpend {
+            color: Color::Named(97),
+            label_color: Color::Named(90),
+        };
+        let spent = Spent {
+            turn: TokenBuckets::default(),
+            session: TokenBuckets {
+                output: 5,
+                ..TokenBuckets::default()
+            },
+        };
+
         assert_eq!(
-            spend(TokenScope::Session).format(&TokenBuckets::default()),
-            None
+            segment.format(&spent).as_deref(),
+            Some("\x1b[90msession \x1b[0m\x1b[97m5\x1b[0m  \x1b[90mout \x1b[0m\x1b[97m5\x1b[0m\x1b[90m · \x1b[0m\x1b[90min \x1b[0m\x1b[97m0\x1b[0m")
         );
     }
 
     #[test]
-    fn adds_the_main_thread_and_subagents_up_within_the_scope() {
+    fn adds_the_main_thread_and_subagents_up() {
         let main = transcript(&[
             r#"{"type":"user","timestamp":"2026-09-15T08:00:00Z","message":{"role":"user","content":"first"}}"#,
             r#"{"type":"assistant","timestamp":"2026-09-15T08:00:05Z","message":{"id":"a","model":"claude-opus-5","usage":{"input_tokens":100}}}"#,
@@ -115,17 +233,18 @@ mod tests {
         let subagent = transcript(&[
             r#"{"type":"assistant","isSidechain":true,"timestamp":"2026-09-15T07:59:30Z","message":{"id":"s","model":"claude-haiku-4-5","usage":{"cache_read_input_tokens":7}}}"#,
         ]);
-        let transcripts = [main, subagent];
+
+        let total = spent(&[main, subagent]);
 
         assert_eq!(
-            spend(TokenScope::LastTurn).spent(&transcripts),
+            total.turn,
             TokenBuckets {
                 output: 20,
                 ..TokenBuckets::default()
             }
         );
         assert_eq!(
-            spend(TokenScope::Session).spent(&transcripts),
+            total.session,
             TokenBuckets {
                 input: 100,
                 output: 20,

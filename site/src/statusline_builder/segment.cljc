@@ -24,7 +24,7 @@
                     "stall_seconds" 120
                     "show_tokens" true}
    "TokensByModel" {"color" (colour/grey) "prefix" "tokens " "separator" " · "}
-   "TokenSpend" {"color" (colour/grey) "prefix" "turn "}
+   "TokenSpend" {"color" (colour/rgb 205 214 244) "label_color" (colour/rgb 127 132 156)}
    "SessionCost" {"color" (colour/rgb 249 226 175) "prefix" ""}
    "Reminder" {"color" (colour/rgb 250 179 135) "prefix" "⏰ " "separator" " · " "max_chars" 80}
    "SessionNotice" {"color" (colour/rgb 249 226 175)
@@ -98,6 +98,9 @@
 
 (defn line-break? [segment]
   (= "LineBreak" (get-in segment [:config "shape"])))
+
+(defn divider? [segment]
+  (= "Divider" (get-in segment [:config "shape"])))
 
 (defn overflow [segment]
   (if (contains? truncating (:type segment)) :truncate :wrap))
