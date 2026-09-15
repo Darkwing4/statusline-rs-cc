@@ -16,6 +16,7 @@ pub mod session_notice;
 pub mod single_line_text;
 pub mod spacer;
 pub mod subagent_stats;
+pub mod tokens_by_model;
 pub mod user_idle_time;
 pub mod weather;
 

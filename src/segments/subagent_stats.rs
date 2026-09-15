@@ -12,6 +12,7 @@ pub use crate::config_schema::SubagentStats;
 use crate::duration_format::format_duration_padded;
 use crate::segments::{GitCache, Segment};
 use crate::statusline_input::session_key;
+use crate::token_count_format::format_tokens;
 
 use self::agent_lifecycle::scan_agent_activity;
 use self::agent_token_totals::collect;
@@ -129,26 +130,9 @@ fn is_stalled(now: i64, last_signal: Option<i64>, stall_seconds: u64) -> bool {
     now - last_signal > stall_seconds as i64
 }
 
-fn format_tokens(tokens: u64) -> String {
-    if tokens < 1_000 {
-        return tokens.to_string();
-    }
-
-    if tokens < 1_000_000 {
-        let thousands = tokens as f64 / 1_000.0;
-        if thousands < 10.0 {
-            return format!("{:.1}k", thousands);
-        }
-
-        return format!("{}k", thousands.round() as u64);
-    }
-
-    format!("{:.1}M", tokens as f64 / 1_000_000.0)
-}
-
 #[cfg(test)]
 mod tests {
-    use super::{format_tokens, is_stalled, Stats, SubagentStats};
+    use super::{is_stalled, Stats, SubagentStats};
     use crate::config_schema::Color;
 
     fn sample() -> SubagentStats {
@@ -225,13 +209,5 @@ mod tests {
         assert!(!is_stalled(1_000, Some(900), 120));
         assert!(is_stalled(1_000, Some(870), 120));
         assert!(!is_stalled(1_000, None, 120));
-    }
-
-    #[test]
-    fn formats_token_magnitudes() {
-        assert_eq!(format_tokens(999), "999");
-        assert_eq!(format_tokens(1_500), "1.5k");
-        assert_eq!(format_tokens(42_400), "42k");
-        assert_eq!(format_tokens(1_240_000), "1.2M");
     }
 }

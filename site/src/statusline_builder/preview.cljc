@@ -77,6 +77,14 @@
                      :else (config "color"))]
         [(piece text (colour/css colour 50))]))))
 
+(defn- tokens-by-model [config session]
+  (let [ranked (->> (:model-tokens session)
+                    (filter (comp pos? second))
+                    (sort-by (comp - second)))]
+    (when (seq ranked)
+      (let [text (str/join (config "separator") (map (fn [[model tokens]] (str model " " (format-tokens tokens))) ranked))]
+        [(piece (str (config "prefix") text) (colour/css (config "color") 50))]))))
+
 (defn git-branch [config session]
   (when (:git session)
     (let [branch (str (when (and (config "show_worktree") (:worktree session)) "⑂") (:branch session))
@@ -160,6 +168,7 @@
                         [(piece (str (config "prefix") (format-duration (:idle-seconds session))) (colour/css (config "color") 48))])
        "RateLimit" (rate-limit config session)
        "SubagentStats" (subagent-stats config session)
+       "TokensByModel" (tokens-by-model config session)
        "Reminder" (text-piece config (width/cut (str/join (config "separator") (:reminders session)) (config "max_chars")))
        "SessionNotice" (session-notice config session)
        "MyLastPrompt" (text-piece config (width/cut (:last-prompt session) (config "max_chars")))

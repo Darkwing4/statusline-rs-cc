@@ -75,11 +75,17 @@ Substring matches, no regex. The search string must not be empty. Existing confi
 
 `SubagentStats` counts the `Agent` tool calls in the session and renders `agents 2/7 4m12s 1.2M`: two subagents still running out of seven launched, the oldest running one started 4m12s ago, and 1.2M tokens burned by subagents in total. Once every agent has finished the active counter and the age drop off, leaving `agents 7 1.2M`.
 
-A launch is a `tool_use` block named `Agent` in the main thread; it finishes on its `tool_result` — or, for async agents whose first result is only `async_launched`, on the `<task-notification>` that reports the matching `<tool-use-id>`. Token totals sum `input`, `output`, `cache_creation`, and `cache_read` across `<session>/subagents/**/*.jsonl`, so agents started by `Workflow` are counted in the total and in the tokens even though they never appear as an `Agent` tool call.
+A launch is a `tool_use` block named `Agent` in the main thread; it finishes on its `tool_result` — or, for async agents whose first result is only `async_launched`, on the `<task-notification>` that reports the matching `<tool-use-id>`. Token totals sum `input`, `output`, `cache_creation`, and `cache_read` across `<session>/subagents/**/*.jsonl`, counting each response once however many transcript rows repeat its usage, so agents started by `Workflow` are counted in the total and in the tokens even though they never appear as an `Agent` tool call.
 
 `stall_seconds` guards against agents that never report back: when subagents are active but nothing has been written to any of their transcripts for that long, the segment appends `stall_marker` and switches to `stall_color`. Set `show_tokens: false` to skip the token pass entirely.
 
 Both scans are incremental — a cache under `$XDG_CACHE_HOME/statusline` (or `~/.cache/statusline`) keeps the byte offset reached in every transcript, so each render only parses what was appended since the previous one. A truncated or rewritten transcript resets its offset. On a 4 MB transcript with 4 MB of subagent transcripts the first render costs ~31 ms and later ones ~11 ms.
+
+## Tokens by model
+
+`TokensByModel` renders `tokens opus-5 3.4M · haiku-4-5 45k`: every token the session has spent, main thread and subagents together, grouped by the model that spent it and listed from the biggest spender down. It is the same four-bucket sum `SubagentStats` shows, so on a long session cache reads make up most of the number.
+
+Claude Code writes a transcript row per content block and repeats the response's `usage` on each of them, with `output_tokens` growing as the response streams, so a response is counted once, from the last row carrying its `message.id`. Model ids lose the `claude-` prefix and a trailing release date, so `claude-haiku-4-5-20251001` shows as `haiku-4-5`. The scan is incremental like the subagent one and keeps its offsets in `tokens-by-model-<session>.json` in the same cache directory.
 
 ## Command output
 

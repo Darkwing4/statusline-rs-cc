@@ -52,6 +52,11 @@
             stall_seconds: 120,
             show_tokens: true,
         ),
+        TokensByModel(
+            color: Rgb(147, 153, 178),
+            prefix: "tokens ",
+            separator: " \u{B7} ",
+        ),
         Reminder(
             color: Rgb(250, 179, 135),
             prefix: "\u{23F0} ",

@@ -22,6 +22,7 @@
     :cpu "1.10c"
     :rss "685"
     :agents {:active 2 :total 7 :longest-seconds 252 :tokens 1240000 :stalled false}
+    :model-tokens [["opus-5" 3400000] ["haiku-4-5" 45000]]
     :reminders ["standup 11:00"]
     :notice {:text "✗ cargo test (exit 101)" :remaining-seconds 595}
     :last-prompt "rebase the builder branch onto develop and check every segment"
@@ -50,6 +51,7 @@
     :cpu "0.84c"
     :rss "912"
     :agents {:active 1 :total 2 :longest-seconds 61 :tokens 380000 :stalled false}
+    :model-tokens [["fable-5-1" 2100000] ["opus-5" 380000]]
     :reminders []
     :notice nil
     :last-prompt "make the 5h window radial"
@@ -77,6 +79,7 @@
     :cpu "2.37c"
     :rss "1214"
     :agents {:active 1 :total 3 :longest-seconds 3720 :tokens 0 :stalled true}
+    :model-tokens [["opus-5" 9800000]]
     :reminders ["stand up" "drink water"]
     :notice {:text "do not push before the review" :remaining-seconds nil}
     :last-prompt "continue the rebase and fix the conflicts in the input buffer"
@@ -104,6 +107,7 @@
     :cpu "0.06c"
     :rss "224"
     :agents {:active 0 :total 7 :longest-seconds nil :tokens 42000 :stalled false}
+    :model-tokens [["sonnet-5" 640000] ["haiku-4-5" 42000]]
     :reminders []
     :notice nil
     :last-prompt "summarise the lecture notes"
@@ -131,6 +135,7 @@
     :cpu "0.22c"
     :rss "312"
     :agents {:active 0 :total 0 :longest-seconds nil :tokens 0 :stalled false}
+    :model-tokens [["haiku-4-5" 12000]]
     :reminders ["take the coffee"]
     :notice nil
     :last-prompt "rename the downloaded files by date"

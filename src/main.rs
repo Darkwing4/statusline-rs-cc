@@ -17,10 +17,13 @@ mod statusline_input;
 mod statusline_notice_store;
 mod statusline_reminder_store;
 mod statusline_renderer;
+mod subagent_transcript_files;
+mod token_count_format;
 mod transcript_forward_reader;
 mod transcript_record_probe;
 mod transcript_spoken_text;
 mod transcript_tail_reader;
+mod transcript_token_tally;
 
 use std::io::{self, Write};
 use std::path::Path;

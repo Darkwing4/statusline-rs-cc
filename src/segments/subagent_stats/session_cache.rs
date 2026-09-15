@@ -4,13 +4,14 @@ use std::path::PathBuf;
 use serde::{Deserialize, Serialize};
 
 use crate::statusline_cache_dir::cache_dir;
+use crate::transcript_token_tally::TranscriptTally;
 
 #[derive(Default, Deserialize, Serialize)]
 pub(super) struct SessionCache {
     #[serde(default)]
     pub(super) transcript: TranscriptState,
     #[serde(default)]
-    pub(super) agent_files: Vec<AgentFileState>,
+    pub(super) agent_files: Vec<TranscriptTally>,
 }
 
 #[derive(Clone, Default, Deserialize, Serialize)]
@@ -24,13 +25,6 @@ pub(super) struct TranscriptState {
 pub(super) struct PendingAgent {
     pub(super) tool_use_id: String,
     pub(super) started_at: Option<i64>,
-}
-
-#[derive(Clone, Deserialize, Serialize)]
-pub(super) struct AgentFileState {
-    pub(super) path: String,
-    pub(super) scanned_bytes: u64,
-    pub(super) tokens: u64,
 }
 
 pub(super) fn load(session_key: &str) -> (SessionCache, Option<PathBuf>) {
@@ -75,4 +69,16 @@ fn cache_path(session_key: &str) -> Option<PathBuf> {
         .collect();
 
     Some(cache_dir()?.join(format!("subagents-{safe_key}.json")))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::SessionCache;
+
+    #[test]
+    fn rejects_a_cache_whose_agent_totals_counted_repeated_usage_rows() {
+        let old = r#"{"transcript":{"scanned_bytes":10,"launched":1,"pending":[]},"agent_files":[{"path":"a.jsonl","scanned_bytes":10,"tokens":42}]}"#;
+
+        assert!(serde_json::from_str::<SessionCache>(old).is_err());
+    }
 }

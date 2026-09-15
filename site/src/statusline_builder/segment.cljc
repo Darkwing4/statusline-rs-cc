@@ -23,6 +23,7 @@
                     "stall_marker" "!"
                     "stall_seconds" 120
                     "show_tokens" true}
+   "TokensByModel" {"color" (colour/grey) "prefix" "tokens " "separator" " · "}
    "Reminder" {"color" (colour/rgb 250 179 135) "prefix" "⏰ " "separator" " · " "max_chars" 80}
    "SessionNotice" {"color" (colour/rgb 249 226 175)
                     "prefix" "📌 "
@@ -72,6 +73,7 @@
    "RateLimit:FiveHour"
    "RateLimit:SevenDay"
    "SubagentStats"
+   "TokensByModel"
    "Cwd"
    "GitBranch"
    "GitDiff"

@@ -75,6 +75,7 @@ impl SegmentSpec {
             SegmentSpec::SessionNotice(s) => Box::new(s),
             SegmentSpec::Spacer(s) => Box::new(s),
             SegmentSpec::SubagentStats(s) => Box::new(s),
+            SegmentSpec::TokensByModel(s) => Box::new(s),
             SegmentSpec::UserIdleTime(s) => Box::new(s),
             SegmentSpec::Weather(s) => Box::new(s),
         }

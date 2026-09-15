@@ -176,6 +176,17 @@ pub struct SubagentStats {
     pub show_tokens: bool,
 }
 
+/// How many tokens this session has burned on each model so far, subagents included, as opus-5 3.4M.
+#[derive(Deserialize)]
+pub struct TokensByModel {
+    /// Colour of the model names and their token counts.
+    pub color: Color,
+    /// Text before the first model.
+    pub prefix: String,
+    /// Text between two models.
+    pub separator: String,
+}
+
 /// The last line any command prints, run again once its TTL runs out.
 #[derive(Deserialize)]
 pub struct CommandOutput {
@@ -402,6 +413,7 @@ pub enum SegmentSpec {
     SessionNotice(SessionNotice),
     Spacer(Spacer),
     SubagentStats(SubagentStats),
+    TokensByModel(TokensByModel),
     UserIdleTime(UserIdleTime),
     Weather(Weather),
 }

@@ -33,6 +33,13 @@
     (is (= "Sub-agents:1/3! 1h02m" (text-of stats (fixture/scenario "pressure"))))
     (is (nil? (preview/pieces stats (fixture/scenario "outside"))))))
 
+(deftest tokens-by-model-follow-the-runtime-format
+  (let [tokens (fixture/create "TokensByModel")
+        clean (fixture/scenario "clean")]
+    (is (= "tokens opus-5 3.4M · haiku-4-5 45k" (text-of tokens (fixture/scenario "active"))))
+    (is (= "tokens sonnet-5 640k · haiku-4-5 42k" (text-of tokens (assoc clean :model-tokens [["haiku-4-5" 42000] ["opus-5" 0] ["sonnet-5" 640000]]))))
+    (is (nil? (preview/pieces tokens (assoc clean :model-tokens []))))))
+
 (deftest a-session-notice-shows-the-time-left-the-way-the-runtime-pads-it
   (let [notice (fixture/create "SessionNotice")]
     (is (= "📌 ✗ cargo test (exit 101) (9m55s)" (text-of notice (first scenarios/all))))
