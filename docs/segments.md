@@ -85,7 +85,17 @@ Both scans are incremental — a cache under `$XDG_CACHE_HOME/statusline` (or `~
 
 `TokensByModel` renders `tokens opus-5 3.4M · haiku-4-5 45k`: every token the session has spent, main thread and subagents together, grouped by the model that spent it and listed from the biggest spender down. It is the same four-bucket sum `SubagentStats` shows, so on a long session cache reads make up most of the number.
 
-Claude Code writes a transcript row per content block and repeats the response's `usage` on each of them, with `output_tokens` growing as the response streams, so a response is counted once, from the last row carrying its `message.id`. Model ids lose the `claude-` prefix and a trailing release date, so `claude-haiku-4-5-20251001` shows as `haiku-4-5`. The scan is incremental like the subagent one and keeps its offsets in `tokens-by-model-<session>.json` in the same cache directory.
+Claude Code writes a transcript row per content block and repeats the response's `usage` on each of them, with `output_tokens` growing as the response streams, so a response is counted once, from the last row carrying its `message.id`. Model ids lose the `claude-` prefix and a trailing release date, so `claude-haiku-4-5-20251001` shows as `haiku-4-5`. The scan is incremental like the subagent one and keeps its offsets in `session-tokens-<session>.json` in the same cache directory, shared with `TokenSpend`.
+
+## Token spend
+
+`TokenSpend` renders `turn 58k: in 1.2k out 3.4k think 1.1k cache read 52k write 1.9k` — the total first, then what it is made of. `in` is fresh input, `cache read` is context replayed from the prompt cache, `cache write` is what was added to the cache, and `out` is everything the model produced. `think` is the reasoning share of `out`, taken from `usage.output_tokens_details.thinking_tokens`, so it is not added to the total a second time; transcripts written before Claude Code reported it show `think 0`.
+
+`scope: LastTurn` counts from your last prompt, so the numbers grow while the answer runs and stay on screen once it is done. A prompt is a user row you typed: tool results, skill bodies marked `isMeta`, and injected wrappers such as `<task-notification>` or a slash command keep the current turn going. Subagent rows join the turn when they were written after that prompt. `scope: Session` counts everything since the session started — the total `TokensByModel` splits by model. Add the block twice to see both.
+
+## Session cost
+
+`SessionCost` renders `$4.20` from `cost.total_cost_usd`, the estimate Claude Code itself sends to the status line: list prices, or a `modelPricing` table when one is set, applied to every API call of the session. On a subscription it is what the same traffic would cost on the API, not a bill. It stays hidden until the first response is priced.
 
 ## Command output
 

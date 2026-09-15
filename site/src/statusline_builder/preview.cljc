@@ -85,6 +85,23 @@
       (let [text (str/join (config "separator") (map (fn [[model tokens]] (str model " " (format-tokens tokens))) ranked))]
         [(piece (str (config "prefix") text) (colour/css (config "color") 50))]))))
 
+(defn- token-spend [config session]
+  (when-let [{:keys [input output thinking cache-read cache-write]} (get (:token-spend session) (config "scope"))]
+    (let [total (+ input output cache-read cache-write)]
+      (when (pos? total)
+        [(piece (str (config "prefix") (format-tokens total)
+                     ": in " (format-tokens input)
+                     " out " (format-tokens output)
+                     " think " (format-tokens thinking)
+                     " cache read " (format-tokens cache-read)
+                     " write " (format-tokens cache-write))
+                (colour/css (config "color") 50))]))))
+
+(defn- session-cost [config session]
+  (let [dollars (:cost session)]
+    (when (and dollars (pos? dollars))
+      [(piece (str (config "prefix") "$" (number/fixed2 dollars)) (colour/css (config "color") 50))])))
+
 (defn git-branch [config session]
   (when (:git session)
     (let [branch (str (when (and (config "show_worktree") (:worktree session)) "⑂") (:branch session))
@@ -169,6 +186,8 @@
        "RateLimit" (rate-limit config session)
        "SubagentStats" (subagent-stats config session)
        "TokensByModel" (tokens-by-model config session)
+       "TokenSpend" (token-spend config session)
+       "SessionCost" (session-cost config session)
        "Reminder" (text-piece config (width/cut (str/join (config "separator") (:reminders session)) (config "max_chars")))
        "SessionNotice" (session-notice config session)
        "MyLastPrompt" (text-piece config (width/cut (:last-prompt session) (config "max_chars")))

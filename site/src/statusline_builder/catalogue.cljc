@@ -7,7 +7,7 @@
   {"FiveHour" {"prefix" "{t}h "}
    "Fable" {"prefix" "- {t}d " "active_marker" " |"}})
 
-(def ^:private repeatable-segments #{"Spacer" "LlmInsight"})
+(def ^:private repeatable-segments #{"Spacer" "LlmInsight" "TokenSpend"})
 
 (def ^:private unit-words {"ttl" "TTL" "llm" "LLM" "kib" "KiB" "cpu" "CPU"})
 

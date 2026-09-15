@@ -20,6 +20,10 @@
   #?(:cljs (.toFixed value 1)
      :clj (format "%.1f" (double value))))
 
+(defn fixed2 [value]
+  #?(:cljs (.toFixed value 2)
+     :clj (format "%.2f" (double value))))
+
 (defn pad2 [value]
   #?(:cljs (.padStart (str value) 2 "0")
      :clj (format "%02d" (long value))))

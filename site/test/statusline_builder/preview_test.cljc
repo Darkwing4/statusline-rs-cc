@@ -40,6 +40,19 @@
     (is (= "tokens sonnet-5 640k · haiku-4-5 42k" (text-of tokens (assoc clean :model-tokens [["haiku-4-5" 42000] ["opus-5" 0] ["sonnet-5" 640000]]))))
     (is (nil? (preview/pieces tokens (assoc clean :model-tokens []))))))
 
+(deftest token-spend-follows-the-runtime-format
+  (let [turn (fixture/create "TokenSpend")
+        session (-> turn (fixture/with-field "scope" "Session") (fixture/with-field "prefix" "session "))
+        active (fixture/scenario "active")]
+    (is (= "turn 58k: in 1.2k out 3.4k think 1.1k cache read 52k write 1.9k" (text-of turn active)))
+    (is (= "session 3.4M: in 12k out 210k think 70k cache read 3.0M write 180k" (text-of session active)))
+    (is (nil? (preview/pieces turn (assoc active :token-spend {}))))))
+
+(deftest session-cost-shows-dollars-and-cents
+  (let [cost (fixture/create "SessionCost")]
+    (is (= "$18.40" (text-of cost (fixture/scenario "active"))))
+    (is (nil? (preview/pieces cost (assoc (fixture/scenario "active") :cost 0))))))
+
 (deftest a-session-notice-shows-the-time-left-the-way-the-runtime-pads-it
   (let [notice (fixture/create "SessionNotice")]
     (is (= "📌 ✗ cargo test (exit 101) (9m55s)" (text-of notice (first scenarios/all))))

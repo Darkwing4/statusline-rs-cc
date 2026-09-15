@@ -33,6 +33,7 @@ pub(super) fn collect(
             .iter()
             .map(|entry| (entry.path.as_path(), entry.len)),
         cached,
+        None,
     );
     let tokens = cached
         .iter()

@@ -187,6 +187,32 @@ pub struct TokensByModel {
     pub separator: String,
 }
 
+#[derive(Clone, Copy, Deserialize)]
+pub enum TokenScope {
+    LastTurn,
+    Session,
+}
+
+/// Tokens spent on your last prompt or on the whole session, subagents included, split into input, output, reasoning and cache, as turn 58k: in 1.2k out 3.4k think 1.1k cache read 52k write 1.9k.
+#[derive(Deserialize)]
+pub struct TokenSpend {
+    /// Count the tokens spent answering your last prompt, or every token since the session started.
+    pub scope: TokenScope,
+    /// Colour of the token counts.
+    pub color: Color,
+    /// Text before the total.
+    pub prefix: String,
+}
+
+/// What this session has cost so far at API list prices, as Claude Code estimates it, as $4.20.
+#[derive(Deserialize)]
+pub struct SessionCost {
+    /// Colour of the amount.
+    pub color: Color,
+    /// Text before the amount.
+    pub prefix: String,
+}
+
 /// The last line any command prints, run again once its TTL runs out.
 #[derive(Deserialize)]
 pub struct CommandOutput {
@@ -410,9 +436,11 @@ pub enum SegmentSpec {
     PromptCacheTtl(PromptCacheTtl),
     RateLimit(RateLimit),
     Reminder(Reminder),
+    SessionCost(SessionCost),
     SessionNotice(SessionNotice),
     Spacer(Spacer),
     SubagentStats(SubagentStats),
+    TokenSpend(TokenSpend),
     TokensByModel(TokensByModel),
     UserIdleTime(UserIdleTime),
     Weather(Weather),

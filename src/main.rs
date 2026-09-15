@@ -10,6 +10,7 @@ mod private_file;
 mod process_stat;
 mod segment_catalog;
 mod segments;
+mod session_token_tallies;
 mod statusline_cache_dir;
 mod statusline_cli;
 mod statusline_hook;

@@ -23,6 +23,9 @@
     :rss "685"
     :agents {:active 2 :total 7 :longest-seconds 252 :tokens 1240000 :stalled false}
     :model-tokens [["opus-5" 3400000] ["haiku-4-5" 45000]]
+    :token-spend {"LastTurn" {:input 1200 :output 3400 :thinking 1100 :cache-read 51600 :cache-write 1900}
+                  "Session" {:input 12000 :output 210000 :thinking 70000 :cache-read 3043000 :cache-write 180000}}
+    :cost 18.4
     :reminders ["standup 11:00"]
     :notice {:text "✗ cargo test (exit 101)" :remaining-seconds 595}
     :last-prompt "rebase the builder branch onto develop and check every segment"
@@ -52,6 +55,9 @@
     :rss "912"
     :agents {:active 1 :total 2 :longest-seconds 61 :tokens 380000 :stalled false}
     :model-tokens [["fable-5-1" 2100000] ["opus-5" 380000]]
+    :token-spend {"LastTurn" {:input 800 :output 9100 :thinking 5200 :cache-read 96000 :cache-write 4300}
+                  "Session" {:input 9000 :output 140000 :thinking 61000 :cache-read 2201000 :cache-write 130000}}
+    :cost 31.75
     :reminders []
     :notice nil
     :last-prompt "make the 5h window radial"
@@ -80,6 +86,9 @@
     :rss "1214"
     :agents {:active 1 :total 3 :longest-seconds 3720 :tokens 0 :stalled true}
     :model-tokens [["opus-5" 9800000]]
+    :token-spend {"LastTurn" {:input 300 :output 700 :thinking 0 :cache-read 410000 :cache-write 38000}
+                  "Session" {:input 20000 :output 380000 :thinking 150000 :cache-read 9000000 :cache-write 400000}}
+    :cost 52.1
     :reminders ["stand up" "drink water"]
     :notice {:text "do not push before the review" :remaining-seconds nil}
     :last-prompt "continue the rebase and fix the conflicts in the input buffer"
@@ -108,6 +117,9 @@
     :rss "224"
     :agents {:active 0 :total 7 :longest-seconds nil :tokens 42000 :stalled false}
     :model-tokens [["sonnet-5" 640000] ["haiku-4-5" 42000]]
+    :token-spend {"LastTurn" {:input 90 :output 1500 :thinking 400 :cache-read 22000 :cache-write 600}
+                  "Session" {:input 4000 :output 51000 :thinking 12000 :cache-read 580000 :cache-write 47000}}
+    :cost 2.35
     :reminders []
     :notice nil
     :last-prompt "summarise the lecture notes"
@@ -136,6 +148,9 @@
     :rss "312"
     :agents {:active 0 :total 0 :longest-seconds nil :tokens 0 :stalled false}
     :model-tokens [["haiku-4-5" 12000]]
+    :token-spend {"LastTurn" {:input 40 :output 900 :thinking 0 :cache-read 7000 :cache-write 300}
+                  "Session" {:input 500 :output 1500 :thinking 0 :cache-read 9000 :cache-write 1000}}
+    :cost 0.04
     :reminders ["take the coffee"]
     :notice nil
     :last-prompt "rename the downloaded files by date"

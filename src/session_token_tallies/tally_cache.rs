@@ -1,13 +1,13 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
+use super::SessionTallies;
 use crate::private_file;
 use crate::statusline_cache_dir::cache_dir;
-use crate::transcript_token_tally::TranscriptTally;
 
-pub(super) fn load(session_key: &str) -> (Vec<TranscriptTally>, Option<PathBuf>) {
+pub(super) fn load(session_key: &str) -> (SessionTallies, Option<PathBuf>) {
     let Some(path) = cache_path(session_key) else {
-        return (Vec::new(), None);
+        return (SessionTallies::default(), None);
     };
 
     let tallies = fs::read_to_string(&path)
@@ -18,7 +18,7 @@ pub(super) fn load(session_key: &str) -> (Vec<TranscriptTally>, Option<PathBuf>)
     (tallies, Some(path))
 }
 
-pub(super) fn store(path: &Path, tallies: &[TranscriptTally]) {
+pub(super) fn store(path: &Path, tallies: &SessionTallies) {
     let Some(parent) = path.parent() else {
         return;
     };
@@ -35,7 +35,7 @@ pub(super) fn store(path: &Path, tallies: &[TranscriptTally]) {
 }
 
 fn cache_path(session_key: &str) -> Option<PathBuf> {
-    Some(cache_dir()?.join(format!("tokens-by-model-{}.json", file_key(session_key))))
+    Some(cache_dir()?.join(format!("session-tokens-{}.json", file_key(session_key))))
 }
 
 fn file_key(session_key: &str) -> String {

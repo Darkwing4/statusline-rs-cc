@@ -1,28 +1,21 @@
-mod tally_cache;
-
 use std::cmp::Reverse;
 use std::collections::BTreeMap;
-use std::fs;
-use std::iter;
-use std::path::Path;
 
 use serde_json::Value;
 
 pub use crate::config_schema::TokensByModel;
 use crate::segments::{GitCache, Segment};
-use crate::statusline_input::session_key;
-use crate::subagent_transcript_files::list_subagent_transcripts;
+use crate::session_token_tallies::load_session_tallies;
 use crate::token_count_format::format_tokens;
-use crate::transcript_token_tally::{refresh_tallies, TranscriptTally};
+use crate::transcript_token_tally::TranscriptTally;
 
 const MODEL_ID_PREFIX: &str = "claude-";
 const RELEASE_DATE_DIGITS: usize = 8;
 
 impl Segment for TokensByModel {
     fn render(&self, json: &Value, _git: &mut GitCache) -> Option<String> {
-        let transcript = json.get("transcript_path")?.as_str()?;
-        let tallies = session_tallies(transcript, &session_key(json)?)?;
-        let text = self.format(&tokens_per_model(&tallies))?;
+        let tallies = load_session_tallies(json)?;
+        let text = self.format(&tokens_per_model(tallies.transcripts()))?;
 
         Some(self.color.paint(&text))
     }
@@ -43,26 +36,12 @@ impl TokensByModel {
     }
 }
 
-fn session_tallies(transcript: &str, session_key: &str) -> Option<Vec<TranscriptTally>> {
-    let transcript_len = fs::metadata(transcript).ok()?.len();
-    let subagents = list_subagent_transcripts(transcript);
-    let (mut tallies, cache_path) = tally_cache::load(session_key);
-
-    let transcripts = iter::once((Path::new(transcript), transcript_len))
-        .chain(subagents.iter().map(|file| (file.path.as_path(), file.len)));
-    refresh_tallies(transcripts, &mut tallies);
-
-    if let Some(path) = cache_path.as_ref() {
-        tally_cache::store(path, &tallies);
-    }
-
-    Some(tallies)
-}
-
-fn tokens_per_model(tallies: &[TranscriptTally]) -> Vec<(String, u64)> {
+fn tokens_per_model<'a>(
+    transcripts: impl IntoIterator<Item = &'a TranscriptTally>,
+) -> Vec<(String, u64)> {
     let mut totals: BTreeMap<&str, u64> = BTreeMap::new();
 
-    for transcript in tallies {
+    for transcript in transcripts {
         for (model, tokens) in transcript.tally.by_model() {
             *totals.entry(short_model_name(model)).or_insert(0) += tokens;
         }
