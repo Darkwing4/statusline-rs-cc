@@ -6,6 +6,7 @@
 
 (defn -main [& _]
   (let [installed (es/install-catalogue es/initial (catalogue-file/read-catalogue))
-        text (ron/generate (assoc installed :segments (mapv segment/create (:modules installed))))]
+        segments (mapv (fn [module] (segment/create module (:id module))) (:modules installed))
+        text (ron/generate (assoc installed :segments segments))]
     #?(:cljs (.write js/process.stdout text)
        :clj (do (print text) (flush)))))

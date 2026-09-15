@@ -1,6 +1,12 @@
 {:paths ["src" "test"]
  :tasks
- {test {:doc "Run the pure core tests in babashka (needs segment-catalog.json: cargo run -- --schema > site/segment-catalog.json)"
+ {format-check {:doc "Check Clojure formatting with cljfmt 0.16.5 defaults"
+                :task (shell "cljfmt check src test")}
+  lint {:doc "Lint Clojure code with clj-kondo 2026.08.04"
+        :task (shell "clj-kondo --lint src test bb.edn shadow-cljs.edn --cache false --repro")}
+  check {:doc "Check formatting, lint, and the shared core"
+         :depends [format-check lint test]}
+  test {:doc "Run the pure core tests in babashka (needs segment-catalog.json: cargo run -- --schema > site/segment-catalog.json)"
         :requires ([clojure.test :as t])
         :task (do (require 'statusline-builder.catalogue-test
                            'statusline-builder.colour-test

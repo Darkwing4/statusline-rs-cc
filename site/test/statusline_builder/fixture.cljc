@@ -11,10 +11,10 @@
 (def modules (:modules installed))
 
 (defn fresh []
-  (es/reset installed))
+  (es/reset installed "fixture"))
 
 (defn create [module-id]
-  (segment/create (es/module-entry installed module-id)))
+  (segment/create (es/module-entry installed module-id) (str "fixture-" module-id)))
 
 (defn scenario [id]
   (some #(when (= id (:id %)) %) scenarios/all))
