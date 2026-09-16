@@ -214,6 +214,15 @@ pub struct SessionCost {
     pub prefix: String,
 }
 
+/// What your last prompt has cost so far at API list prices, as Claude Code estimates it, as $0.35.
+#[derive(Deserialize)]
+pub struct TurnCost {
+    /// Colour of the amount.
+    pub color: Color,
+    /// Text before the amount.
+    pub prefix: String,
+}
+
 /// The last line any command prints, run again once its TTL runs out.
 #[derive(Deserialize)]
 pub struct CommandOutput {
@@ -443,6 +452,7 @@ pub enum SegmentSpec {
     SubagentStats(SubagentStats),
     TokenSpend(TokenSpend),
     TokensByModel(TokensByModel),
+    TurnCost(TurnCost),
     UserIdleTime(UserIdleTime),
     Weather(Weather),
 }

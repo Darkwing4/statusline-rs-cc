@@ -1,6 +1,7 @@
 use serde_json::Value;
 
 pub use crate::config_schema::SessionCost;
+use crate::dollar_amount_format::format_dollars;
 use crate::segments::{GitCache, Segment};
 
 impl Segment for SessionCost {
@@ -14,11 +15,7 @@ impl Segment for SessionCost {
 
 impl SessionCost {
     fn format(&self, dollars: f64) -> Option<String> {
-        if !dollars.is_finite() || dollars <= 0.0 {
-            return None;
-        }
-
-        Some(format!("{}${:.2}", self.prefix, dollars))
+        Some(format!("{}{}", self.prefix, format_dollars(dollars)?))
     }
 }
 

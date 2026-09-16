@@ -19,6 +19,7 @@ pub mod spacer;
 pub mod subagent_stats;
 pub mod token_spend;
 pub mod tokens_by_model;
+pub mod turn_cost;
 pub mod user_idle_time;
 pub mod weather;
 

@@ -97,6 +97,10 @@ Claude Code writes a transcript row per content block and repeats the response's
 
 `SessionCost` renders `$4.20` from `cost.total_cost_usd`, the estimate Claude Code itself sends to the status line: list prices, or a `modelPricing` table when one is set, applied to every API call of the session. On a subscription it is what the same traffic would cost on the API, not a bill. It stays hidden until the first response is priced.
 
+## Turn cost
+
+`TurnCost` renders `$0.35`: how much of that estimate your last prompt has added so far. Claude Code only sends the session total, so the segment remembers the total at the moment each turn starts in `turn-cost-<session>.json` under the cache directory and shows the difference; the turn starts at the same user row `TokenSpend` counts from. Added to a running session, it counts the current turn from its first render; a total that shrinks, as after a resume, starts the count from zero. It stays hidden while the turn has cost nothing yet.
+
 ## Command output
 
 `CommandOutput` runs any command that prints text and renders its last non-empty output line on a line of its own.

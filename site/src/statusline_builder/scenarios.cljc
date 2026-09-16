@@ -26,6 +26,7 @@
     :token-spend {:turn {:input 1200 :output 3400 :thinking 1100 :cache-read 51600 :cache-write 1900}
                   :session {:input 12000 :output 210000 :thinking 70000 :cache-read 3043000 :cache-write 180000}}
     :cost 18.4
+    :turn-cost 0.35
     :reminders ["standup 11:00"]
     :notice {:text "✗ cargo test (exit 101)" :remaining-seconds 595}
     :last-prompt "rebase the builder branch onto develop and check every segment"
@@ -58,6 +59,7 @@
     :token-spend {:turn {:input 800 :output 9100 :thinking 5200 :cache-read 96000 :cache-write 4300}
                   :session {:input 9000 :output 140000 :thinking 61000 :cache-read 2201000 :cache-write 130000}}
     :cost 31.75
+    :turn-cost 1.9
     :reminders []
     :notice nil
     :last-prompt "make the 5h window radial"
@@ -89,6 +91,7 @@
     :token-spend {:turn {:input 300 :output 700 :thinking 0 :cache-read 410000 :cache-write 38000}
                   :session {:input 20000 :output 380000 :thinking 150000 :cache-read 9000000 :cache-write 400000}}
     :cost 52.1
+    :turn-cost 0.12
     :reminders ["stand up" "drink water"]
     :notice {:text "do not push before the review" :remaining-seconds nil}
     :last-prompt "continue the rebase and fix the conflicts in the input buffer"
@@ -120,6 +123,7 @@
     :token-spend {:turn {:input 90 :output 1500 :thinking 400 :cache-read 22000 :cache-write 600}
                   :session {:input 4000 :output 51000 :thinking 12000 :cache-read 580000 :cache-write 47000}}
     :cost 2.35
+    :turn-cost 0.08
     :reminders []
     :notice nil
     :last-prompt "summarise the lecture notes"
@@ -151,6 +155,7 @@
     :token-spend {:turn {:input 40 :output 900 :thinking 0 :cache-read 7000 :cache-write 300}
                   :session {:input 500 :output 1500 :thinking 0 :cache-read 9000 :cache-write 1000}}
     :cost 0.04
+    :turn-cost 0.01
     :reminders ["take the coffee"]
     :notice nil
     :last-prompt "rename the downloaded files by date"

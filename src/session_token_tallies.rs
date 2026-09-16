@@ -20,6 +20,10 @@ impl SessionTallies {
     pub(crate) fn transcripts(&self) -> impl Iterator<Item = &TranscriptTally> {
         self.main.iter().chain(&self.subagents)
     }
+
+    pub(crate) fn turn_started_at(&self) -> Option<i64> {
+        self.main.as_ref()?.tally.turn_started_at()
+    }
 }
 
 pub(crate) fn load_session_tallies(json: &Value) -> Option<SessionTallies> {

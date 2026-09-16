@@ -2,6 +2,7 @@ mod ansi;
 mod claude_config_dir;
 mod config;
 mod config_schema;
+mod dollar_amount_format;
 mod duration_format;
 mod gradient;
 mod iso8601;
@@ -25,6 +26,7 @@ mod transcript_record_probe;
 mod transcript_spoken_text;
 mod transcript_tail_reader;
 mod transcript_token_tally;
+mod turn_cost_baseline;
 
 use std::io::{self, Write};
 use std::path::Path;

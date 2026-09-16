@@ -26,6 +26,7 @@
    "TokensByModel" {"color" (colour/grey) "prefix" "tokens " "separator" " · "}
    "TokenSpend" {"color" (colour/rgb 205 214 244) "label_color" (colour/rgb 127 132 156)}
    "SessionCost" {"color" (colour/rgb 249 226 175) "prefix" ""}
+   "TurnCost" {"color" (colour/rgb 249 226 175) "prefix" "turn "}
    "Reminder" {"color" (colour/rgb 250 179 135) "prefix" "⏰ " "separator" " · " "max_chars" 80}
    "SessionNotice" {"color" (colour/rgb 249 226 175)
                     "prefix" "📌 "

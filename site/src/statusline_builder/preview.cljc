@@ -118,10 +118,9 @@
                          [(piece " │ " (colour/css (config "label_color") 50))]
                          second-block))))))))
 
-(defn- session-cost [config session]
-  (let [dollars (:cost session)]
-    (when (and dollars (pos? dollars))
-      [(piece (str (config "prefix") "$" (number/fixed2 dollars)) (colour/css (config "color") 50))])))
+(defn- dollars [config amount]
+  (when (and amount (pos? amount))
+    [(piece (str (config "prefix") "$" (number/fixed2 amount)) (colour/css (config "color") 50))]))
 
 (defn git-branch [config session]
   (when (:git session)
@@ -208,7 +207,8 @@
        "SubagentStats" (subagent-stats config session)
        "TokensByModel" (tokens-by-model config session)
        "TokenSpend" (token-spend config session)
-       "SessionCost" (session-cost config session)
+       "SessionCost" (dollars config (:cost session))
+       "TurnCost" (dollars config (:turn-cost session))
        "Reminder" (text-piece config (width/cut (str/join (config "separator") (:reminders session)) (config "max_chars")))
        "SessionNotice" (session-notice config session)
        "MyLastPrompt" (text-piece config (width/cut (:last-prompt session) (config "max_chars")))

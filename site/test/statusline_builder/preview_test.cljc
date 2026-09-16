@@ -58,6 +58,11 @@
     (is (= "$18.40" (text-of cost (fixture/scenario "active"))))
     (is (nil? (preview/pieces cost (assoc (fixture/scenario "active") :cost 0))))))
 
+(deftest turn-cost-shows-the-last-prompt-in-dollars-and-cents
+  (let [cost (fixture/create "TurnCost")]
+    (is (= "turn $0.35" (text-of cost (fixture/scenario "active"))))
+    (is (nil? (preview/pieces cost (assoc (fixture/scenario "active") :turn-cost 0))))))
+
 (deftest a-session-notice-shows-the-time-left-the-way-the-runtime-pads-it
   (let [notice (fixture/create "SessionNotice")]
     (is (= "📌 ✗ cargo test (exit 101) (9m55s)" (text-of notice (first scenarios/all))))
