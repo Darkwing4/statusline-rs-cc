@@ -1,5 +1,6 @@
 use serde_json::Value;
 
+use crate::config_schema::TokenScope;
 pub use crate::config_schema::TokenSpend;
 use crate::segments::{GitCache, Segment};
 use crate::session_token_tallies::load_session_tallies;
@@ -37,11 +38,18 @@ impl TokenSpend {
             return Some(session);
         }
 
+        let turn = self.block(TURN_LABEL, &spent.turn);
+
+        let (first, second) = match self.first_block {
+            TokenScope::LastTurn => (turn, session),
+            TokenScope::Session => (session, turn),
+        };
+
         Some(format!(
             "{}{}{}",
-            self.block(TURN_LABEL, &spent.turn),
+            first,
             self.label_color.paint(SCOPE_SEPARATOR),
-            session
+            second
         ))
     }
 
@@ -109,7 +117,7 @@ mod tests {
     use std::io::Cursor;
 
     use super::{spent, Spent, TokenSpend};
-    use crate::config_schema::Color;
+    use crate::config_schema::{Color, TokenScope};
     use crate::transcript_token_tally::{tally_tokens, TokenBuckets, TokenTally, TranscriptTally};
 
     const FIRST_TURN: TokenBuckets = TokenBuckets {
@@ -120,8 +128,17 @@ mod tests {
         cache_read: 51_000,
     };
 
-    fn plain() -> TokenSpend {
+    const WHOLE_SESSION: TokenBuckets = TokenBuckets {
+        input: 2_100,
+        output: 96_000,
+        thinking: 41_000,
+        cache_write: 110_000,
+        cache_read: 1_200_000,
+    };
+
+    fn plain(first_block: TokenScope) -> TokenSpend {
         TokenSpend {
+            first_block,
             color: Color::Gradient,
             label_color: Color::Gradient,
         }
@@ -143,18 +160,25 @@ mod tests {
     fn shows_the_turn_then_the_session_with_every_bucket() {
         let spent = Spent {
             turn: FIRST_TURN,
-            session: TokenBuckets {
-                input: 2_100,
-                output: 96_000,
-                thinking: 41_000,
-                cache_write: 110_000,
-                cache_read: 1_200_000,
-            },
+            session: WHOLE_SESSION,
         };
 
         assert_eq!(
-            plain().format(&spent).as_deref(),
+            plain(TokenScope::LastTurn).format(&spent).as_deref(),
             Some("turn 78k  out 1.2k · think 408 · in 34 · cache 51k +26k │ session 1.4M  out 96k · think 41k · in 2.1k · cache 1.2M +110k")
+        );
+    }
+
+    #[test]
+    fn puts_the_session_first_when_asked_to() {
+        let spent = Spent {
+            turn: FIRST_TURN,
+            session: WHOLE_SESSION,
+        };
+
+        assert_eq!(
+            plain(TokenScope::Session).format(&spent).as_deref(),
+            Some("session 1.4M  out 96k · think 41k · in 2.1k · cache 1.2M +110k │ turn 78k  out 1.2k · think 408 · in 34 · cache 51k +26k")
         );
     }
 
@@ -170,8 +194,14 @@ mod tests {
         };
         let expected = "session 78k  out 1.2k · think 408 · in 34 · cache 51k +26k";
 
-        assert_eq!(plain().format(&first).as_deref(), Some(expected));
-        assert_eq!(plain().format(&waiting).as_deref(), Some(expected));
+        assert_eq!(
+            plain(TokenScope::LastTurn).format(&first).as_deref(),
+            Some(expected)
+        );
+        assert_eq!(
+            plain(TokenScope::Session).format(&waiting).as_deref(),
+            Some(expected)
+        );
     }
 
     #[test]
@@ -187,7 +217,7 @@ mod tests {
         };
 
         assert_eq!(
-            plain().format(&spent).as_deref(),
+            plain(TokenScope::LastTurn).format(&spent).as_deref(),
             Some("session 11k  out 446 · in 2 · cache 11k")
         );
     }
@@ -199,12 +229,13 @@ mod tests {
             session: TokenBuckets::default(),
         };
 
-        assert_eq!(plain().format(&spent), None);
+        assert_eq!(plain(TokenScope::LastTurn).format(&spent), None);
     }
 
     #[test]
     fn paints_counts_and_labels_in_their_own_colours() {
         let segment = TokenSpend {
+            first_block: TokenScope::LastTurn,
             color: Color::Named(97),
             label_color: Color::Named(90),
         };

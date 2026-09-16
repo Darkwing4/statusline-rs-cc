@@ -22,7 +22,7 @@
     :cpu "1.10c"
     :rss "685"
     :agents {:active 2 :total 7 :longest-seconds 252 :tokens 1240000 :stalled false}
-    :model-tokens [["opus-5" 3400000] ["haiku-4-5" 45000]]
+    :model-tokens [["Opus" 3400000] ["Haiku" 45000]]
     :token-spend {:turn {:input 1200 :output 3400 :thinking 1100 :cache-read 51600 :cache-write 1900}
                   :session {:input 12000 :output 210000 :thinking 70000 :cache-read 3043000 :cache-write 180000}}
     :cost 18.4
@@ -54,7 +54,7 @@
     :cpu "0.84c"
     :rss "912"
     :agents {:active 1 :total 2 :longest-seconds 61 :tokens 380000 :stalled false}
-    :model-tokens [["fable-5-1" 2100000] ["opus-5" 380000]]
+    :model-tokens [["Fable" 2100000] ["Opus" 380000]]
     :token-spend {:turn {:input 800 :output 9100 :thinking 5200 :cache-read 96000 :cache-write 4300}
                   :session {:input 9000 :output 140000 :thinking 61000 :cache-read 2201000 :cache-write 130000}}
     :cost 31.75
@@ -85,7 +85,7 @@
     :cpu "2.37c"
     :rss "1214"
     :agents {:active 1 :total 3 :longest-seconds 3720 :tokens 0 :stalled true}
-    :model-tokens [["opus-5" 9800000]]
+    :model-tokens [["Opus" 9800000]]
     :token-spend {:turn {:input 300 :output 700 :thinking 0 :cache-read 410000 :cache-write 38000}
                   :session {:input 20000 :output 380000 :thinking 150000 :cache-read 9000000 :cache-write 400000}}
     :cost 52.1
@@ -116,7 +116,7 @@
     :cpu "0.06c"
     :rss "224"
     :agents {:active 0 :total 7 :longest-seconds nil :tokens 42000 :stalled false}
-    :model-tokens [["sonnet-5" 640000] ["haiku-4-5" 42000]]
+    :model-tokens [["Sonnet" 640000] ["Haiku" 42000]]
     :token-spend {:turn {:input 90 :output 1500 :thinking 400 :cache-read 22000 :cache-write 600}
                   :session {:input 4000 :output 51000 :thinking 12000 :cache-read 580000 :cache-write 47000}}
     :cost 2.35
@@ -147,7 +147,7 @@
     :cpu "0.22c"
     :rss "312"
     :agents {:active 0 :total 0 :longest-seconds nil :tokens 0 :stalled false}
-    :model-tokens [["haiku-4-5" 12000]]
+    :model-tokens [["Haiku" 12000]]
     :token-spend {:turn {:input 40 :output 900 :thinking 0 :cache-read 7000 :cache-write 300}
                   :session {:input 500 :output 1500 :thinking 0 :cache-read 9000 :cache-write 1000}}
     :cost 0.04

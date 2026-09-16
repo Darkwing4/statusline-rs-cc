@@ -110,9 +110,13 @@
       (let [session-block (spend-block config "session " whole)]
         (if (or (nil? turn) (zero? (spend-total turn)) (= turn whole))
           session-block
-          (vec (concat (spend-block config "turn " turn)
-                       [(piece " │ " (colour/css (config "label_color") 50))]
-                       session-block)))))))
+          (let [turn-block (spend-block config "turn " turn)
+                [first-block second-block] (if (= "Session" (config "first_block"))
+                                             [session-block turn-block]
+                                             [turn-block session-block])]
+            (vec (concat first-block
+                         [(piece " │ " (colour/css (config "label_color") 50))]
+                         second-block))))))))
 
 (defn- session-cost [config session]
   (let [dollars (:cost session)]

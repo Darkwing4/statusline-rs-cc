@@ -61,10 +61,10 @@ pub struct Cwd {
     pub color: Color,
 }
 
-/// Nothing at all, or a thin bar: a gap between two neighbours, a line break, a blank line of its own, or a │ between two neighbours that are both shown.
+/// Nothing at all, or a thin bar: a gap between two neighbours, a line break, a blank line of its own, or a │ that frames and splits the line.
 #[derive(Deserialize)]
 pub struct Spacer {
-    /// Gap sits between two neighbours, LineBreak starts the next piece on a new line, BlankLine leaves an empty line, Divider draws │ only while there is something shown on both sides.
+    /// Gap sits between two neighbours, LineBreak starts the next piece on a new line, BlankLine leaves an empty line, Divider draws │ where it sits, ends of the line included, and two that meet collapse into one.
     pub shape: SpacerShape,
 }
 
@@ -177,7 +177,7 @@ pub struct SubagentStats {
     pub show_tokens: bool,
 }
 
-/// How many tokens this session has burned on each model so far, subagents included, as opus-5 3.4M.
+/// How many tokens this session has burned on each model so far, subagents included, as Opus 3.4M.
 #[derive(Deserialize)]
 pub struct TokensByModel {
     /// Colour of the model names and their token counts.
@@ -188,9 +188,17 @@ pub struct TokensByModel {
     pub separator: String,
 }
 
+#[derive(Clone, Copy, Deserialize)]
+pub enum TokenScope {
+    LastTurn,
+    Session,
+}
+
 /// Tokens spent on your last prompt and on the whole session, subagents included, as turn 78k  out 1.2k · think 408 · in 34 · cache 51k +26k │ session 1.4M  out 96k · in 2.1k · cache 1.2M +110k.
 #[derive(Deserialize)]
 pub struct TokenSpend {
+    /// Which block comes first, the last turn or the whole session.
+    pub first_block: TokenScope,
     /// Colour of the token counts.
     pub color: Color,
     /// Colour of the words, the dots, and the bar between the turn and the session.

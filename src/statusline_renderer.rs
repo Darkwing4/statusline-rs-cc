@@ -32,22 +32,21 @@ impl Renderer {
             .filter(|max| *max > 0);
 
         let mut lines: Vec<String> = Vec::new();
-        let mut main_parts: Vec<String> = Vec::new();
-        let mut divider_pending = false;
+        let mut line = MainLine::default();
 
         for segment in &self.segments {
             if segment.breaks_line() {
-                if !main_parts.is_empty() {
-                    lines.push(main_block(&main_parts, &sep, width));
-                    main_parts.clear();
+                let parts = line.take(&divider);
+
+                if !parts.is_empty() {
+                    lines.push(main_block(&parts, &sep, width));
                 }
 
-                divider_pending = false;
                 continue;
             }
 
             if segment.divides() {
-                divider_pending = !main_parts.is_empty();
+                line.divide();
                 continue;
             }
 
@@ -60,23 +59,14 @@ impl Renderer {
             }
 
             if !segment.standalone() {
-                if divider_pending {
-                    if let Some(last) = main_parts.last_mut() {
-                        last.push_str(&sep);
-                        last.push_str(&divider);
-                    }
-                }
-
-                divider_pending = false;
-                main_parts.push(rendered);
+                line.push(rendered, &divider);
                 continue;
             }
 
-            divider_pending = false;
+            let parts = line.take(&divider);
 
-            if lines.is_empty() || !main_parts.is_empty() {
-                lines.push(main_block(&main_parts, &sep, width));
-                main_parts.clear();
+            if lines.is_empty() || !parts.is_empty() {
+                lines.push(main_block(&parts, &sep, width));
             }
 
             lines.push(match (width, segment.overflow()) {
@@ -86,11 +76,52 @@ impl Renderer {
             });
         }
 
-        if lines.is_empty() || !main_parts.is_empty() {
-            lines.push(main_block(&main_parts, &sep, width));
+        let parts = line.take(&divider);
+
+        if lines.is_empty() || !parts.is_empty() {
+            lines.push(main_block(&parts, &sep, width));
         }
 
         lines.join("\n")
+    }
+}
+
+#[derive(Default)]
+struct MainLine {
+    parts: Vec<String>,
+    shown: usize,
+    divider_pending: bool,
+}
+
+impl MainLine {
+    fn divide(&mut self) {
+        self.divider_pending = true;
+    }
+
+    fn push(&mut self, rendered: String, divider: &str) {
+        if self.divider_pending {
+            self.parts.push(divider.to_string());
+            self.divider_pending = false;
+        }
+
+        self.parts.push(rendered);
+        self.shown += 1;
+    }
+
+    fn take(&mut self, divider: &str) -> Vec<String> {
+        let shown = std::mem::take(&mut self.shown);
+        let pending = std::mem::take(&mut self.divider_pending);
+        let mut parts = std::mem::take(&mut self.parts);
+
+        if shown == 0 {
+            return Vec::new();
+        }
+
+        if pending {
+            parts.push(divider.to_string());
+        }
+
+        parts
     }
 }
 
@@ -270,7 +301,7 @@ mod tests {
     }
 
     #[test]
-    fn draws_a_divider_only_between_two_shown_neighbours_on_one_line() {
+    fn frames_the_line_with_dividers_and_collapses_the_ones_that_meet() {
         let renderer = Renderer {
             separator: " ".to_string(),
             separator_color: Color::Gradient,
@@ -291,6 +322,28 @@ mod tests {
             ],
         };
 
-        assert_eq!(renderer.render(&serde_json::json!({})), "turn │ cost\nnext");
+        assert_eq!(
+            renderer.render(&serde_json::json!({})),
+            "│ turn │ cost │\n│ next │"
+        );
+    }
+
+    #[test]
+    fn drops_the_dividers_of_a_line_that_has_nothing_else_on_it() {
+        let renderer = Renderer {
+            separator: " ".to_string(),
+            separator_color: Color::Gradient,
+            segments: vec![
+                divider(),
+                omitted_segment(false),
+                divider(),
+                Box::new(Spacer {
+                    shape: SpacerShape::LineBreak,
+                }),
+                segment("below", false),
+            ],
+        };
+
+        assert_eq!(renderer.render(&serde_json::json!({})), "below");
     }
 }

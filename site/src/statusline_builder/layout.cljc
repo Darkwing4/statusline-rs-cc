@@ -81,21 +81,25 @@
     (update entry :pieces (if (= :truncate (:overflow entry)) truncate-pieces wrap-pieces) max-columns)
     entry))
 
+(defn- collapse-dividers [block]
+  (if (every? :divider block)
+    []
+    (reduce (fn [kept entry]
+              (if (and (:divider entry) (:divider (peek kept)))
+                kept
+                (conj kept entry)))
+            []
+            block)))
+
 (defn drop-idle-dividers [entries]
   (let [boundary? (fn [entry] (or (:standalone entry) (:line-break entry)))
-        step (fn [kept entry]
-               (let [previous (peek kept)]
-                 (cond
-                   (:divider entry) (if (or (nil? previous) (:divider previous) (boundary? previous))
-                                      kept
-                                      (conj kept entry))
-                   (and (:divider previous) (boundary? entry)) (conj (pop kept) entry)
-                   :else (conj kept entry))))
-        kept (reduce step [] entries)]
+        step (fn [{:keys [kept block]} entry]
+               (if (boundary? entry)
+                 {:kept (conj (into kept (collapse-dividers block)) entry) :block []}
+                 {:kept kept :block (conj block entry)}))
+        {:keys [kept block]} (reduce step {:kept [] :block []} entries)]
 
-    (if (:divider (peek kept))
-      (pop kept)
-      kept)))
+    (into kept (collapse-dividers block))))
 
 (defn- block-rows [block separator max-columns]
   (let [lines (wrap-preview-segments block separator max-columns)]

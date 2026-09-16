@@ -83,15 +83,15 @@ Both scans are incremental — a cache under `$XDG_CACHE_HOME/statusline` (or `~
 
 ## Tokens by model
 
-`TokensByModel` renders `tokens opus-5 3.4M · haiku-4-5 45k`: every token the session has spent, main thread and subagents together, grouped by the model that spent it and listed from the biggest spender down. It is the same four-bucket sum `SubagentStats` shows, so on a long session cache reads make up most of the number.
+`TokensByModel` renders `tokens Opus 3.4M · Haiku 45k`: every token the session has spent, main thread and subagents together, grouped by the model that spent it and listed from the biggest spender down. It is the same four-bucket sum `SubagentStats` shows, so on a long session cache reads make up most of the number.
 
-Claude Code writes a transcript row per content block and repeats the response's `usage` on each of them, with `output_tokens` growing as the response streams, so a response is counted once, from the last row carrying its `message.id`. Model ids lose the `claude-` prefix and a trailing release date, so `claude-haiku-4-5-20251001` shows as `haiku-4-5`. The scan is incremental like the subagent one and keeps its offsets in `session-tokens-<session>.json` in the same cache directory, shared with `TokenSpend`.
+Claude Code writes a transcript row per content block and repeats the response's `usage` on each of them, with `output_tokens` growing as the response streams, so a response is counted once, from the last row carrying its `message.id`. A Claude model id is cut down to its family, capitalised: `claude-haiku-4-5-20251001` and `claude-haiku-4-5` both show as `Haiku` and add up together, while an id from anywhere else is left as it is. The scan is incremental like the subagent one and keeps its offsets in `session-tokens-<session>.json` in the same cache directory, shared with `TokenSpend`.
 
 ## Token spend
 
 `TokenSpend` renders `turn 78k  out 1.2k · think 408 · in 34 · cache 51k +26k │ session 1.4M  out 96k · think 41k · in 2.1k · cache 1.2M +110k`: each block starts with its total and then lists what it is made of. `out` is everything the model produced and `think` is the reasoning share of it, taken from `usage.output_tokens_details.thinking_tokens`, so it is not added to the total a second time. `in` is fresh input, `cache 51k` is context replayed from the prompt cache, and `+26k` is what was written to the cache. Counts go in `color`, the words, dots, and the bar in `label_color`. A reasoning count or a cache write of zero is left out.
 
-The turn counts from your last prompt, so its numbers grow while the answer runs and stay on screen once it is done. A prompt is a user row you typed: tool results, skill bodies marked `isMeta`, and injected wrappers such as `<task-notification>` or a slash command keep the current turn going. Subagent rows join the turn when they were written after that prompt. The session counts everything since the session started — the total `TokensByModel` splits by model. While the turn has spent nothing yet, or is still the whole session, only the session block is shown.
+`first_block` decides which block leads, the turn or the session. The turn counts from your last prompt, so its numbers grow while the answer runs and stay on screen once it is done. A prompt is a user row you typed: tool results, skill bodies marked `isMeta`, and injected wrappers such as `<task-notification>` or a slash command keep the current turn going. Subagent rows join the turn when they were written after that prompt. The session counts everything since the session started — the total `TokensByModel` splits by model. While the turn has spent nothing yet, or is still the whole session, only the session block is shown.
 
 ## Session cost
 

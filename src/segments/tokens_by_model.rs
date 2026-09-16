@@ -10,7 +10,6 @@ use crate::token_count_format::format_tokens;
 use crate::transcript_token_tally::TranscriptTally;
 
 const MODEL_ID_PREFIX: &str = "claude-";
-const RELEASE_DATE_DIGITS: usize = 8;
 
 impl Segment for TokensByModel {
     fn render(&self, json: &Value, _git: &mut GitCache) -> Option<String> {
@@ -39,42 +38,42 @@ impl TokensByModel {
 fn tokens_per_model<'a>(
     transcripts: impl IntoIterator<Item = &'a TranscriptTally>,
 ) -> Vec<(String, u64)> {
-    let mut totals: BTreeMap<&str, u64> = BTreeMap::new();
+    let mut totals: BTreeMap<String, u64> = BTreeMap::new();
 
     for transcript in transcripts {
         for (model, tokens) in transcript.tally.by_model() {
-            *totals.entry(short_model_name(model)).or_insert(0) += tokens;
+            *totals.entry(model_family(model)).or_insert(0) += tokens;
         }
     }
 
     let mut ranked: Vec<(String, u64)> = totals
         .into_iter()
         .filter(|(_, tokens)| *tokens > 0)
-        .map(|(model, tokens)| (model.to_string(), tokens))
         .collect();
     ranked.sort_by_key(|(_, tokens)| Reverse(*tokens));
 
     ranked
 }
 
-fn short_model_name(model: &str) -> &str {
-    let name = model.strip_prefix(MODEL_ID_PREFIX).unwrap_or(model);
+fn model_family(model: &str) -> String {
+    let Some(name) = model.strip_prefix(MODEL_ID_PREFIX) else {
+        return model.to_string();
+    };
 
-    match name.rsplit_once('-') {
-        Some((family, date)) if is_release_date(date) => family,
-        _ => name,
+    let family = name.split('-').next().unwrap_or(name);
+    let mut letters = family.chars();
+
+    match letters.next() {
+        Some(first) => first.to_uppercase().chain(letters).collect(),
+        None => model.to_string(),
     }
-}
-
-fn is_release_date(part: &str) -> bool {
-    part.len() == RELEASE_DATE_DIGITS && part.bytes().all(|byte| byte.is_ascii_digit())
 }
 
 #[cfg(test)]
 mod tests {
     use std::io::Cursor;
 
-    use super::{short_model_name, tokens_per_model, TokensByModel};
+    use super::{model_family, tokens_per_model, TokensByModel};
     use crate::config_schema::Color;
     use crate::transcript_token_tally::{tally_tokens, TokenTally, TranscriptTally};
 
@@ -100,13 +99,13 @@ mod tests {
     #[test]
     fn lists_models_from_the_most_tokens_spent() {
         let ranked = vec![
-            ("opus-5".to_string(), 3_400_000),
-            ("haiku-4-5".to_string(), 45_000),
+            ("Opus".to_string(), 3_400_000),
+            ("Haiku".to_string(), 45_000),
         ];
 
         assert_eq!(
             sample().format(&ranked).as_deref(),
-            Some("tokens opus-5 3.4M · haiku-4-5 45k")
+            Some("tokens Opus 3.4M · Haiku 45k")
         );
     }
 
@@ -116,7 +115,7 @@ mod tests {
     }
 
     #[test]
-    fn merges_dated_model_ids_ranks_by_tokens_and_drops_empty_models() {
+    fn merges_model_versions_ranks_by_tokens_and_drops_empty_models() {
         let main = transcript(concat!(
             r#"{"message":{"id":"m1","model":"claude-opus-5","usage":{"input_tokens":900}}}"#,
             "\n",
@@ -132,18 +131,15 @@ mod tests {
 
         assert_eq!(
             tokens_per_model(&[main, subagent]),
-            vec![
-                ("haiku-4-5".to_string(), 1_200),
-                ("opus-5".to_string(), 900)
-            ]
+            vec![("Haiku".to_string(), 1_200), ("Opus".to_string(), 900)]
         );
     }
 
     #[test]
-    fn shortens_model_ids_to_family_and_version() {
-        assert_eq!(short_model_name("claude-opus-5"), "opus-5");
-        assert_eq!(short_model_name("claude-haiku-4-5-20251001"), "haiku-4-5");
-        assert_eq!(short_model_name("claude-fable-5-1"), "fable-5-1");
-        assert_eq!(short_model_name("gpt-5.6-sol"), "gpt-5.6-sol");
+    fn keeps_only_the_model_family_and_leaves_other_ids_alone() {
+        assert_eq!(model_family("claude-opus-5"), "Opus");
+        assert_eq!(model_family("claude-haiku-4-5-20251001"), "Haiku");
+        assert_eq!(model_family("claude-fable-5-1"), "Fable");
+        assert_eq!(model_family("gpt-5.6-sol"), "gpt-5.6-sol");
     }
 }

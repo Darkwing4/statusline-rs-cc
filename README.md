@@ -102,7 +102,7 @@ The rest of the shelf is what a status line usually cannot do, each documented i
 
 ## tuning
 
-A segment with `standalone: true` gets a line of its own where it sits in the config, wrapped by words to the terminal width; `MyLastPrompt` is cut with `…` instead. `Spacer(shape: LineBreak)` starts the next segments on a new line, `Spacer(shape: BlankLine)` leaves an empty one, `Spacer(shape: Gap)` is just a gap, and `Spacer(shape: Divider)` draws a `│` in `separator_color` between the segments around it, disappearing when there is nothing shown on one side. A main line wider than the terminal wraps at segment boundaries:
+A segment with `standalone: true` gets a line of its own where it sits in the config, wrapped by words to the terminal width; `MyLastPrompt` is cut with `…` instead. `Spacer(shape: LineBreak)` starts the next segments on a new line, `Spacer(shape: BlankLine)` leaves an empty one, `Spacer(shape: Gap)` is just a gap, and `Spacer(shape: Divider)` draws a `│` in `separator_color` where it sits, including at both ends of the line; two that meet because the segment between them is hidden collapse into one, and a line with nothing else on it keeps none of them. A main line wider than the terminal wraps at segment boundaries:
 
 <p><img src="docs/screenshots/wrap.png" alt="multi-line wrap when statusline exceeds terminal width"/></p>
 
