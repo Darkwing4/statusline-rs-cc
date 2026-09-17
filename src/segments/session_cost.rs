@@ -23,10 +23,10 @@ impl SessionCost {
         }
 
         let mut text = format!("{}${:.0}", self.prefix, total);
-        let turn_dollars = turn.round();
+        let turn_dimes = (turn * 10.0).round();
 
-        if turn_dollars.is_finite() && turn_dollars >= 1.0 {
-            text.push_str(&format!("(+{:.0})", turn_dollars));
+        if turn_dimes.is_finite() && turn_dimes >= 1.0 {
+            text.push_str(&format!("(+{:.1})", turn_dimes / 10.0));
         }
 
         Some(text)
@@ -74,13 +74,14 @@ mod tests {
 
     #[test]
     fn adds_the_last_prompt_in_brackets() {
-        assert_eq!(cost().format(30.98, 1.0).as_deref(), Some("$31(+1)"));
-        assert_eq!(cost().format(30.98, 12.6).as_deref(), Some("$31(+13)"));
+        assert_eq!(cost().format(30.98, 1.0).as_deref(), Some("$31(+1.0)"));
+        assert_eq!(cost().format(30.98, 0.3).as_deref(), Some("$31(+0.3)"));
+        assert_eq!(cost().format(30.98, 12.64).as_deref(), Some("$31(+12.6)"));
     }
 
     #[test]
-    fn leaves_out_a_last_prompt_cheaper_than_a_dollar() {
-        assert_eq!(cost().format(30.98, 0.35).as_deref(), Some("$31"));
+    fn leaves_out_a_last_prompt_cheaper_than_ten_cents() {
+        assert_eq!(cost().format(30.98, 0.04).as_deref(), Some("$31"));
         assert_eq!(cost().format(30.98, 0.0).as_deref(), Some("$31"));
         assert_eq!(cost().format(30.98, f64::NAN).as_deref(), Some("$31"));
     }

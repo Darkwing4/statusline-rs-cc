@@ -120,11 +120,11 @@
 
 (defn- session-cost [config session]
   (let [total (:cost session)
-        turn-dollars (number/round (or (:turn-cost session) 0))]
+        turn-dimes (number/round (* 10 (or (:turn-cost session) 0)))]
     (when (and total (pos? total))
       [(piece (str (config "prefix")
                    "$" (number/round total)
-                   (when (>= turn-dollars 1) (str "(+" turn-dollars ")")))
+                   (when (>= turn-dimes 1) (str "(+" (number/fixed1 (/ turn-dimes 10)) ")")))
               (colour/css (config "color") 50))])))
 
 (defn git-branch [config session]

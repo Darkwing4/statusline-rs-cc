@@ -205,7 +205,7 @@ pub struct TokenSpend {
     pub label_color: Color,
 }
 
-/// What this session has cost so far in whole dollars at API list prices, as Claude Code estimates it, with your last prompt in brackets, as $31(+1).
+/// What this session has cost so far in whole dollars at API list prices, as Claude Code estimates it, with your last prompt in brackets, as $31(+0.3).
 #[derive(Deserialize)]
 pub struct SessionCost {
     /// Colour of the amounts.

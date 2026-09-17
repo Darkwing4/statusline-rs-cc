@@ -55,8 +55,9 @@
 
 (deftest session-cost-shows-whole-dollars-with-the-last-prompt-in-brackets
   (let [cost (fixture/create "SessionCost")]
-    (is (= "$18" (text-of cost (fixture/scenario "active"))))
-    (is (= "$18(+2)" (text-of cost (assoc (fixture/scenario "active") :turn-cost 1.9))))
+    (is (= "$18(+0.4)" (text-of cost (fixture/scenario "active"))))
+    (is (= "$18(+1.9)" (text-of cost (assoc (fixture/scenario "active") :turn-cost 1.9))))
+    (is (= "$18" (text-of cost (assoc (fixture/scenario "active") :turn-cost 0.04))))
     (is (nil? (preview/pieces cost (assoc (fixture/scenario "active") :cost 0))))))
 
 (deftest a-session-notice-shows-the-time-left-the-way-the-runtime-pads-it
