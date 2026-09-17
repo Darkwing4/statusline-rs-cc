@@ -53,15 +53,11 @@
     (is (= "session 3.3M  out 210k · in 12k · cache 3.0M" (line-of spend (assoc active :token-spend {:turn session-only :session session-only}))))
     (is (nil? (preview/pieces spend (assoc active :token-spend {}))))))
 
-(deftest session-cost-shows-dollars-and-cents
+(deftest session-cost-shows-whole-dollars-with-the-last-prompt-in-brackets
   (let [cost (fixture/create "SessionCost")]
-    (is (= "$18.40" (text-of cost (fixture/scenario "active"))))
+    (is (= "$18" (text-of cost (fixture/scenario "active"))))
+    (is (= "$18(+2)" (text-of cost (assoc (fixture/scenario "active") :turn-cost 1.9))))
     (is (nil? (preview/pieces cost (assoc (fixture/scenario "active") :cost 0))))))
-
-(deftest turn-cost-shows-the-last-prompt-in-dollars-and-cents
-  (let [cost (fixture/create "TurnCost")]
-    (is (= "turn $0.35" (text-of cost (fixture/scenario "active"))))
-    (is (nil? (preview/pieces cost (assoc (fixture/scenario "active") :turn-cost 0))))))
 
 (deftest a-session-notice-shows-the-time-left-the-way-the-runtime-pads-it
   (let [notice (fixture/create "SessionNotice")]

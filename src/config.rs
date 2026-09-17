@@ -78,7 +78,6 @@ impl SegmentSpec {
             SegmentSpec::SubagentStats(s) => Box::new(s),
             SegmentSpec::TokenSpend(s) => Box::new(s),
             SegmentSpec::TokensByModel(s) => Box::new(s),
-            SegmentSpec::TurnCost(s) => Box::new(s),
             SegmentSpec::UserIdleTime(s) => Box::new(s),
             SegmentSpec::Weather(s) => Box::new(s),
         }

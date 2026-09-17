@@ -1,22 +1,49 @@
 use serde_json::Value;
 
 pub use crate::config_schema::SessionCost;
-use crate::dollar_amount_format::format_dollars;
 use crate::segments::{GitCache, Segment};
+use crate::session_token_tallies::load_session_tallies;
+use crate::statusline_input::session_key;
+use crate::turn_cost_baseline::{self, TurnCostBaseline};
 
 impl Segment for SessionCost {
     fn render(&self, json: &Value, _git: &mut GitCache) -> Option<String> {
-        let dollars = json.pointer("/cost/total_cost_usd")?.as_f64()?;
-        let text = self.format(dollars)?;
+        let total = json.pointer("/cost/total_cost_usd")?.as_f64()?;
+        let turn = turn_cost(json, total).unwrap_or(0.0);
+        let text = self.format(total, turn)?;
 
         Some(self.color.paint(&text))
     }
 }
 
 impl SessionCost {
-    fn format(&self, dollars: f64) -> Option<String> {
-        Some(format!("{}{}", self.prefix, format_dollars(dollars)?))
+    fn format(&self, total: f64, turn: f64) -> Option<String> {
+        if !total.is_finite() || total <= 0.0 {
+            return None;
+        }
+
+        let mut text = format!("{}${:.0}", self.prefix, total);
+        let turn_dollars = turn.round();
+
+        if turn_dollars.is_finite() && turn_dollars >= 1.0 {
+            text.push_str(&format!("(+{:.0})", turn_dollars));
+        }
+
+        Some(text)
     }
+}
+
+fn turn_cost(json: &Value, total: f64) -> Option<f64> {
+    let session = session_key(json)?;
+    let turn_started_at = load_session_tallies(json)?.turn_started_at();
+    let known = turn_cost_baseline::load(&session);
+    let current = TurnCostBaseline::advance(known.clone(), turn_started_at, total);
+
+    if known.as_ref() != Some(&current) {
+        turn_cost_baseline::store(&session, &current);
+    }
+
+    Some(current.turn_cost())
 }
 
 #[cfg(test)]
@@ -35,14 +62,27 @@ mod tests {
     }
 
     #[test]
-    fn shows_the_session_cost_in_dollars_and_cents() {
+    fn shows_the_session_cost_in_whole_dollars() {
         let json = json!({"cost": {"total_cost_usd": 4.2}});
         let mut git = GitCache::new(String::new());
 
         assert_eq!(
             cost().render(&json, &mut git),
-            Some("\x1b[90m$4.20\x1b[0m".to_string())
+            Some("\x1b[90m$4\x1b[0m".to_string())
         );
+    }
+
+    #[test]
+    fn adds_the_last_prompt_in_brackets() {
+        assert_eq!(cost().format(30.98, 1.0).as_deref(), Some("$31(+1)"));
+        assert_eq!(cost().format(30.98, 12.6).as_deref(), Some("$31(+13)"));
+    }
+
+    #[test]
+    fn leaves_out_a_last_prompt_cheaper_than_a_dollar() {
+        assert_eq!(cost().format(30.98, 0.35).as_deref(), Some("$31"));
+        assert_eq!(cost().format(30.98, 0.0).as_deref(), Some("$31"));
+        assert_eq!(cost().format(30.98, f64::NAN).as_deref(), Some("$31"));
     }
 
     #[test]
@@ -54,5 +94,6 @@ mod tests {
             cost().render(&json!({"cost": {"total_cost_usd": 0}}), &mut git),
             None
         );
+        assert_eq!(cost().format(f64::NAN, 1.0), None);
     }
 }

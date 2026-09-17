@@ -2,7 +2,6 @@ mod ansi;
 mod claude_config_dir;
 mod config;
 mod config_schema;
-mod dollar_amount_format;
 mod duration_format;
 mod gradient;
 mod iso8601;

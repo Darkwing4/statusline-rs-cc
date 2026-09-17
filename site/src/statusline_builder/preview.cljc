@@ -118,9 +118,14 @@
                          [(piece " │ " (colour/css (config "label_color") 50))]
                          second-block))))))))
 
-(defn- dollars [config amount]
-  (when (and amount (pos? amount))
-    [(piece (str (config "prefix") "$" (number/fixed2 amount)) (colour/css (config "color") 50))]))
+(defn- session-cost [config session]
+  (let [total (:cost session)
+        turn-dollars (number/round (or (:turn-cost session) 0))]
+    (when (and total (pos? total))
+      [(piece (str (config "prefix")
+                   "$" (number/round total)
+                   (when (>= turn-dollars 1) (str "(+" turn-dollars ")")))
+              (colour/css (config "color") 50))])))
 
 (defn git-branch [config session]
   (when (:git session)
@@ -207,8 +212,7 @@
        "SubagentStats" (subagent-stats config session)
        "TokensByModel" (tokens-by-model config session)
        "TokenSpend" (token-spend config session)
-       "SessionCost" (dollars config (:cost session))
-       "TurnCost" (dollars config (:turn-cost session))
+       "SessionCost" (session-cost config session)
        "Reminder" (text-piece config (width/cut (str/join (config "separator") (:reminders session)) (config "max_chars")))
        "SessionNotice" (session-notice config session)
        "MyLastPrompt" (text-piece config (width/cut (:last-prompt session) (config "max_chars")))

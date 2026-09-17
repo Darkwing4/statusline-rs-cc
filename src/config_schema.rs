@@ -205,21 +205,12 @@ pub struct TokenSpend {
     pub label_color: Color,
 }
 
-/// What this session has cost so far at API list prices, as Claude Code estimates it, as $4.20.
+/// What this session has cost so far in whole dollars at API list prices, as Claude Code estimates it, with your last prompt in brackets, as $31(+1).
 #[derive(Deserialize)]
 pub struct SessionCost {
-    /// Colour of the amount.
+    /// Colour of the amounts.
     pub color: Color,
-    /// Text before the amount.
-    pub prefix: String,
-}
-
-/// What your last prompt has cost so far at API list prices, as Claude Code estimates it, as $0.35.
-#[derive(Deserialize)]
-pub struct TurnCost {
-    /// Colour of the amount.
-    pub color: Color,
-    /// Text before the amount.
+    /// Text before the amounts.
     pub prefix: String,
 }
 
@@ -452,7 +443,6 @@ pub enum SegmentSpec {
     SubagentStats(SubagentStats),
     TokenSpend(TokenSpend),
     TokensByModel(TokensByModel),
-    TurnCost(TurnCost),
     UserIdleTime(UserIdleTime),
     Weather(Weather),
 }
