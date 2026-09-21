@@ -47,9 +47,7 @@
   (let [spend (fixture/create "TokenSpend")
         active (fixture/scenario "active")
         session-only (-> (get-in active [:token-spend :session]) (assoc :thinking 0 :cache-write 0))]
-    (is (= "turn 58k  out 3.4k · think 1.1k · in 1.2k · cache 52k +1.9k │ session 3.4M  out 210k · think 70k · in 12k · cache 3.0M +180k" (line-of spend active)))
-    (is (= "session 3.4M  out 210k · think 70k · in 12k · cache 3.0M +180k │ turn 58k  out 3.4k · think 1.1k · in 1.2k · cache 52k +1.9k"
-           (line-of (fixture/with-field spend "first_block" "Session") active)))
+    (is (= "session 3.4M(+58k)  out 210k · think 70k · in 12k · cache 3.0M +180k" (line-of spend active)))
     (is (= "session 3.3M  out 210k · in 12k · cache 3.0M" (line-of spend (assoc active :token-spend {:turn session-only :session session-only}))))
     (is (nil? (preview/pieces spend (assoc active :token-spend {}))))))
 

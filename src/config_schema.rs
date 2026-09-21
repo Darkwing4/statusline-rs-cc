@@ -188,20 +188,12 @@ pub struct TokensByModel {
     pub separator: String,
 }
 
-#[derive(Clone, Copy, Deserialize)]
-pub enum TokenScope {
-    LastTurn,
-    Session,
-}
-
-/// Tokens spent on your last prompt and on the whole session, subagents included, as turn 78k  out 1.2k · think 408 · in 34 · cache 51k +26k │ session 1.4M  out 96k · in 2.1k · cache 1.2M +110k.
+/// Tokens spent on the whole session, subagents included, with your last prompt in brackets, as session 1.4M(+78k)  out 96k · think 41k · in 2.1k · cache 1.2M +110k.
 #[derive(Deserialize)]
 pub struct TokenSpend {
-    /// Which block comes first, the last turn or the whole session.
-    pub first_block: TokenScope,
     /// Colour of the token counts.
     pub color: Color,
-    /// Colour of the words, the dots, and the bar between the turn and the session.
+    /// Colour of the words and the dots.
     pub label_color: Color,
 }
 

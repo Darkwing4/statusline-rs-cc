@@ -1,17 +1,14 @@
 use serde_json::Value;
 
-use crate::config_schema::TokenScope;
 pub use crate::config_schema::TokenSpend;
 use crate::segments::{GitCache, Segment};
 use crate::session_token_tallies::load_session_tallies;
 use crate::token_count_format::format_tokens;
 use crate::transcript_token_tally::{TokenBuckets, TranscriptTally};
 
-const TURN_LABEL: &str = "turn ";
 const SESSION_LABEL: &str = "session ";
 const DETAILS_GAP: &str = "  ";
 const DETAIL_SEPARATOR: &str = " · ";
-const SCOPE_SEPARATOR: &str = " │ ";
 
 struct Spent {
     turn: TokenBuckets,
@@ -32,28 +29,25 @@ impl TokenSpend {
             return None;
         }
 
-        let session = self.block(SESSION_LABEL, &spent.session);
+        let mut total = self.metric(SESSION_LABEL, spent.session.total());
 
-        if spent.turn.total() == 0 || spent.turn == spent.session {
-            return Some(session);
+        if spent.turn.total() > 0 && spent.turn != spent.session {
+            total.push_str(
+                &self
+                    .color
+                    .paint(&format!("(+{})", format_tokens(spent.turn.total()))),
+            );
         }
-
-        let turn = self.block(TURN_LABEL, &spent.turn);
-
-        let (first, second) = match self.first_block {
-            TokenScope::LastTurn => (turn, session),
-            TokenScope::Session => (session, turn),
-        };
 
         Some(format!(
             "{}{}{}",
-            first,
-            self.label_color.paint(SCOPE_SEPARATOR),
-            second
+            total,
+            DETAILS_GAP,
+            self.details(&spent.session)
         ))
     }
 
-    fn block(&self, label: &str, spent: &TokenBuckets) -> String {
+    fn details(&self, spent: &TokenBuckets) -> String {
         let mut details = vec![self.metric("out ", spent.output)];
 
         if spent.thinking > 0 {
@@ -66,12 +60,7 @@ impl TokenSpend {
             details.push(self.cache(spent));
         }
 
-        format!(
-            "{}{}{}",
-            self.metric(label, spent.total()),
-            DETAILS_GAP,
-            details.join(&self.label_color.paint(DETAIL_SEPARATOR))
-        )
+        details.join(&self.label_color.paint(DETAIL_SEPARATOR))
     }
 
     fn cache(&self, spent: &TokenBuckets) -> String {
@@ -117,7 +106,7 @@ mod tests {
     use std::io::Cursor;
 
     use super::{spent, Spent, TokenSpend};
-    use crate::config_schema::{Color, TokenScope};
+    use crate::config_schema::Color;
     use crate::transcript_token_tally::{tally_tokens, TokenBuckets, TokenTally, TranscriptTally};
 
     const FIRST_TURN: TokenBuckets = TokenBuckets {
@@ -136,9 +125,8 @@ mod tests {
         cache_read: 1_200_000,
     };
 
-    fn plain(first_block: TokenScope) -> TokenSpend {
+    fn plain() -> TokenSpend {
         TokenSpend {
-            first_block,
             color: Color::Gradient,
             label_color: Color::Gradient,
         }
@@ -157,33 +145,20 @@ mod tests {
     }
 
     #[test]
-    fn shows_the_turn_then_the_session_with_every_bucket() {
+    fn shows_the_session_with_every_bucket_and_the_turn_total_in_brackets() {
         let spent = Spent {
             turn: FIRST_TURN,
             session: WHOLE_SESSION,
         };
 
         assert_eq!(
-            plain(TokenScope::LastTurn).format(&spent).as_deref(),
-            Some("turn 78k  out 1.2k · think 408 · in 34 · cache 51k +26k │ session 1.4M  out 96k · think 41k · in 2.1k · cache 1.2M +110k")
+            plain().format(&spent).as_deref(),
+            Some("session 1.4M(+78k)  out 96k · think 41k · in 2.1k · cache 1.2M +110k")
         );
     }
 
     #[test]
-    fn puts_the_session_first_when_asked_to() {
-        let spent = Spent {
-            turn: FIRST_TURN,
-            session: WHOLE_SESSION,
-        };
-
-        assert_eq!(
-            plain(TokenScope::Session).format(&spent).as_deref(),
-            Some("session 1.4M  out 96k · think 41k · in 2.1k · cache 1.2M +110k │ turn 78k  out 1.2k · think 408 · in 34 · cache 51k +26k")
-        );
-    }
-
-    #[test]
-    fn shows_one_block_while_the_turn_is_the_whole_session_or_has_not_spent_yet() {
+    fn leaves_the_brackets_out_while_the_turn_is_the_whole_session_or_has_not_spent_yet() {
         let first = Spent {
             turn: FIRST_TURN,
             session: FIRST_TURN,
@@ -195,11 +170,11 @@ mod tests {
         let expected = "session 78k  out 1.2k · think 408 · in 34 · cache 51k +26k";
 
         assert_eq!(
-            plain(TokenScope::LastTurn).format(&first).as_deref(),
+            plain().format(&first).as_deref(),
             Some(expected)
         );
         assert_eq!(
-            plain(TokenScope::Session).format(&waiting).as_deref(),
+            plain().format(&waiting).as_deref(),
             Some(expected)
         );
     }
@@ -217,7 +192,7 @@ mod tests {
         };
 
         assert_eq!(
-            plain(TokenScope::LastTurn).format(&spent).as_deref(),
+            plain().format(&spent).as_deref(),
             Some("session 11k  out 446 · in 2 · cache 11k")
         );
     }
@@ -229,18 +204,20 @@ mod tests {
             session: TokenBuckets::default(),
         };
 
-        assert_eq!(plain(TokenScope::LastTurn).format(&spent), None);
+        assert_eq!(plain().format(&spent), None);
     }
 
     #[test]
     fn paints_counts_and_labels_in_their_own_colours() {
         let segment = TokenSpend {
-            first_block: TokenScope::LastTurn,
             color: Color::Named(97),
             label_color: Color::Named(90),
         };
         let spent = Spent {
-            turn: TokenBuckets::default(),
+            turn: TokenBuckets {
+                output: 2,
+                ..TokenBuckets::default()
+            },
             session: TokenBuckets {
                 output: 5,
                 ..TokenBuckets::default()
@@ -249,7 +226,7 @@ mod tests {
 
         assert_eq!(
             segment.format(&spent).as_deref(),
-            Some("\x1b[90msession \x1b[0m\x1b[97m5\x1b[0m  \x1b[90mout \x1b[0m\x1b[97m5\x1b[0m\x1b[90m · \x1b[0m\x1b[90min \x1b[0m\x1b[97m0\x1b[0m")
+            Some("\x1b[90msession \x1b[0m\x1b[97m5\x1b[0m\x1b[97m(+2)\x1b[0m  \x1b[90mout \x1b[0m\x1b[97m5\x1b[0m\x1b[90m · \x1b[0m\x1b[90min \x1b[0m\x1b[97m0\x1b[0m")
         );
     }
 

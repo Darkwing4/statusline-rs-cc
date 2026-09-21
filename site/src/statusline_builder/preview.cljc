@@ -88,7 +88,7 @@
 (defn- spend-total [{:keys [input output cache-read cache-write]}]
   (+ input output cache-read cache-write))
 
-(defn- spend-block [config label spent]
+(defn- spend-details [config spent]
   (let [label-colour (colour/css (config "label_color") 50)
         count-colour (colour/css (config "color") 50)
         metric (fn [word tokens] [(piece word label-colour) (piece (format-tokens tokens) count-colour)])
@@ -99,24 +99,21 @@
                   (pos? thinking) (conj (metric "think " thinking))
                   :always (conj (metric "in " input))
                   (pos? (+ cache-read cache-write)) (conj cache))]
-    (vec (concat (metric label (spend-total spent))
-                 [(piece "  " label-colour)]
-                 (apply concat (interpose [(piece " · " label-colour)] details))))))
+    (vec (apply concat (interpose [(piece " · " label-colour)] details)))))
 
 (defn- token-spend [config session]
   (let [{:keys [turn] :as spend} (:token-spend session)
-        whole (:session spend)]
+        whole (:session spend)
+        label-colour (colour/css (config "label_color") 50)
+        count-colour (colour/css (config "color") 50)]
     (when (and whole (pos? (spend-total whole)))
-      (let [session-block (spend-block config "session " whole)]
-        (if (or (nil? turn) (zero? (spend-total turn)) (= turn whole))
-          session-block
-          (let [turn-block (spend-block config "turn " turn)
-                [first-block second-block] (if (= "Session" (config "first_block"))
-                                             [session-block turn-block]
-                                             [turn-block session-block])]
-            (vec (concat first-block
-                         [(piece " │ " (colour/css (config "label_color") 50))]
-                         second-block))))))))
+      (let [turn-spent? (and turn (pos? (spend-total turn)) (not= turn whole))]
+        (vec (concat [(piece "session " label-colour)
+                      (piece (format-tokens (spend-total whole)) count-colour)]
+                     (when turn-spent?
+                       [(piece (str "(+" (format-tokens (spend-total turn)) ")") count-colour)])
+                     [(piece "  " label-colour)]
+                     (spend-details config whole)))))))
 
 (defn- session-cost [config session]
   (let [total (:cost session)
