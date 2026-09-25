@@ -9,6 +9,7 @@ pub mod git;
 pub mod llm_insight;
 pub mod model;
 pub mod my_last_prompt;
+pub mod prompt_cache_miss;
 pub mod prompt_cache_ttl;
 pub mod rate_limits;
 pub mod reminder;

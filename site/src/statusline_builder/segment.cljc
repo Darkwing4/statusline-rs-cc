@@ -8,6 +8,7 @@
                    "prefix_color" (colour/rgb 203 166 247)
                    "suffix_color" (colour/rgb 203 166 247)}
    "PromptCacheTtl" {"color" colour/gradient "prefix" "cache "}
+   "PromptCacheMiss" {"color" (colour/rgb 243 139 168) "prefix" "(missing! " "suffix" ")" "min_tokens" 10000}
    "RateLimit" {"style" "Percent"
                 "fill" "Remaining"
                 "color_mode" "Gradient"
@@ -72,6 +73,7 @@
    "ContextUsage"
    "Effort"
    "PromptCacheTtl"
+   "PromptCacheMiss"
    "RateLimit:FiveHour"
    "RateLimit:SevenDay"
    "SubagentStats"

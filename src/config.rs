@@ -69,6 +69,7 @@ impl SegmentSpec {
             SegmentSpec::LlmInsight(s) => Box::new(s),
             SegmentSpec::Model(s) => Box::new(s),
             SegmentSpec::MyLastPrompt(s) => Box::new(s),
+            SegmentSpec::PromptCacheMiss(s) => Box::new(s),
             SegmentSpec::PromptCacheTtl(s) => Box::new(s),
             SegmentSpec::RateLimit(s) => Box::new(s),
             SegmentSpec::Reminder(s) => Box::new(s),

@@ -8,6 +8,7 @@ use serde_json::Value;
 
 use crate::statusline_input::session_key;
 use crate::subagent_transcript_files::list_subagent_transcripts;
+use crate::transcript_cache_miss::CacheMiss;
 use crate::transcript_token_tally::{refresh_tallies, refresh_tally, TranscriptTally};
 
 #[derive(Default, Deserialize, Serialize)]
@@ -23,6 +24,10 @@ impl SessionTallies {
 
     pub(crate) fn turn_started_at(&self) -> Option<i64> {
         self.main.as_ref()?.tally.turn_started_at()
+    }
+
+    pub(crate) fn turn_cache_miss(&self) -> Option<CacheMiss> {
+        Some(self.main.as_ref()?.tally.turn_cache_miss())
     }
 }
 
