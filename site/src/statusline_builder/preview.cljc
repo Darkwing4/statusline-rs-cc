@@ -115,6 +115,16 @@
                      [(piece "  " label-colour)]
                      (spend-details config whole)))))))
 
+(defn- cache-miss [config session]
+  (let [{:keys [tokens overpay]} (:cache-miss session)
+        cents (number/round (* 100 (or overpay 0)))]
+    (when (and tokens (pos? tokens) (>= tokens (config "min_tokens")))
+      [(piece (str (config "prefix")
+                   (format-tokens tokens)
+                   (when (>= cents 1) (str " $" (number/fixed2 (/ cents 100))))
+                   (config "suffix"))
+              (colour/css (config "color") 70))])))
+
 (defn- session-cost [config session]
   (let [total (:cost session)
         turn-dimes (number/round (* 10 (or (:turn-cost session) 0)))]
@@ -197,6 +207,7 @@
                        (piece (config "suffix") (colour/css (config "suffix_color") (:context session)))]
        "PromptCacheTtl" (let [view (cache-ttl session)]
                           [(piece (str (config "prefix") (:text view)) (colour/cache-ttl-css (config "color") view))])
+       "PromptCacheMiss" (cache-miss config session)
        "ClaudeResourceUsage" [(piece (str (config "cpu_prefix") (:cpu session) " " (config "memory_prefix") (:rss session) " MiB")
                                      (colour/css (config "color") 46))]
        "Cwd" [(piece (:cwd session) (colour/css (config "color") 45))]

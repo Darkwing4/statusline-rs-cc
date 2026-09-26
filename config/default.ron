@@ -21,6 +21,12 @@
             color: Gradient,
             prefix: "cache ",
         ),
+        PromptCacheMiss(
+            color: Rgb(243, 139, 168),
+            prefix: "(missing! ",
+            suffix: ")",
+            min_tokens: 10000,
+        ),
         RateLimit(
             window: FiveHour,
             style: Bar,

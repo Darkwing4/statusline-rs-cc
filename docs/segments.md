@@ -93,6 +93,10 @@ Claude Code writes a transcript row per content block and repeats the response's
 
 The turn counts from your last prompt, so its numbers grow while the answer runs and stay on screen once it is done. A prompt is a user row you typed: tool results, skill bodies marked `isMeta`, and injected wrappers such as `<task-notification>` or a slash command keep the current turn going. Subagent rows join the turn when they were written after that prompt. The session counts everything since the session started — the total `TokensByModel` splits by model. While the turn has spent nothing yet, or is still the whole session, the brackets are left out.
 
+## Prompt cache miss
+
+`PromptCacheMiss` renders `(missing! 254k $1.22)` when a request of your last prompt had to write again what the previous request had already cached: after the cache went cold, or after a model switch. The tokens are the part of the old prefix the request failed to read and rewrote instead, summed over the turn; the dollars are what that rewrite cost over a cache hit at API list prices: the 5-minute or 1-hour write price minus the read price of the model that answered. Compaction starts a new prefix, so the first request after it is not a miss; sidechain rows and repeated content blocks of one response are skipped. The count rides on the same incremental transcript tally as `TokenSpend` and resets when the next prompt starts. It stays hidden below `min_tokens`, and the dollar amount is left out below one cent or for a model missing from the price table in `src/claude_model_pricing.rs`.
+
 ## Session cost
 
 `SessionCost` renders `$4.20` from `cost.total_cost_usd`, the estimate Claude Code itself sends to the status line: list prices, or a `modelPricing` table when one is set, applied to every API call of the session. On a subscription it is what the same traffic would cost on the API, not a bill. It stays hidden until the first response is priced.

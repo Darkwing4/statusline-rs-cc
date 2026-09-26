@@ -43,6 +43,19 @@ pub struct PromptCacheTtl {
     pub prefix: String,
 }
 
+/// Warns when your last prompt had to rebuild the prompt cache, with the tokens rewritten and what that cost over a cache hit, as (missing! 254k $1.22).
+#[derive(Deserialize)]
+pub struct PromptCacheMiss {
+    /// Colour of the warning.
+    pub color: Color,
+    /// Text before the rewritten token count.
+    pub prefix: String,
+    /// Text after the dollar amount.
+    pub suffix: String,
+    /// Smallest rewrite worth a warning, in tokens; smaller ones stay hidden.
+    pub min_tokens: u64,
+}
+
 /// How much CPU and memory the Claude Code process tree is eating right now (Linux only).
 #[derive(Deserialize)]
 pub struct ClaudeResourceUsage {
@@ -426,6 +439,7 @@ pub enum SegmentSpec {
     LlmInsight(LlmInsight),
     Model(Model),
     MyLastPrompt(MyLastPrompt),
+    PromptCacheMiss(PromptCacheMiss),
     PromptCacheTtl(PromptCacheTtl),
     RateLimit(RateLimit),
     Reminder(Reminder),

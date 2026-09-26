@@ -1,5 +1,6 @@
 mod ansi;
 mod claude_config_dir;
+mod claude_model_pricing;
 mod config;
 mod config_schema;
 mod duration_format;
@@ -20,6 +21,7 @@ mod statusline_reminder_store;
 mod statusline_renderer;
 mod subagent_transcript_files;
 mod token_count_format;
+mod transcript_cache_miss;
 mod transcript_forward_reader;
 mod transcript_record_probe;
 mod transcript_spoken_text;

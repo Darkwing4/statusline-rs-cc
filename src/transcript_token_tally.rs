@@ -6,11 +6,15 @@ use std::path::Path;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+use crate::claude_model_pricing::CacheLifetime;
 use crate::iso8601::parse_iso8601_utc;
+use crate::transcript_cache_miss::{CacheMiss, CacheMissTracker, CachedPrompt};
 use crate::transcript_forward_reader::read_records_forward;
 use crate::transcript_spoken_text::{is_conversation_record, spoken_text};
 
 const USER_ROW_TYPE: &str = "user";
+const SYSTEM_ROW_TYPE: &str = "system";
+const COMPACT_BOUNDARY_SUBTYPE: &str = "compact_boundary";
 
 #[derive(Clone, Copy, Debug, Default, Deserialize, PartialEq, Serialize)]
 pub(crate) struct TokenBuckets {
@@ -53,6 +57,7 @@ pub(crate) struct TokenTally {
     turn: TokenBuckets,
     turn_started_at: Option<i64>,
     last_response: Option<CountedResponse>,
+    cache_miss: CacheMissTracker,
 }
 
 #[derive(Deserialize, Serialize)]
@@ -74,7 +79,9 @@ struct Response {
     id: Option<String>,
     model: String,
     usage: TokenBuckets,
+    cache_lifetime: CacheLifetime,
     written_at: Option<i64>,
+    sidechain: bool,
 }
 
 impl TokenTally {
@@ -94,6 +101,10 @@ impl TokenTally {
         self.turn_started_at
     }
 
+    pub(crate) fn turn_cache_miss(&self) -> CacheMiss {
+        self.cache_miss.turn()
+    }
+
     pub(crate) fn by_model(&self) -> impl Iterator<Item = (&str, u64)> {
         self.by_model
             .iter()
@@ -107,6 +118,7 @@ impl TokenTally {
 
         self.turn_started_at = Some(started_at);
         self.turn = TokenBuckets::default();
+        self.cache_miss.start_turn();
 
         if let Some(last) = self.last_response.as_mut() {
             last.in_turn = false;
@@ -126,11 +138,23 @@ impl TokenTally {
             .take()
             .filter(|last| response.id.as_deref() == Some(last.id.as_str()));
 
+        let is_repeat = repeated.is_some();
+
         if let Some(last) = repeated {
             self.uncount(&last);
         }
 
         let in_turn = self.is_in_turn(response.written_at);
+
+        if !is_repeat && !response.sidechain {
+            let prompt = CachedPrompt {
+                model: &response.model,
+                cache_read: response.usage.cache_read,
+                cache_write: response.usage.cache_write,
+                lifetime: response.cache_lifetime,
+            };
+            self.cache_miss.observe(&prompt, in_turn);
+        }
 
         *self.by_model.entry(response.model.clone()).or_insert(0) += response.usage.total();
         self.session.add(&response.usage);
@@ -225,10 +249,18 @@ pub(crate) fn tally_tokens<R: Read>(reader: R, tally: &mut TokenTally) -> u64 {
         };
 
         let written_at = row.timestamp.as_deref().and_then(parse_iso8601_utc);
+        let sidechain = row.is_sidechain == Some(true);
+
+        if row.kind.as_deref() == Some(SYSTEM_ROW_TYPE)
+            && row.subtype.as_deref() == Some(COMPACT_BOUNDARY_SUBTYPE)
+        {
+            tally.cache_miss.forget_prefix();
+            return;
+        }
 
         if let Some(response) = row
             .message
-            .and_then(|message| message.into_response(written_at))
+            .and_then(|message| message.into_response(written_at, sidechain))
         {
             tally.count(response);
             return;
@@ -263,6 +295,9 @@ fn is_prompt(record: &[u8]) -> bool {
 struct TranscriptRow {
     #[serde(rename = "type")]
     kind: Option<String>,
+    subtype: Option<String>,
+    #[serde(rename = "isSidechain")]
+    is_sidechain: Option<bool>,
     timestamp: Option<String>,
     message: Option<UsageMessage>,
 }
@@ -275,7 +310,7 @@ struct UsageMessage {
 }
 
 impl UsageMessage {
-    fn into_response(self, written_at: Option<i64>) -> Option<Response> {
+    fn into_response(self, written_at: Option<i64>, sidechain: bool) -> Option<Response> {
         let (Some(model), Some(usage)) = (self.model, self.usage) else {
             return None;
         };
@@ -284,7 +319,9 @@ impl UsageMessage {
             id: self.id,
             model,
             usage: usage.buckets(),
+            cache_lifetime: usage.cache_lifetime(),
             written_at,
+            sidechain,
         })
     }
 }
@@ -295,7 +332,14 @@ struct Usage {
     output_tokens: Option<u64>,
     cache_creation_input_tokens: Option<u64>,
     cache_read_input_tokens: Option<u64>,
+    cache_creation: Option<CacheCreation>,
     output_tokens_details: Option<OutputTokensDetails>,
+}
+
+#[derive(Deserialize)]
+struct CacheCreation {
+    ephemeral_5m_input_tokens: Option<u64>,
+    ephemeral_1h_input_tokens: Option<u64>,
 }
 
 #[derive(Deserialize)]
@@ -304,6 +348,21 @@ struct OutputTokensDetails {
 }
 
 impl Usage {
+    fn cache_lifetime(&self) -> CacheLifetime {
+        let Some(creation) = self.cache_creation.as_ref() else {
+            return CacheLifetime::FiveMinutes;
+        };
+
+        let one_hour = creation.ephemeral_1h_input_tokens.unwrap_or(0);
+        let five_minutes = creation.ephemeral_5m_input_tokens.unwrap_or(0);
+
+        if one_hour > five_minutes {
+            return CacheLifetime::OneHour;
+        }
+
+        CacheLifetime::FiveMinutes
+    }
+
     fn buckets(&self) -> TokenBuckets {
         let thinking = self
             .output_tokens_details
@@ -407,6 +466,36 @@ mod tests {
             }
         );
         assert_eq!(tally.session().total(), 470);
+    }
+
+    #[test]
+    fn a_turn_counts_only_the_prefix_a_cold_cache_made_it_rewrite() {
+        let transcript = rows(&[
+            r#"{"type":"user","timestamp":"2026-09-15T08:00:00Z","message":{"role":"user","content":"first"}}"#,
+            r#"{"type":"assistant","timestamp":"2026-09-15T08:00:05Z","message":{"id":"a","model":"claude-opus-5-5","usage":{"cache_read_input_tokens":90000,"cache_creation_input_tokens":10000}}}"#,
+            r#"{"type":"user","timestamp":"2026-09-15T09:00:00Z","message":{"role":"user","content":"second"}}"#,
+            r#"{"type":"assistant","timestamp":"2026-09-15T09:00:05Z","message":{"id":"b","model":"claude-opus-5-5","usage":{"cache_read_input_tokens":12000,"cache_creation_input_tokens":90000,"cache_creation":{"ephemeral_1h_input_tokens":90000}}}}"#,
+            r#"{"type":"assistant","timestamp":"2026-09-15T09:00:06Z","message":{"id":"b","model":"claude-opus-5-5","usage":{"cache_read_input_tokens":12000,"cache_creation_input_tokens":90000,"cache_creation":{"ephemeral_1h_input_tokens":90000}}}}"#,
+            r#"{"type":"assistant","isSidechain":true,"timestamp":"2026-09-15T09:00:07Z","message":{"id":"side","model":"claude-haiku-4-5","usage":{"cache_creation_input_tokens":5000}}}"#,
+            r#"{"type":"assistant","timestamp":"2026-09-15T09:00:09Z","message":{"id":"c","model":"claude-opus-5-5","usage":{"cache_read_input_tokens":102000,"cache_creation_input_tokens":800}}}"#,
+        ]);
+
+        let miss = tally_of(&transcript).0.turn_cache_miss();
+
+        assert_eq!(miss.tokens, 88_000);
+        assert!((miss.overpay_usd - 0.6864).abs() < 1e-9);
+    }
+
+    #[test]
+    fn compaction_starts_a_new_prefix_instead_of_a_miss() {
+        let transcript = rows(&[
+            r#"{"type":"assistant","timestamp":"2026-09-15T08:00:05Z","message":{"id":"a","model":"claude-opus-5-5","usage":{"cache_read_input_tokens":150000,"cache_creation_input_tokens":2000}}}"#,
+            r#"{"type":"system","subtype":"compact_boundary","timestamp":"2026-09-15T08:07:36Z"}"#,
+            r#"{"type":"user","timestamp":"2026-09-15T08:12:18Z","message":{"role":"user","content":"carry on"}}"#,
+            r#"{"type":"assistant","timestamp":"2026-09-15T08:12:22Z","message":{"id":"b","model":"claude-opus-5-5","usage":{"cache_read_input_tokens":11764,"cache_creation_input_tokens":25015}}}"#,
+        ]);
+
+        assert_eq!(tally_of(&transcript).0.turn_cache_miss().tokens, 0);
     }
 
     #[test]

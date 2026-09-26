@@ -58,6 +58,14 @@
     (is (= "$18" (text-of cost (assoc (fixture/scenario "active") :turn-cost 0.04))))
     (is (nil? (preview/pieces cost (assoc (fixture/scenario "active") :cost 0))))))
 
+(deftest a-cache-miss-shows-the-rewritten-tokens-and-their-cost-over-a-hit
+  (let [miss (fixture/create "PromptCacheMiss")
+        pressure (fixture/scenario "pressure")]
+    (is (= "(missing! 254k $1.22)" (text-of miss pressure)))
+    (is (= "(missing! 12k)" (text-of miss (assoc pressure :cache-miss {:tokens 12000 :overpay 0.004}))))
+    (is (nil? (preview/pieces miss (assoc pressure :cache-miss {:tokens 9999 :overpay 0.05}))))
+    (is (nil? (preview/pieces miss (fixture/scenario "active"))))))
+
 (deftest a-session-notice-shows-the-time-left-the-way-the-runtime-pads-it
   (let [notice (fixture/create "SessionNotice")]
     (is (= "📌 ✗ cargo test (exit 101) (9m55s)" (text-of notice (first scenarios/all))))
