@@ -88,7 +88,7 @@ The default line is the model, its effort level, context usage, the prompt-cache
 - `5h` / `7d` are the Claude.ai rolling usage limits, green under 50%, yellow to 80%, red above. Absent on API plans and before the first response. `window: Fable` adds the per-model weekly window, fetched in the background.
 - `⑂feature` means you are inside a git worktree; `[REBASE 2/5]` and friends appear only during the operation; `~2 +1 -1` is modified, untracked, deleted.
 
-The rest of the shelf is what a status line usually cannot do, each documented in [docs/segments.md](docs/segments.md):
+The rest of the shelf is what a status line usually cannot do, each described in [`src/config_schema.rs`](src/config_schema.rs):
 
 - **LLM insight** — an external model reads the transcript every few turns and answers your prompt in one line: the current goal, what the last prompt was missing, whatever you ask. Add it twice for two independent lines.
 - **My last prompt** — the last thing you typed, so several Claude Code windows are easy to tell apart.
