@@ -11,7 +11,7 @@ A status line for Claude Code. I wrote it after failing to find one on GitHub th
   </tr>
   <tr>
     <td><img src="docs/screenshots/nogit.png" alt="outside git repo"/></td>
-    <td><img src="docs/screenshots/debug.png" alt="debug segment below statusline"/></td>
+    <td><img src="docs/screenshots/token-spend.png" alt="session cost and token spend"/></td>
   </tr>
 </table>
 
