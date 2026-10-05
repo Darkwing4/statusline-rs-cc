@@ -169,14 +169,8 @@ mod tests {
         };
         let expected = "session 78k  out 1.2k · think 408 · in 34 · cache 51k +26k";
 
-        assert_eq!(
-            plain().format(&first).as_deref(),
-            Some(expected)
-        );
-        assert_eq!(
-            plain().format(&waiting).as_deref(),
-            Some(expected)
-        );
+        assert_eq!(plain().format(&first).as_deref(), Some(expected));
+        assert_eq!(plain().format(&waiting).as_deref(), Some(expected));
     }
 
     #[test]
